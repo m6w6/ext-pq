@@ -436,19 +436,6 @@ static void php_pqconn_object_read_transaction_status(void *o, zval *return_valu
 	RETVAL_LONG(PQtransactionStatus(obj->conn));
 }
 
-static void php_pqconn_object_read_socket(void *o, zval *return_value TSRMLS_DC)
-{
-	php_pqconn_object_t *obj = o;
-	php_stream *stream;
-	int socket = PQsocket(obj->conn);
-
-	if ((stream = php_stream_fopen_from_fd(socket, "r+b", NULL))) {
-		php_stream_to_zval(stream, return_value);
-	} else {
-		RETVAL_NULL();
-	}
-}
-
 static void php_pqconn_object_read_error_message(void *o, zval *return_value TSRMLS_DC)
 {
 	php_pqconn_object_t *obj = o;
@@ -594,7 +581,7 @@ static zval *php_pqconn_object_read_prop(zval *object, zval *member, int type, c
 
 	if (!obj->conn) {
 		zend_error(E_WARNING, "Connection not initialized");
-	} else if (SUCCESS == zend_hash_find(&php_pqconn_object_prophandlers, Z_STRVAL_P(member), Z_STRLEN_P(member)+1, (void *) &handler)) {
+	} else if ((SUCCESS == zend_hash_find(&php_pqconn_object_prophandlers, Z_STRVAL_P(member), Z_STRLEN_P(member)+1, (void *) &handler)) && handler->read) {
 		if (type == BP_VAR_R) {
 			ALLOC_ZVAL(return_value);
 			Z_SET_REFCOUNT_P(return_value, 0);
@@ -715,6 +702,36 @@ static void php_pqstm_object_write_prop(zval *object, zval *member, zval *value,
 	}
 }
 
+static STATUS php_pqconn_update_socket(zval *this_ptr, php_pqconn_object_t *obj TSRMLS_DC)
+{
+	zval *zsocket, zmember;
+	php_stream *stream;
+	STATUS retval;
+	int socket;
+	
+	if (!obj) {
+		obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+	}
+	
+	INIT_PZVAL(&zmember);
+	ZVAL_STRINGL(&zmember, "socket", sizeof("socket")-1, 0);
+	MAKE_STD_ZVAL(zsocket);
+	
+	if ((CONNECTION_BAD != PQstatus(obj->conn))
+	&&	(-1 < (socket = PQsocket(obj->conn)))
+	&&	(stream = php_stream_fopen_from_fd(socket, "r+b", NULL))) {
+		php_stream_to_zval(stream, zsocket);
+		retval = SUCCESS;
+	} else {
+		ZVAL_NULL(zsocket);
+		retval = FAILURE;
+	}
+	zend_get_std_object_handlers()->write_property(getThis(), &zmember, zsocket, NULL TSRMLS_CC);
+	zval_ptr_dtor(&zsocket);
+	
+	return retval;
+}
+
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_construct, 0, 0, 1)
 	ZEND_ARG_INFO(0, dsn)
 	ZEND_ARG_INFO(0, block)
@@ -738,8 +755,8 @@ static PHP_METHOD(pqconn, __construct) {
 			obj->conn = PQconnectStart(dsn_str);
 			obj->poller = (int (*)(PGconn*)) PQconnectPoll;
 		}
-
-		if (CONNECTION_BAD == PQstatus(obj->conn)) {
+		
+		if (SUCCESS != php_pqconn_update_socket(getThis(), obj TSRMLS_CC)) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Connection failed: %s", PQerrorMessage(obj->conn));
 		}
 	}
@@ -755,8 +772,12 @@ static PHP_METHOD(pqconn, reset) {
 		if (obj->conn) {
 			if (obj->blocking) {
 				PQreset(obj->conn);
-				RETURN_TRUE; /* probably ;) */
-			} if (PQresetStart(obj->conn)) {
+				if (CONNECTION_OK == PQstatus(obj->conn)) {
+					RETURN_TRUE;
+				} else {
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Connection reset failed: %s", PQerrorMessage(obj->conn));
+				}
+			} else if (PQresetStart(obj->conn)) {
 				obj->poller = (int (*)(PGconn*)) PQresetPoll;
 				RETURN_TRUE;
 			}
@@ -1253,7 +1274,7 @@ PHP_MINIT_FUNCTION(pq)
 	zend_hash_add(&php_pqconn_object_prophandlers, "transactionStatus", sizeof("transactionStatus"), (void *) &ph, sizeof(ph), NULL);
 
 	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("socket"), ZEND_ACC_PUBLIC TSRMLS_CC);
-	ph.read = php_pqconn_object_read_socket;
+	ph.read = NULL; /* forward to std prophandler */
 	zend_hash_add(&php_pqconn_object_prophandlers, "socket", sizeof("socket"), (void *) &ph, sizeof(ph), NULL);
 
 	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("errorMessage"), ZEND_ACC_PUBLIC TSRMLS_CC);
