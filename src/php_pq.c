@@ -485,14 +485,25 @@ static void php_pqconn_object_read_types(void *o, zval *return_value TSRMLS_DC)
 	if (res) {
 		if (PGRES_TUPLES_OK == PQresultStatus(res)) {
 			int r, rows;
+			zval *byoid, *byname;
 
+			MAKE_STD_ZVAL(byoid);
+			MAKE_STD_ZVAL(byname);
+			object_init(byoid);
+			object_init(byname);
 			object_init(return_value);
 			for (r = 0, rows = PQntuples(res); r < rows; ++r) {
 				zval *row = php_pqres_row_to_zval(res, r, PHP_PQRES_FETCH_OBJECT TSRMLS_CC);
 
-				add_property_zval(return_value, PQgetvalue(res, r, 1), row);
+				add_property_zval(byoid, PQgetvalue(res, r, 0), row);
+				add_property_zval(byname, PQgetvalue(res, r, 1), row);
 				zval_ptr_dtor(&row);
 			}
+
+			add_property_zval(return_value, "byOid", byoid);
+			add_property_zval(return_value, "byName", byname);
+			zval_ptr_dtor(&byoid);
+			zval_ptr_dtor(&byname);
 		} else {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not fetch types: %s", PQresultErrorMessage(res));
 		}
@@ -783,6 +794,19 @@ static PHP_METHOD(pqconn, poll) {
 	}
 }
 
+static STATUS php_pqres_success(PGresult *res TSRMLS_DC)
+{
+	switch (PQresultStatus(res)) {
+	case PGRES_BAD_RESPONSE:
+	case PGRES_NONFATAL_ERROR:
+	case PGRES_FATAL_ERROR:
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s: %s", PQresStatus(PQresultStatus(res)), PQresultErrorMessage(res));
+		return FAILURE;
+	default:
+		return SUCCESS;
+	}
+}
+
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_exec, 0, 0, 1)
 	ZEND_ARG_INFO(0, query)
 ZEND_END_ARG_INFO();
@@ -799,8 +823,10 @@ static PHP_METHOD(pqconn, exec) {
 			PGresult *res = PQexec(obj->conn, query_str);
 
 			if (res) {
-				return_value->type = IS_OBJECT;
-				return_value->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, res, NULL TSRMLS_CC);
+				if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
+					return_value->type = IS_OBJECT;
+					return_value->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, res, NULL TSRMLS_CC);
+				}
 			} else {
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not execute query: %s", PQerrorMessage(obj->conn));
 			}
@@ -894,7 +920,7 @@ static PHP_METHOD(pqconn, execParams) {
 				zend_hash_apply_with_arguments(Z_ARRVAL_P(zparams) TSRMLS_CC, apply_to_param, 2, &tmp, &zdtor);
 			}
 
-			res = PQexecParams(obj->conn, query_str, count, types, params, NULL, NULL, 0);
+			res = PQexecParams(obj->conn, query_str, count, types, (const char *const*) params, NULL, NULL, 0);
 
 			zend_hash_destroy(&zdtor);
 			if (types) {
@@ -905,8 +931,10 @@ static PHP_METHOD(pqconn, execParams) {
 			}
 
 			if (res) {
-				return_value->type = IS_OBJECT;
-				return_value->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, res, NULL TSRMLS_CC);
+				if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
+					return_value->type = IS_OBJECT;
+					return_value->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, res, NULL TSRMLS_CC);
+				}
 			} else {
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not execute query: %s", PQerrorMessage(obj->conn));
 			}
@@ -1009,7 +1037,7 @@ static zval **php_pqres_iteration(zval *this_ptr, php_pqres_object_t *obj, php_p
 	return row ? row : NULL;
 }
 
-ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_row, 0, 0, 0)
 	ZEND_ARG_INFO(0, fetch_type)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, fetchRow) {
@@ -1030,8 +1058,55 @@ static PHP_METHOD(pqres, fetchRow) {
 	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
+static zval **column_at(zval *row, int col TSRMLS_DC)
+{
+	zval **data = NULL;
+	HashTable *ht = HASH_OF(row);
+	int count = zend_hash_num_elements(ht);
+
+	if (col < count) {
+		zend_hash_internal_pointer_reset(ht);
+		while (col-- > 0) {
+			zend_hash_move_forward(ht);
+		}
+		zend_hash_get_current_data(ht, (void *) &data);
+	} else {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Column index %d does excess column count %d", col, count);
+	}
+	return data;
+}
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_col, 0, 0, 0)
+	ZEND_ARG_INFO(0, col_num)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqres, fetchCol) {
+	zend_error_handling zeh;
+	long fetch_col = 0;
+
+	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
+	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &fetch_col)) {
+		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+		zval **row = php_pqres_iteration(getThis(), obj, obj->iter ? obj->iter->fetch_type : 0 TSRMLS_CC);
+
+		if (row) {
+			zval **col = column_at(*row, fetch_col TSRMLS_CC);
+
+			if (col) {
+				RETVAL_ZVAL(*col, 1, 0);
+			} else {
+				RETVAL_FALSE;
+			}
+		} else {
+			RETVAL_FALSE;
+		}
+	}
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+}
+
 static zend_function_entry php_pqres_methods[] = {
-	PHP_ME(pqres, fetchRow, ai_pqres_fetch, ZEND_ACC_PUBLIC)
+	PHP_ME(pqres, fetchRow, ai_pqres_fetch_row, ZEND_ACC_PUBLIC)
+	PHP_ME(pqres, fetchCol, ai_pqres_fetch_col, ZEND_ACC_PUBLIC)
 	{0}
 };
 
@@ -1093,7 +1168,7 @@ static PHP_METHOD(pqstm, exec) {
 					zend_hash_apply_with_arguments(Z_ARRVAL_P(zparams) TSRMLS_CC, apply_to_param, 2, &tmp, &zdtor);
 				}
 
-				res = PQexecPrepared(conn_obj->conn, obj->name, count, params, NULL, NULL, 0);
+				res = PQexecPrepared(conn_obj->conn, obj->name, count, (const char *const*) params, NULL, NULL, 0);
 
 				if (params) {
 					efree(params);
@@ -1101,10 +1176,49 @@ static PHP_METHOD(pqstm, exec) {
 				zend_hash_destroy(&zdtor);
 
 				if (res) {
-					return_value->type = IS_OBJECT;
-					return_value->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, res, NULL TSRMLS_CC);
+					if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
+						return_value->type = IS_OBJECT;
+						return_value->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, res, NULL TSRMLS_CC);
+					}
 				} else {
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not execute statement: %s", PQerrorMessage(conn_obj->conn));
+				}
+			} else {
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Connection not initialized");
+			}
+		} else {
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Statement not initialized");
+		}
+	}
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+}
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_desc, 0, 0, 0)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqstm, desc) {
+	zend_error_handling zeh;
+
+	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
+	if (SUCCESS == zend_parse_parameters_none()) {
+		php_pqstm_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
+		if (obj->conn && obj->name) {
+			php_pqconn_object_t *conn_obj = zend_object_store_get_object(obj->conn TSRMLS_CC);
+
+			if (conn_obj->conn) {
+				PGresult *res = PQdescribePrepared(conn_obj->conn, obj->name);
+
+				if (res) {
+					if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
+						int p, params;
+
+						array_init(return_value);
+						for (p = 0, params = PQnparams(res); p < params; ++p) {
+							add_next_index_long(return_value, PQparamtype(res, p));
+						}
+					}
+				} else {
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not describe statement: %s", PQerrorMessage(conn_obj->conn));
 				}
 			} else {
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Connection not initialized");
@@ -1119,6 +1233,7 @@ static PHP_METHOD(pqstm, exec) {
 static zend_function_entry php_pqstm_methods[] = {
 	PHP_ME(pqstm, __construct, ai_pqstm_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
 	PHP_ME(pqstm, exec, ai_pqstm_exec, ZEND_ACC_PUBLIC)
+	PHP_ME(pqstm, desc, ai_pqstm_desc, ZEND_ACC_PUBLIC)
 	{0}
 };
 
