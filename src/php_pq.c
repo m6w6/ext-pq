@@ -86,7 +86,7 @@ typedef struct php_pqconn_object {
 	zend_object zo;
 	PGconn *conn;
 	int (*poller)(PGconn *);
-	unsigned blocking:1;
+	unsigned async:1;
 } php_pqconn_object_t;
 
 typedef enum php_pqres_fetch {
@@ -336,7 +336,7 @@ static zend_object_value php_pqconn_create_object_ex(zend_class_entry *ce, PGcon
 
 	if (conn) {
 		o->conn = conn;
-		o->blocking = !PQisnonblocking(o->conn);
+		o->async = !PQisnonblocking(o->conn);
 	}
 
 	ov.handle = zend_objects_store_put((zend_object *) o, NULL, php_pqconn_object_free, NULL TSRMLS_CC);
@@ -734,26 +734,26 @@ static STATUS php_pqconn_update_socket(zval *this_ptr, php_pqconn_object_t *obj 
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_construct, 0, 0, 1)
 	ZEND_ARG_INFO(0, dsn)
-	ZEND_ARG_INFO(0, block)
+	ZEND_ARG_INFO(0, async)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, __construct) {
 	zend_error_handling zeh;
 	char *dsn_str;
 	int dsn_len;
-	zend_bool block = 1;
+	zend_bool async = 0;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &dsn_str, &dsn_len, &block)) {
+	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &dsn_str, &dsn_len, &async)) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
 		if (obj->conn) {
 			PQfinish(obj->conn);
 		}
-		if ((obj->blocking = block)) {
-			obj->conn = PQconnectdb(dsn_str);
-		} else {
+		if ((obj->async = async)) {
 			obj->conn = PQconnectStart(dsn_str);
 			obj->poller = (int (*)(PGconn*)) PQconnectPoll;
+		} else {
+			obj->conn = PQconnectdb(dsn_str);
 		}
 		
 		if (SUCCESS != php_pqconn_update_socket(getThis(), obj TSRMLS_CC)) {
@@ -770,16 +770,19 @@ static PHP_METHOD(pqconn, reset) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
 		if (obj->conn) {
-			if (obj->blocking) {
+			if (obj->async) {
+				if (PQresetStart(obj->conn)) {
+					obj->poller = (int (*)(PGconn*)) PQresetPoll;
+					RETURN_TRUE;
+				}
+			} else {
 				PQreset(obj->conn);
+				
 				if (CONNECTION_OK == PQstatus(obj->conn)) {
 					RETURN_TRUE;
 				} else {
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Connection reset failed: %s", PQerrorMessage(obj->conn));
 				}
-			} else if (PQresetStart(obj->conn)) {
-				obj->poller = (int (*)(PGconn*)) PQresetPoll;
-				RETURN_TRUE;
 			}
 		} else {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Connection not initialized");

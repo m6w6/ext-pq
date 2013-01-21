@@ -8,7 +8,7 @@ echo "Test\n";
 
 include "_setup.inc";
 
-$c = new pq\Connection(PQ_DSN, false);
+$c = new pq\Connection(PQ_DSN, true);
 $s = array($c->status);
 echo "W";
 $w = array($c->socket);

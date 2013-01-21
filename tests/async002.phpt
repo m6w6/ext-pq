@@ -8,7 +8,7 @@ echo "Test\n";
 
 include "_setup.inc";
 
-$c = new pq\Connection(PQ_DSN, false);
+$c = new pq\Connection(PQ_DSN, true);
 
 function complete($c) {
 	$s = array($c->status);
