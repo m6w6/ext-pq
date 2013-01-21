@@ -1,12 +1,12 @@
 /*
     +--------------------------------------------------------------------+
-    | PECL :: pq                                                       |
+    | PECL :: pq                                                         |
     +--------------------------------------------------------------------+
     | Redistribution and use in source and binary forms, with or without |
     | modification, are permitted provided that the conditions mentioned |
     | in the accompanying LICENSE file are met.                          |
     +--------------------------------------------------------------------+
-    | Copyright (c) 20013, Michael Wallner <mike@php.net>                |
+    | Copyright (c) 2013, Michael Wallner <mike@php.net>                |
     +--------------------------------------------------------------------+
 */
 
