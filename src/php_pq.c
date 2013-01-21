@@ -799,7 +799,11 @@ static PHP_METHOD(pqconn, poll) {
 
 		if (obj->conn) {
 			if (obj->poller) {
-				RETURN_LONG(obj->poller(obj->conn));
+				if (obj->poller == PQconsumeInput) {
+					RETURN_LONG(obj->poller(obj->conn) * PGRES_POLLING_OK);
+				} else {
+					RETURN_LONG(obj->poller(obj->conn));
+				}
 			} else {
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "No asynchronous operation active");
 			}
@@ -816,7 +820,7 @@ static STATUS php_pqres_success(PGresult *res TSRMLS_DC)
 	case PGRES_BAD_RESPONSE:
 	case PGRES_NONFATAL_ERROR:
 	case PGRES_FATAL_ERROR:
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s: %s", PQresStatus(PQresultStatus(res)), PQresultErrorMessage(res));
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", PQresultErrorMessage(res));
 		return FAILURE;
 	default:
 		return SUCCESS;
