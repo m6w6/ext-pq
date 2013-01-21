@@ -1,0 +1,23 @@
+
+# /
+/*~
+/*.tgz
+/.deps
+/*.lo
+/*.la
+/config.[^m]*
+/configure*
+/lib*
+/ac*.m4
+/ltmain.sh
+/install-sh
+/Make*
+/mk*
+/missing
+/.libs
+/build
+/include
+/modules
+/autom4te*
+/.dep.inc
+run-tests.php
