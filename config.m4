@@ -33,5 +33,6 @@ if test "$PHP_PQ" != "no"; then
 	])
 
 	PQ_SRC="src/php_pq.c"
+    PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
 	PHP_NEW_EXTENSION(pq, $PQ_SRC, $ext_shared)
 fi
