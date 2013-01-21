@@ -977,6 +977,7 @@ static PHP_METHOD(pqconn, poll) {
 				if (obj->poller == PQconsumeInput) {
 					RETVAL_LONG(obj->poller(obj->conn) * PGRES_POLLING_OK);
 					php_pqconn_notify_listeners(getThis(), obj TSRMLS_CC);
+					return;
 				} else {
 					RETURN_LONG(obj->poller(obj->conn));
 				}
