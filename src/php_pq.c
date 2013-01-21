@@ -1185,6 +1185,7 @@ static PHP_METHOD(pqconn, prepare) {
 				return_value->type = IS_OBJECT;
 				return_value->value.obj = php_pqstm_create_object_ex(php_pqstm_class_entry, getThis(), name_str, NULL TSRMLS_CC);
 			}
+			php_pqconn_notify_listeners(getThis(), obj TSRMLS_CC);
 		} else {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Connection not initialized");
 		}
@@ -1315,7 +1316,7 @@ static PHP_METHOD(pqstm, __construct) {
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
 	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Oss|a/!", &zconn, php_pqconn_class_entry, &name_str, &name_len, &query_str, &query_len, &ztypes)) {
 		php_pqstm_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
-		php_pqconn_object_t *conn_obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+		php_pqconn_object_t *conn_obj = zend_object_store_get_object(zconn TSRMLS_CC);
 
 		if (conn_obj->conn) {
 			if (SUCCESS == php_pqconn_prepare(conn_obj->conn, name_str, query_str, ztypes ? Z_ARRVAL_P(ztypes) : NULL TSRMLS_CC)) {
@@ -1323,6 +1324,7 @@ static PHP_METHOD(pqstm, __construct) {
 				obj->conn = zconn;
 				obj->name = estrdup(name_str);
 			}
+			php_pqconn_notify_listeners(obj->conn, conn_obj TSRMLS_CC);
 		} else {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Connection not initialized");
 		}
@@ -1365,6 +1367,8 @@ static PHP_METHOD(pqstm, exec) {
 				}
 				zend_hash_destroy(&zdtor);
 
+				php_pqconn_notify_listeners(obj->conn, conn_obj TSRMLS_CC);
+
 				if (res) {
 					if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
 						return_value->type = IS_OBJECT;
@@ -1397,6 +1401,8 @@ static PHP_METHOD(pqstm, desc) {
 
 			if (conn_obj->conn) {
 				PGresult *res = PQdescribePrepared(conn_obj->conn, obj->name);
+
+				php_pqconn_notify_listeners(obj->conn, conn_obj TSRMLS_CC);
 
 				if (res) {
 					if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
