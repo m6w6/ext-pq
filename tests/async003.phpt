@@ -1,5 +1,5 @@
 --TEST--
-async query
+async exec
 --SKIPIF--
 <?php include "_skipif.inc"; ?>
 --FILE--
