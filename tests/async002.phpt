@@ -46,7 +46,7 @@ function complete($c) {
 complete($c);
 
 if ($c->status == pq\Connection::OK) {
-	$c->reset();
+	$c->resetAsync();
 	complete($c);
 }
 ?>

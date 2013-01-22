@@ -25,8 +25,18 @@ $w = null; $e = null;
 var_dump(stream_select($r, $w, $e, NULL));
 $consumer->poll();
 
+$producer->notify("other", "this should not show up");
+
 var_dump(stream_select($r, $w, $e, 0));
 $consumer->poll();
+
+$producer->notify("test", "just to be sure");
+
+$r = array($consumer->socket);
+$w = null; $e = null;
+var_dump(stream_select($r, $w, $e, NULL));
+$consumer->poll();
+
 ?>
 DONE
 --EXPECTF--
@@ -35,4 +45,6 @@ test(%d): this is a test
 int(1)
 test(%d): this is an async test
 int(0)
+int(1)
+test(%d): just to be sure
 DONE

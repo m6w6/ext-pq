@@ -1,5 +1,5 @@
 --TEST--
-pq\Statment::desc()
+desc statement
 --SKIPIF--
 <?php include "_skipif.inc"; ?>
 --FILE--

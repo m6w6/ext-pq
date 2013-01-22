@@ -1,1 +1,13 @@
 * parse arrays out of PQgetvalue
+* listenAsync & notifyAsync
+* LOBs
+* COPY
+* pq\Cancel
+
+* fetchInto/fetchCtor?
+* unlisten?
+* tracing?
+* userland event handler?
+* notice receiver?
+* pq\Result->__clone through PQcopyResult?
+* db/pass/user/host/port/options properties on pq\Connection?
