@@ -1471,9 +1471,9 @@ static STATUS php_pqconn_prepare(PGconn *conn, const char *name, const char *que
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_prepare, 0, 0, 2)
-	ZEND_ARG_INFO(0, "name")
-	ZEND_ARG_INFO(0, "query")
-	ZEND_ARG_ARRAY_INFO(0, "types", 1)
+	ZEND_ARG_INFO(0, name)
+	ZEND_ARG_INFO(0, query)
+	ZEND_ARG_ARRAY_INFO(0, types, 1)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, prepare) {
 	zend_error_handling zeh;
@@ -1610,10 +1610,10 @@ static zend_function_entry php_pqres_methods[] = {
 };
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_construct, 0, 0, 3)
-	ZEND_ARG_OBJ_INFO(0, "Connection", "pq\\Connection", 0)
-	ZEND_ARG_INFO(0, "name")
-	ZEND_ARG_INFO(0, "query")
-	ZEND_ARG_ARRAY_INFO(0, "types", 1)
+	ZEND_ARG_OBJ_INFO(0, Connection, pq\\Connection, 0)
+	ZEND_ARG_INFO(0, name)
+	ZEND_ARG_INFO(0, query)
+	ZEND_ARG_ARRAY_INFO(0, types, 1)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqstm, __construct) {
 	zend_error_handling zeh;
@@ -1640,7 +1640,7 @@ static PHP_METHOD(pqstm, __construct) {
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_exec, 0, 0, 0)
-	ZEND_ARG_ARRAY_INFO(0, "params", 1)
+	ZEND_ARG_ARRAY_INFO(0, params, 1)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqstm, exec) {
 	zend_error_handling zeh;
