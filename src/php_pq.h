@@ -32,13 +32,6 @@ zend_module_entry pq_module_entry;
 #	include "TSRM.h"
 #endif
 
-PHP_MINIT_FUNCTION(pq);
-PHP_MSHUTDOWN_FUNCTION(pq);
-PHP_RINIT_FUNCTION(pq);
-PHP_RSHUTDOWN_FUNCTION(pq);
-PHP_MINFO_FUNCTION(pq);
-
-
 /* 
 ZEND_BEGIN_MODULE_GLOBALS(pq)
 	long  global_value;

@@ -3,11 +3,18 @@
 * LOBs
 * COPY
 * pq\Cancel
+* transaction savepoints
+* transaction snapshots
+* notice receiver (else libpq uses stderr)
+* pq\Event\Notice
 
+* pq\Event\Result\Create, 
+  pq\Event\Result\Destroy, 
+  pq\Event\Connection\Reset, 
+  pq\Event\Connection\Destroy
 * fetchInto/fetchCtor?
 * unlisten?
 * tracing?
 * userland event handler?
-* notice receiver?
 * pq\Result->__clone through PQcopyResult?
 * db/pass/user/host/port/options properties on pq\Connection?
