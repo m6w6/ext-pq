@@ -2,7 +2,6 @@
 * listenAsync & notifyAsync
 * LOBs
 * COPY
-* pq\Cancel
 * transaction savepoints
 * transaction snapshots
 * notice receiver (else libpq uses stderr)
