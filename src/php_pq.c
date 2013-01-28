@@ -900,6 +900,78 @@ static void php_pqconn_object_write_unbuffered(zval *object, void *o, zval *valu
 	obj->intern->unbuffered = zend_is_true(value);
 }
 
+static void php_pqconn_object_read_db(zval *objec, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+	char *db = PQdb(obj->intern->conn);
+
+	if (db) {
+		RETVAL_STRING(db, 1);
+	} else {
+		RETVAL_EMPTY_STRING();
+	}
+}
+
+static void php_pqconn_object_read_user(zval *objec, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+	char *user = PQuser(obj->intern->conn);
+
+	if (user) {
+		RETVAL_STRING(user, 1);
+	} else {
+		RETVAL_EMPTY_STRING();
+	}
+}
+
+static void php_pqconn_object_read_pass(zval *objec, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+	char *pass = PQpass(obj->intern->conn);
+
+	if (pass) {
+		RETVAL_STRING(pass, 1);
+	} else {
+		RETVAL_EMPTY_STRING();
+	}
+}
+
+static void php_pqconn_object_read_host(zval *objec, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+	char *host = PQhost(obj->intern->conn);
+
+	if (host) {
+		RETVAL_STRING(host, 1);
+	} else {
+		RETVAL_EMPTY_STRING();
+	}
+}
+
+static void php_pqconn_object_read_port(zval *objec, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+	char *port = PQport(obj->intern->conn);
+
+	if (port) {
+		RETVAL_STRING(port, 1);
+	} else {
+		RETVAL_EMPTY_STRING();
+	}
+}
+
+static void php_pqconn_object_read_options(zval *objec, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+	char *options = PQoptions(obj->intern->conn);
+
+	if (options) {
+		RETVAL_STRING(options, 1);
+	} else {
+		RETVAL_EMPTY_STRING();
+	}
+}
+
 static void php_pqres_object_read_status(zval *object, void *o, zval *return_value TSRMLS_DC)
 {
 	php_pqres_object_t *obj = o;
@@ -1201,6 +1273,37 @@ static void php_pqconn_event_conndestroy(PGEventConnDestroy *event, php_pqconn_e
 	efree(data);
 }
 
+static int apply_event(void *p, void *a TSRMLS_DC)
+{
+	zval **evh = p;
+	zval *args = a;
+	zval *retval = NULL;
+
+	zend_call_method_with_1_params(evh, Z_OBJCE_PP(evh), NULL, "trigger", &retval, args);
+	if (retval) {
+		zval_ptr_dtor(&retval);
+	}
+
+	return ZEND_HASH_APPLY_KEEP;
+}
+
+static void php_pqconn_event_connreset(PGEventConnReset *event, php_pqconn_event_data_t *data)
+{
+	zval **evhs;
+	TSRMLS_DF(data);
+
+	if (SUCCESS == zend_hash_find(&data->obj->intern->eventhandlers, ZEND_STRS("reset"), (void *) &evhs)) {
+		zval *args, *connection = NULL;
+
+		MAKE_STD_ZVAL(args);
+		array_init(args);
+		php_pq_object_to_zval(data->obj, &connection TSRMLS_CC);
+		add_next_index_zval(args, connection);
+		zend_hash_apply_with_argument(Z_ARRVAL_PP(evhs), apply_event, args TSRMLS_CC);
+		zval_ptr_dtor(&args);
+	}
+}
+
 static zval *result_instance_zval(PGresult *res TSRMLS_DC)
 {
 	zval *rid = PQresultInstanceData(res, php_pqconn_event);
@@ -1218,20 +1321,6 @@ static zval *result_instance_zval(PGresult *res TSRMLS_DC)
 
 	Z_ADDREF_P(rid);
 	return rid;
-}
-
-static int apply_event(void *p, void *a TSRMLS_DC)
-{
-	zval **evh = p;
-	zval *args = a;
-	zval *retval = NULL;
-
-	zend_call_method_with_1_params(evh, Z_OBJCE_PP(evh), NULL, "trigger", &retval, args);
-	if (retval) {
-		zval_ptr_dtor(&retval);
-	}
-
-	return ZEND_HASH_APPLY_KEEP;
 }
 
 static void php_pqconn_event_resultcreate(PGEventResultCreate *event, php_pqconn_event_data_t *data)
@@ -1270,6 +1359,9 @@ static int php_pqconn_event(PGEventId id, void *e, void *data)
 		break;
 	case PGEVT_CONNDESTROY:
 		php_pqconn_event_conndestroy(e, data);
+		break;
+	case PGEVT_CONNRESET:
+		php_pqconn_event_connreset(e, data);
 		break;
 	case PGEVT_RESULTCREATE:
 		php_pqconn_event_resultcreate(e, data);
@@ -1316,12 +1408,12 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_construct, 0, 0, 1)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, __construct) {
 	zend_error_handling zeh;
-	char *dsn_str;
-	int dsn_len;
+	char *dsn_str = "";
+	int dsn_len = 0;
 	zend_bool async = 0;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &dsn_str, &dsn_len, &async)) {
+	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|sb", &dsn_str, &dsn_len, &async)) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 		php_pqconn_event_data_t *data =  php_pqconn_event_data_init(obj TSRMLS_CC);
 
@@ -2898,7 +2990,7 @@ static PHP_MINIT_FUNCTION(pq)
 	php_pqconn_object_handlers.get_property_ptr_ptr = NULL;
 	php_pqconn_object_handlers.get_debug_info = php_pq_object_debug_info;
 
-	zend_hash_init(&php_pqconn_object_prophandlers, 8, NULL, NULL, 1);
+	zend_hash_init(&php_pqconn_object_prophandlers, 14, NULL, NULL, 1);
 
 	zend_declare_property_long(php_pqconn_class_entry, ZEND_STRL("status"), CONNECTION_BAD, ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqconn_object_read_status;
@@ -2935,6 +3027,30 @@ static PHP_MINIT_FUNCTION(pq)
 	ph.write = php_pqconn_object_write_unbuffered;
 	zend_hash_add(&php_pqconn_object_prophandlers, "unbuffered", sizeof("unbuffered"), (void *) &ph, sizeof(ph), NULL);
 	ph.write = NULL;
+
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("db"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqconn_object_read_db;
+	zend_hash_add(&php_pqconn_object_prophandlers, "db", sizeof("db"), (void *) &ph, sizeof(ph), NULL);
+
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("user"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqconn_object_read_user;
+	zend_hash_add(&php_pqconn_object_prophandlers, "user", sizeof("user"), (void *) &ph, sizeof(ph), NULL);
+
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("pass"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqconn_object_read_pass;
+	zend_hash_add(&php_pqconn_object_prophandlers, "pass", sizeof("pass"), (void *) &ph, sizeof(ph), NULL);
+
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("host"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqconn_object_read_host;
+	zend_hash_add(&php_pqconn_object_prophandlers, "host", sizeof("host"), (void *) &ph, sizeof(ph), NULL);
+
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("port"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqconn_object_read_port;
+	zend_hash_add(&php_pqconn_object_prophandlers, "port", sizeof("port"), (void *) &ph, sizeof(ph), NULL);
+
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("options"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqconn_object_read_options;
+	zend_hash_add(&php_pqconn_object_prophandlers, "options", sizeof("options"), (void *) &ph, sizeof(ph), NULL);
 
 	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("OK"), CONNECTION_OK TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("BAD"), CONNECTION_BAD TSRMLS_CC);
@@ -3116,6 +3232,7 @@ static PHP_MINIT_FUNCTION(pq)
 
 	zend_declare_class_constant_stringl(php_pqevent_class_entry, ZEND_STRL("NOTICE"), ZEND_STRL("notice") TSRMLS_CC);
 	zend_declare_class_constant_stringl(php_pqevent_class_entry, ZEND_STRL("RESULT"), ZEND_STRL("result") TSRMLS_CC);
+	zend_declare_class_constant_stringl(php_pqevent_class_entry, ZEND_STRL("RESET"), ZEND_STRL("reset") TSRMLS_CC);
 
 	/*
 	REGISTER_INI_ENTRIES();

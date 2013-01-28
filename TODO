@@ -5,12 +5,10 @@
 * transaction savepoints
 * transaction snapshots
 
-* pq\Event\Result\Create, 
-  pq\Event\Result\Destroy, 
-  pq\Event\Connection\Reset, 
-  pq\Event\Connection\Destroy
+* pq\Event\Result\Destroy, 
+* pq\Event\Connection\Destroy
+
 * fetchInto/fetchCtor?
 * unlisten?
 * pq\Result->__clone through PQcopyResult?
-* db/pass/user/host/port/options properties on pq\Connection?
 * LOB stream wrapper
