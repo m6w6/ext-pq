@@ -14,7 +14,7 @@ new pq\Event($c, pq\Event::NOTICE, function($c, $notice) {
 });
 $t = new pq\Transaction($c);
 $c->exec("DROP TABLE IF EXISTS test; CREATE TABLE test (id serial, data text)");
-$s = $c->prepare("test_insert", "INSERT INTO test (data) VALUES (\$1)", array($c->types->byName->text->oid));
+$s = $c->prepare("test_insert", "INSERT INTO test (data) VALUES (\$1)", array((new pq\Types($c))["text"]->oid));
 $s->exec(array("a"));
 $s->exec(array("b"));
 $s->exec(array("c"));

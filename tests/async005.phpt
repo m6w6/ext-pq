@@ -21,7 +21,8 @@ function complete($s) {
 }
 
 $c = new pq\Connection(PQ_DSN);
-$s = $c->prepareAsync("test", "SELECT \$1,\$2::int4", array($c->types->byName->int4->oid));
+$t = new pq\Types($c);
+$s = $c->prepareAsync("test", "SELECT \$1,\$2::int4", array($t["int4"]->oid));
 
 complete($s);
 

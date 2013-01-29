@@ -9,7 +9,8 @@ echo "Test\n";
 include "_setup.inc";
 
 $c = new pq\Connection(PQ_DSN);
-$c->execParamsAsync("SELECT \$1,\$2::int4", array(1,2), array($c->types->byName->int4->oid), function ($res) {
+$t = new pq\Types($c);
+$c->execParamsAsync("SELECT \$1,\$2::int4", array(1,2), array($t["int4"]->oid), function ($res) {
 	var_dump($res);
 });
 do {

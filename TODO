@@ -1,6 +1,5 @@
 * parse arrays out of PQgetvalue
 * listenAsync & notifyAsync
-* LOBs
 * COPY
 * transaction savepoints
 * transaction snapshots
@@ -8,7 +7,9 @@
 * pq\Event\Result\Destroy, 
 * pq\Event\Connection\Destroy
 
+* bound columns/variables
 * fetchInto/fetchCtor?
 * unlisten?
 * pq\Result->__clone through PQcopyResult?
 * LOB stream wrapper
+* LOB convenience import/export over php streams

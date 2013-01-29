@@ -8,7 +8,8 @@ echo "Test\n";
 include "_setup.inc";
 
 $c = new pq\Connection(PQ_DSN);
-$s = $c->prepare("test1", "SELECT \$1",array($c->types->byName->text->oid));
+$t = new pq\Types($c);
+$s = $c->prepare("test1", "SELECT \$1",array($t["text"]->oid));
 $r = $s->exec(array("fooo"));
 
 printf("%s\n", $r->errorMessage);
