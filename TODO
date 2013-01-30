@@ -13,3 +13,5 @@
 * pq\Result->__clone through PQcopyResult?
 * LOB stream wrapper
 * LOB convenience import/export over php streams
+
+* check PQresult listeners for PGresults immediately cleared after PQexec...

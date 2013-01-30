@@ -26,8 +26,7 @@ object(pq\Result)#%d (6) {
   ["status"]=>
   int(7)
   ["errorMessage"]=>
-  string(48) "ERROR:  canceling statement due to user request
-"
+  string(47) "ERROR:  canceling statement due to user request"
   ["numRows"]=>
   int(0)
   ["numCols"]=>

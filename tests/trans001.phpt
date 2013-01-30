@@ -10,7 +10,7 @@ include "_setup.inc";
 
 $c = new pq\Connection(PQ_DSN);
 new pq\Event($c, pq\Event::NOTICE, function($c, $notice) {
-	echo "Got notice: $notice";
+	echo "Got notice: $notice\n";
 });
 $t = new pq\Transaction($c);
 $c->exec("DROP TABLE IF EXISTS test; CREATE TABLE test (id serial, data text)");
