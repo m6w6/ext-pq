@@ -23,7 +23,6 @@ if test "$PHP_PQ" != "no"; then
 
 	PQ_SYM=PQregisterEventProc
 	PHP_CHECK_LIBRARY(pq, $PQ_SYM, [
-		LDFLAGS="$save_LDFLAGS"
 		PHP_ADD_LIBRARY_WITH_PATH(pq, $PQ_DIR/$PHP_LIBDIR, PQ_SHARED_LIBADD)
 		PHP_SUBST(PQ_SHARED_LIBADD)
 	],[
@@ -31,8 +30,10 @@ if test "$PHP_PQ" != "no"; then
 	],[
 		-L$PQ_DIR/$PHP_LIBDIR
 	])
+	PHP_CHECK_LIBRARY(pq, PQlibVersion, AC_DEFINE(HAVE_PQLIBVERSION, 1, Have PQlibVersion))
 
 	PQ_SRC="src/php_pq.c"
-    PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
 	PHP_NEW_EXTENSION(pq, $PQ_SRC, $ext_shared)
+    PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
 fi
+

@@ -8,6 +8,5 @@
 * bound columns/variables
 * fetchInto/fetchCtor?
 * unlisten?
-* pq\Result->__clone through PQcopyResult?
 * LOB stream wrapper
 * LOB convenience import/export over php streams

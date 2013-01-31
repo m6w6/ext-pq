@@ -4690,8 +4690,21 @@ static PHP_MSHUTDOWN_FUNCTION(pq)
  */
 static PHP_MINFO_FUNCTION(pq)
 {
+	int libpq_v;
+	char libpq_version[10] = "pre-9.1";
+
 	php_info_print_table_start();
-	php_info_print_table_header(2, "pq support", "enabled");
+	php_info_print_table_header(2, "PQ Support", "enabled");
+	php_info_print_table_row(2, "Extension Version", PHP_PQ_EXT_VERSION);
+	php_info_print_table_end();
+
+	php_info_print_table_start();
+	php_info_print_table_header(2, "Used Library", "Version");
+#ifdef HAVE_PQLIBVERSION
+	libpq_v = PQlibVersion();
+	slprintf(libpq_version, sizeof(libpq_version), "%d.%d.%d", libpq_v/10000%100, libpq_v/100%100, libpq_v%100);
+#endif
+	php_info_print_table_row(2, "libpq", libpq_version);
 	php_info_print_table_end();
 
 	/* Remove comments if you have entries in php.ini
