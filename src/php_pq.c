@@ -169,6 +169,7 @@ typedef struct php_pqres_object {
 typedef struct php_pqstm {
 	php_pqconn_object_t *conn;
 	char *name;
+	HashTable bound;
 } php_pqstm_t;
 
 typedef struct php_pqstm_object {
@@ -582,6 +583,7 @@ static void php_pqstm_object_free(void *o TSRMLS_DC)
 	if (obj->intern) {
 		php_pq_object_delref(obj->intern->conn TSRMLS_CC);
 		efree(obj->intern->name);
+		zend_hash_destroy(&obj->intern->bound);
 		efree(obj->intern);
 		obj->intern = NULL;
 	}
@@ -2298,6 +2300,7 @@ static PHP_METHOD(pqconn, prepare) {
 				php_pq_object_addref(obj TSRMLS_CC);
 				stm->conn = obj;
 				stm->name = estrdup(name_str);
+				ZEND_INIT_SYMTABLE(&stm->bound);
 
 				return_value->type = IS_OBJECT;
 				return_value->value.obj = php_pqstm_create_object_ex(php_pqstm_class_entry, stm, NULL TSRMLS_CC);
@@ -2366,6 +2369,7 @@ static PHP_METHOD(pqconn, prepareAsync) {
 				php_pq_object_addref(obj TSRMLS_CC);
 				stm->conn = obj;
 				stm->name = estrdup(name_str);
+				ZEND_INIT_SYMTABLE(&stm->bound);
 
 				return_value->type = IS_OBJECT;
 				return_value->value.obj = php_pqstm_create_object_ex(php_pqstm_class_entry, stm, NULL TSRMLS_CC);
@@ -3113,6 +3117,7 @@ static PHP_METHOD(pqstm, __construct) {
 				php_pq_object_addref(conn_obj TSRMLS_CC);
 				stm->conn = conn_obj;
 				stm->name = estrdup(name_str);
+				ZEND_INIT_SYMTABLE(&stm->bound);
 				obj->intern = stm;
 			}
 		} else {
@@ -3120,6 +3125,26 @@ static PHP_METHOD(pqstm, __construct) {
 		}
 	}
 	zend_restore_error_handling(&zeh TSRMLS_CC);
+}
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_bind, 0, 0, 2)
+	ZEND_ARG_INFO(0, param_no)
+	ZEND_ARG_INFO(1, param_ref)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqstm, bind) {
+	long param_no;
+	zval *param_ref;
+
+	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lz", &param_no, &param_ref)) {
+		php_pqstm_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
+		if (obj->intern) {
+			Z_ADDREF_P(param_ref);
+			zend_hash_index_update(&obj->intern->bound, param_no, (void *) &param_ref, sizeof(zval *), NULL);
+		} else {
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Statement not initialized");
+		}
+	}
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_exec, 0, 0, 0)
@@ -3140,9 +3165,12 @@ static PHP_METHOD(pqstm, exec) {
 				HashTable zdtor;
 				PGresult *res;
 
+				ZEND_INIT_SYMTABLE(&zdtor);
+
 				if (zparams) {
-					ZEND_INIT_SYMTABLE(&zdtor);
 					count = php_pq_params_to_array(Z_ARRVAL_P(zparams), &params, &zdtor TSRMLS_CC);
+				} else {
+					count = php_pq_params_to_array(&obj->intern->bound, &params, &zdtor TSRMLS_CC);
 				}
 
 				res = PQexecPrepared(obj->intern->conn->intern->conn, obj->intern->name, count, (const char *const*) params, NULL, NULL, 0);
@@ -3150,9 +3178,7 @@ static PHP_METHOD(pqstm, exec) {
 				if (params) {
 					efree(params);
 				}
-				if (zparams) {
-					zend_hash_destroy(&zdtor);
-				}
+				zend_hash_destroy(&zdtor);
 
 				php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
 
@@ -3281,6 +3307,7 @@ static PHP_METHOD(pqstm, desc) {
 
 static zend_function_entry php_pqstm_methods[] = {
 	PHP_ME(pqstm, __construct, ai_pqstm_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+	PHP_ME(pqstm, bind, ai_pqstm_bind, ZEND_ACC_PUBLIC)
 	PHP_ME(pqstm, exec, ai_pqstm_exec, ZEND_ACC_PUBLIC)
 	PHP_ME(pqstm, desc, ai_pqstm_desc, ZEND_ACC_PUBLIC)
 	PHP_ME(pqstm, execAsync, ai_pqstm_exec_async, ZEND_ACC_PUBLIC)
