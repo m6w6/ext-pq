@@ -1,9 +1,7 @@
 * parse arrays out of PQgetvalue
 * listenAsync & notifyAsync
-* COPY
-* transaction savepoints
-* transaction snapshots
-
+* COPY: getAsync & putAsync
+* pq\Exception
 * pq\Event\Result\Destroy, 
 * pq\Event\Connection\Destroy
 
@@ -13,5 +11,3 @@
 * pq\Result->__clone through PQcopyResult?
 * LOB stream wrapper
 * LOB convenience import/export over php streams
-
-* check PQresult listeners for PGresults immediately cleared after PQexec...
