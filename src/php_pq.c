@@ -157,6 +157,7 @@ typedef struct php_pqres_iterator {
 typedef struct php_pqres {
 	PGresult *res;
 	php_pqres_iterator_t *iter;
+	HashTable bound;
 } php_pqres_t;
 
 typedef struct php_pqres_object {
@@ -568,6 +569,8 @@ static void php_pqres_object_free(void *o TSRMLS_DC)
 			php_pqres_iterator_dtor((zend_object_iterator *) obj->intern->iter TSRMLS_CC);
 			obj->intern->iter = NULL;
 		}
+
+		zend_hash_destroy(&obj->intern->bound);
 
 		efree(obj->intern);
 		obj->intern = NULL;
@@ -1639,6 +1642,7 @@ static zval *result_instance_zval(PGresult *res TSRMLS_DC)
 
 		MAKE_STD_ZVAL(rid);
 		r->res = res;
+		ZEND_INIT_SYMTABLE(&r->bound);
 		rid->type = IS_OBJECT;
 		rid->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, r, NULL TSRMLS_CC);
 
@@ -1956,6 +1960,7 @@ static PHP_METHOD(pqconn, exec) {
 					php_pqres_t *r = ecalloc(1, sizeof(*r));
 
 					r->res = res;
+					ZEND_INIT_SYMTABLE(&r->bound);
 					return_value->type = IS_OBJECT;
 					return_value->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, r, NULL TSRMLS_CC);
 				}
@@ -1982,6 +1987,7 @@ static PHP_METHOD(pqconn, getResult) {
 				php_pqres_t *r = ecalloc(1, sizeof(*r));
 
 				r->res = res;
+				ZEND_INIT_SYMTABLE(&r->bound);
 				return_value->type = IS_OBJECT;
 				return_value->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, r, NULL TSRMLS_CC);
 			} else {
@@ -2161,6 +2167,7 @@ static PHP_METHOD(pqconn, execParams) {
 					php_pqres_t *r = ecalloc(1, sizeof(*r));
 
 					r->res = res;
+					ZEND_INIT_SYMTABLE(&r->bound);
 					return_value->type = IS_OBJECT;
 					return_value->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, r, NULL TSRMLS_CC);
 				}
@@ -2772,8 +2779,9 @@ static zend_function_entry php_pqtypes_methods[] = {
 	{0}
 };
 
-static zval *php_pqres_iteration(zval *this_ptr, php_pqres_object_t *obj, php_pqres_fetch_t fetch_type, zval ***row TSRMLS_DC)
+static STATUS php_pqres_iteration(zval *this_ptr, php_pqres_object_t *obj, php_pqres_fetch_t fetch_type, zval ***row TSRMLS_DC)
 {
+	STATUS rv;
 	php_pqres_fetch_t orig_fetch;
 
 	if (!obj) {
@@ -2786,13 +2794,146 @@ static zval *php_pqres_iteration(zval *this_ptr, php_pqres_object_t *obj, php_pq
 	}
 	orig_fetch = obj->intern->iter->fetch_type;
 	obj->intern->iter->fetch_type = fetch_type;
-	if (SUCCESS == obj->intern->iter->zi.funcs->valid((zend_object_iterator *) obj->intern->iter TSRMLS_CC)) {
+	if (SUCCESS == (rv = obj->intern->iter->zi.funcs->valid((zend_object_iterator *) obj->intern->iter TSRMLS_CC))) {
 		obj->intern->iter->zi.funcs->get_current_data((zend_object_iterator *) obj->intern->iter, row TSRMLS_CC);
 		obj->intern->iter->zi.funcs->move_forward((zend_object_iterator *) obj->intern->iter TSRMLS_CC);
 	}
 	obj->intern->iter->fetch_type = orig_fetch;
 
-	return *row ? **row : NULL;
+	return rv;
+}
+
+typedef struct php_pqres_col {
+	char *name;
+	int num;
+} php_pqres_col_t;
+
+static STATUS column_nn(php_pqres_object_t *obj, zval *zcol, php_pqres_col_t *col TSRMLS_DC)
+{
+	long index = -1;
+	char *name = NULL;
+
+	switch (Z_TYPE_P(zcol)) {
+	default:
+		convert_to_string(zcol);
+		/* no break */
+
+	case IS_STRING:
+		if (!is_numeric_string(Z_STRVAL_P(zcol), Z_STRLEN_P(zcol), &index, NULL, 0)) {
+			name = Z_STRVAL_P(zcol);
+		}
+		break;
+
+	case IS_LONG:
+		index = Z_LVAL_P(zcol);
+		break;
+	}
+
+	if (name) {
+		col->name = name;
+		col->num = PQfnumber(obj->intern->res, name);
+	} else {
+		col->name = PQfname(obj->intern->res, index);
+		col->num = index;
+	}
+
+	if (!col->name) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to find column at index %ld", index);
+		return FAILURE;
+	}
+	if (col->num == -1) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to find column with name '%s'", name);
+		return FAILURE;
+	}
+	return SUCCESS;
+}
+
+static int compare_index(const void *lptr, const void *rptr TSRMLS_DC)
+{
+	const Bucket *l = *(const Bucket **) lptr;
+	const Bucket *r = *(const Bucket **) rptr;
+
+	if (l->h < r->h) {
+		return -1;
+	}
+	if (l->h > r->h) {
+		return 1;
+	}
+	return 0;
+}
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqres_bind, 0, 0, 2)
+	ZEND_ARG_INFO(0, col)
+	ZEND_ARG_INFO(1, ref)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqres, bind) {
+	zval *zcol, *zref;
+
+	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z/z", &zcol, &zref)) {
+		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
+		if (obj->intern) {
+			php_pqres_col_t col;
+
+			if (SUCCESS == column_nn(obj, zcol, &col TSRMLS_CC)) {
+				Z_ADDREF_P(zref);
+				if (SUCCESS == zend_hash_index_update(&obj->intern->bound, col.num, (void *) &zref, sizeof(zval *), NULL)) {
+					zend_hash_sort(&obj->intern->bound, zend_qsort, compare_index, 0 TSRMLS_CC);
+					RETVAL_TRUE;
+				} else {
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to bind column %s@%d", col.name, col.num);
+					RETVAL_FALSE;
+				}
+			} else {
+				RETVAL_FALSE;
+			}
+		} else {
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Result not initialized");
+			RETVAL_FALSE;
+		}
+	}
+}
+
+static int apply_bound(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
+{
+	zval **zvalue, **zbound = p;
+	zval **zrow = va_arg(argv, zval **);
+
+	if (SUCCESS == zend_hash_index_find(Z_ARRVAL_PP(zrow), key->h, (void *) &zvalue)) {
+		zval_dtor(*zbound);
+		ZVAL_COPY_VALUE(*zbound, *zvalue);
+		ZVAL_NULL(*zvalue);
+		zval_ptr_dtor(zvalue);
+		Z_ADDREF_P(*zbound);
+		*zvalue = *zbound;
+		return ZEND_HASH_APPLY_KEEP;
+	} else {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to find column ad index %lu", key->h);
+		return ZEND_HASH_APPLY_STOP;
+	}
+}
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_bound, 0, 0, 0)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqres, fetchBound) {
+	zend_error_handling zeh;
+
+	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
+	if (SUCCESS == zend_parse_parameters_none()) {
+		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
+		if (obj->intern) {
+			zval **row = NULL;
+
+			if (SUCCESS == php_pqres_iteration(getThis(), obj, PHP_PQRES_FETCH_ARRAY, &row TSRMLS_CC)) {
+				if (row) {
+					zend_hash_apply_with_arguments(&obj->intern->bound TSRMLS_CC, apply_bound, 1, row);
+					RETVAL_ZVAL(*row, 1, 0);
+				}
+			}
+		}
+	}
+	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_row, 0, 0, 0)
@@ -2871,55 +3012,22 @@ static PHP_METHOD(pqres, fetchCol) {
 	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
-typedef struct php_pqres_col {
-	char *name;
-	int num;
-} php_pqres_col_t;
-
 static int apply_to_col(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
 {
 	zval **c = p;
 	php_pqres_object_t *obj = va_arg(argv, php_pqres_object_t *);
 	php_pqres_col_t *col, **cols = va_arg(argv, php_pqres_col_t **);
 	STATUS *rv = va_arg(argv, STATUS *);
-	long index = -1;
-	char *name = NULL;
-
-	switch (Z_TYPE_PP(c)) {
-	default:
-		convert_to_string(*c);
-		/* no break */
-	case IS_STRING:
-		if (!is_numeric_string(Z_STRVAL_PP(c), Z_STRLEN_PP(c), &index, NULL, 0)) {
-			name = Z_STRVAL_PP(c);
-		}
-		break;
-	case IS_LONG:
-		index = Z_LVAL_PP(c);
-		break;
-	}
 
 	col = *cols;
-	if (name) {
-		col->name = name;
-		col->num = PQfnumber(obj->intern->res, name);
+	if (SUCCESS == column_nn(obj, *c, col TSRMLS_CC)) {
+		*rv = SUCCESS;
 	} else {
-		col->name = PQfname(obj->intern->res, index);
-		col->num = index;
-	}
-
-	if (!col->name) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to find column at index %ld", index);
 		*rv = FAILURE;
 		return ZEND_HASH_APPLY_STOP;
 	}
-	if (col->num == -1) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to find column with name '%s'", name);
-		*rv = FAILURE;
-		return ZEND_HASH_APPLY_STOP;
-	}
-
 	++*cols;
+
 	return ZEND_HASH_APPLY_KEEP;
 }
 
@@ -3075,6 +3183,8 @@ static PHP_METHOD(pqres, count) {
 }
 
 static zend_function_entry php_pqres_methods[] = {
+	PHP_ME(pqres, bind, ai_pqres_bind, ZEND_ACC_PUBLIC)
+	PHP_ME(pqres, fetchBound, ai_pqres_fetch_bound, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, fetchRow, ai_pqres_fetch_row, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, fetchCol, ai_pqres_fetch_col, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, count, ai_pqres_count, ZEND_ACC_PUBLIC)
@@ -3126,7 +3236,6 @@ static PHP_METHOD(pqstm, __construct) {
 	}
 	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
-
 ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_bind, 0, 0, 2)
 	ZEND_ARG_INFO(0, param_no)
 	ZEND_ARG_INFO(1, param_ref)
@@ -3141,6 +3250,7 @@ static PHP_METHOD(pqstm, bind) {
 		if (obj->intern) {
 			Z_ADDREF_P(param_ref);
 			zend_hash_index_update(&obj->intern->bound, param_no, (void *) &param_ref, sizeof(zval *), NULL);
+			zend_hash_sort(&obj->intern->bound, zend_qsort, compare_index, 0 TSRMLS_CC);
 		} else {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Statement not initialized");
 		}
@@ -3187,6 +3297,7 @@ static PHP_METHOD(pqstm, exec) {
 						php_pqres_t *r = ecalloc(1, sizeof(*r));
 
 						r->res = res;
+						ZEND_INIT_SYMTABLE(&r->bound);
 						return_value->type = IS_OBJECT;
 						return_value->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, r, NULL TSRMLS_CC);
 					}
@@ -4717,7 +4828,9 @@ static PHP_MSHUTDOWN_FUNCTION(pq)
  */
 static PHP_MINFO_FUNCTION(pq)
 {
+#ifdef HAVE_PQLIBVERSION
 	int libpq_v;
+#endif
 	char libpq_version[10] = "pre-9.1";
 
 	php_info_print_table_start();
