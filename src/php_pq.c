@@ -6,7 +6,7 @@
     | modification, are permitted provided that the conditions mentioned |
     | in the accompanying LICENSE file are met.                          |
     +--------------------------------------------------------------------+
-    | Copyright (c) 2013, Michael Wallner <mike@php.net>                |
+    | Copyright (c) 2013, Michael Wallner <mike@php.net>                 |
     +--------------------------------------------------------------------+
 */
 
@@ -18,6 +18,7 @@
 #include <Zend/zend_interfaces.h>
 #include <ext/standard/info.h>
 #include <ext/spl/spl_array.h>
+#include <ext/raphf/php_raphf.h>
 
 #include <libpq-events.h>
 #include <libpq/libpq-fs.h>
@@ -106,9 +107,13 @@ typedef struct php_pq_object {
 	void *intern;
 } php_pq_object_t;
 
+#define PHP_PQCONN_ASYNC 0x01
+#define PHP_PQCONN_PERSISTENT 0x02
+
 typedef struct php_pqconn {
 	PGconn *conn;
 	int (*poller)(PGconn *);
+	php_resource_factory_t factory;
 	HashTable listeners;
 	HashTable eventhandlers;
 	php_pq_callback_t onevent;
@@ -522,7 +527,15 @@ static void php_pqconn_object_free(void *o TSRMLS_DC)
 	php_pqconn_object_t *obj = o;
 
 	if (obj->intern) {
-		PQfinish(obj->intern->conn);
+		php_pqconn_event_data_t *evdata = PQinstanceData(obj->intern->conn, php_pqconn_event);
+
+		if (evdata) {
+			efree(evdata);
+			PQsetInstanceData(obj->intern->conn, php_pqconn_event, NULL);
+		}
+
+		php_resource_factory_handle_dtor(&obj->intern->factory, obj->intern->conn TSRMLS_CC);
+		php_resource_factory_dtor(&obj->intern->factory);
 		php_pq_callback_dtor(&obj->intern->onevent);
 		zend_hash_destroy(&obj->intern->listeners);
 		zend_hash_destroy(&obj->intern->eventhandlers);
@@ -1591,17 +1604,6 @@ static STATUS php_pqconn_update_socket(zval *this_ptr, php_pqconn_object_t *obj 
 #	define TSRMLS_CF(d)
 #endif
 
-static void php_pqconn_event_register(PGEventRegister *event, php_pqconn_event_data_t *data)
-{
-	PQsetInstanceData(event->conn, php_pqconn_event, data);
-}
-
-static void php_pqconn_event_conndestroy(PGEventConnDestroy *event, php_pqconn_event_data_t *data)
-{
-	PQsetInstanceData(event->conn, php_pqconn_event, NULL);
-	efree(data);
-}
-
 static int apply_event(void *p, void *a TSRMLS_DC)
 {
 	zval **evh = p;
@@ -1684,12 +1686,6 @@ static void php_pqconn_event_resultcreate(PGEventResultCreate *event, php_pqconn
 static int php_pqconn_event(PGEventId id, void *e, void *data)
 {
 	switch (id) {
-	case PGEVT_REGISTER:
-		php_pqconn_event_register(e, data);
-		break;
-	case PGEVT_CONNDESTROY:
-		php_pqconn_event_conndestroy(e, data);
-		break;
 	case PGEVT_CONNRESET:
 		php_pqconn_event_connreset(e, data);
 		break;
@@ -1732,6 +1728,51 @@ static void php_pqconn_notice_recv(void *p, const PGresult *res)
 	}
 }
 
+typedef struct php_pqconn_resource_factory_data {
+	char *dsn;
+	long flags;
+} php_pqconn_resource_factory_data_t;
+
+static php_pqconn_resource_factory_data_t *php_pqconn_resource_factory_data_init(const char *dsn, long flags)
+{
+	php_pqconn_resource_factory_data_t *data = emalloc(sizeof(*data));
+
+	data->dsn = estrdup(dsn);
+	data->flags = flags;
+
+	return data;
+}
+
+static void php_pqconn_resource_factory_data_dtor(void *d)
+{
+	php_pqconn_resource_factory_data_t *data = d;
+
+	efree(data->dsn);
+	efree(data);
+}
+
+static void *php_pqconn_resource_factory_ctor(void *data, void *init_arg TSRMLS_DC)
+{
+	php_pqconn_resource_factory_data_t *o = init_arg;
+
+	if (o->flags & PHP_PQCONN_ASYNC) {
+		return PQconnectStart(o->dsn);
+	} else {
+		return PQconnectdb(o->dsn);
+	}
+}
+
+static void php_pqconn_resource_factory_dtor(void *opaque, void *handle TSRMLS_DC)
+{
+	PQfinish(handle);
+}
+
+static php_resource_factory_ops_t php_pqconn_resource_factory_ops = {
+	php_pqconn_resource_factory_ctor,
+	NULL,
+	php_pqconn_resource_factory_dtor
+};
+
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_construct, 0, 0, 1)
 	ZEND_ARG_INFO(0, dsn)
 	ZEND_ARG_INFO(0, async)
@@ -1740,28 +1781,35 @@ static PHP_METHOD(pqconn, __construct) {
 	zend_error_handling zeh;
 	char *dsn_str = "";
 	int dsn_len = 0;
-	zend_bool async = 0;
+	long flags = 0;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|sb", &dsn_str, &dsn_len, &async)) {
+	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|sl", &dsn_str, &dsn_len, &flags)) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
-		php_pqconn_event_data_t *data =  php_pqconn_event_data_init(obj TSRMLS_CC);
+		php_pqconn_event_data_t *evdata =  php_pqconn_event_data_init(obj TSRMLS_CC);
+		php_pqconn_resource_factory_data_t rfdata = {dsn_str, flags};
 
 		obj->intern = ecalloc(1, sizeof(*obj->intern));
 
 		zend_hash_init(&obj->intern->listeners, 0, NULL, (dtor_func_t) zend_hash_destroy, 0);
 		zend_hash_init(&obj->intern->eventhandlers, 0, NULL, ZVAL_PTR_DTOR, 0);
 
-
-		if (async) {
-			obj->intern->conn = PQconnectStart(dsn_str);
+		if (flags & PHP_PQCONN_PERSISTENT) {
+			php_persistent_handle_factory_t *phf = php_persistent_handle_concede(NULL, ZEND_STRL("pq\\Connection"), dsn_str, dsn_len TSRMLS_CC);
+			php_resource_factory_init(&obj->intern->factory, php_persistent_handle_get_resource_factory_ops(), phf, (void (*)(void*)) php_persistent_handle_abandon);
+		} else{
+			php_resource_factory_init(&obj->intern->factory, &php_pqconn_resource_factory_ops, NULL, NULL);
+		}
+		if (flags & PHP_PQCONN_ASYNC) {
 			obj->intern->poller = (int (*)(PGconn*)) PQconnectPoll;
-		} else {
-			obj->intern->conn = PQconnectdb(dsn_str);
 		}
 
-		PQsetNoticeReceiver(obj->intern->conn, php_pqconn_notice_recv, data);
-		PQregisterEventProc(obj->intern->conn, php_pqconn_event, "ext-pq", data);
+		obj->intern->conn = php_resource_factory_handle_ctor(&obj->intern->factory, &rfdata TSRMLS_CC);
+
+		PQregisterEventProc(obj->intern->conn, php_pqconn_event, "ext-pq", evdata);
+		/* the connection might be persistent, so reset event_proc instance data */
+		PQsetInstanceData(obj->intern->conn, php_pqconn_event, evdata);
+		PQsetNoticeReceiver(obj->intern->conn, php_pqconn_notice_recv, evdata);
 
 		if (SUCCESS != php_pqconn_update_socket(getThis(), obj TSRMLS_CC)) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Connection failed (%s)", PHP_PQerrorMessage(obj->intern->conn));
@@ -4561,6 +4609,8 @@ static PHP_MINIT_FUNCTION(pq)
 	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("POLLING_WRITING"), PGRES_POLLING_WRITING TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("POLLING_OK"), PGRES_POLLING_OK TSRMLS_CC);
 
+	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("ASYNC"), 0x1 TSRMLS_CC);
+	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("PERSISTENT"), 0x2 TSRMLS_CC);
 	memset(&ce, 0, sizeof(ce));
 	INIT_NS_CLASS_ENTRY(ce, "pq", "Types", php_pqtypes_methods);
 	php_pqtypes_class_entry = zend_register_internal_class_ex(&ce, NULL, NULL TSRMLS_CC);
@@ -4806,6 +4856,8 @@ static PHP_MINIT_FUNCTION(pq)
 	zend_declare_class_constant_long(php_pqcopy_class_entry, ZEND_STRL("FROM_STDIN"), PHP_PQCOPY_FROM_STDIN TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqcopy_class_entry, ZEND_STRL("TO_STDOUT"), PHP_PQCOPY_TO_STDOUT TSRMLS_CC);
 
+	php_persistent_handle_provide(ZEND_STRL("pq\\Connection"), &php_pqconn_resource_factory_ops, NULL, NULL);
+
 	/*
 	REGISTER_INI_ENTRIES();
 	*/
@@ -4820,6 +4872,7 @@ static PHP_MSHUTDOWN_FUNCTION(pq)
 	/* uncomment this line if you have INI entries
 	UNREGISTER_INI_ENTRIES();
 	*/
+	php_persistent_handle_cleanup(ZEND_STRL("pq\\Connection"), NULL, 0 TSRMLS_CC);
 	return SUCCESS;
 }
 /* }}} */
@@ -4857,10 +4910,17 @@ const zend_function_entry pq_functions[] = {
 	{0}
 };
 
+static zend_module_dep pq_module_deps[] = {
+	ZEND_MOD_REQUIRED("raphf")
+	ZEND_MOD_END
+};
+
 /* {{{ pq_module_entry
  */
 zend_module_entry pq_module_entry = {
-	STANDARD_MODULE_HEADER,
+	STANDARD_MODULE_HEADER_EX,
+	NULL,
+	pq_module_deps,
 	"pq",
 	pq_functions,
 	PHP_MINIT(pq),

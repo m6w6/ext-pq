@@ -5,7 +5,6 @@
 * pq\Event\Result\Destroy, 
 * pq\Event\Connection\Destroy
 
-* bound columns/variables
 * fetchInto/fetchCtor?
 * unlisten?
 * LOB stream wrapper
