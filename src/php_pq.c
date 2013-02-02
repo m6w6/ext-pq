@@ -1733,24 +1733,6 @@ typedef struct php_pqconn_resource_factory_data {
 	long flags;
 } php_pqconn_resource_factory_data_t;
 
-static php_pqconn_resource_factory_data_t *php_pqconn_resource_factory_data_init(const char *dsn, long flags)
-{
-	php_pqconn_resource_factory_data_t *data = emalloc(sizeof(*data));
-
-	data->dsn = estrdup(dsn);
-	data->flags = flags;
-
-	return data;
-}
-
-static void php_pqconn_resource_factory_data_dtor(void *d)
-{
-	php_pqconn_resource_factory_data_t *data = d;
-
-	efree(data->dsn);
-	efree(data);
-}
-
 static void *php_pqconn_resource_factory_ctor(void *data, void *init_arg TSRMLS_DC)
 {
 	php_pqconn_resource_factory_data_t *o = init_arg;
