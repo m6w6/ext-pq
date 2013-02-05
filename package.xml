@@ -73,6 +73,12 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <pearinstaller>
     <min>1.4.0</min>
    </pearinstaller>
+   <package>
+    <name>raphf</name>
+    <channel>pecl.php.net</channel>
+    <min>1.0.0</min>
+    <providesextension>raphf</providesextension>
+   </package>
   </required>
  </dependencies>
  <providesextension>pq</providesextension>
