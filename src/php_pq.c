@@ -3601,24 +3601,19 @@ static PHP_METHOD(pqstm, descAsync) {
 	if (SUCCESS == zend_parse_parameters_none()) {
 		php_pqstm_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->conn && obj->name) {
-			php_pqconn_object_t *conn_obj = zend_object_store_get_object(obj->conn TSRMLS_CC);
+		if (obj->intern) {
 
-			if (conn_obj->conn) {
-				conn_obj->poller = PQconsumeInput;
-				if (PQsendDescribePrepared(conn_obj->conn, obj->name)) {
-					RETVAL_TRUE;
-				} else {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not describe statement: %s", PQerrorMessage(conn_obj->conn));
-					RETVAL_FALSE;
-				}
+			obj->intern->conn->intern->poller = PQconsumeInput;
 
-				php_pqconn_notify_listeners(obj->conn, conn_obj TSRMLS_CC);
-
+			if (PQsendDescribePrepared(obj->intern->conn->intern->conn, obj->intern->name)) {
+				RETVAL_TRUE;
 			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Connection not initialized");
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not describe statement: %s", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				RETVAL_FALSE;
 			}
+
+			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
+
 		} else {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Statement not initialized");
 			RETVAL_FALSE;
