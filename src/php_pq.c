@@ -1803,8 +1803,9 @@ static void php_pqconn_persistent_resource_factory_dtor(void *opaque, void *hand
 {
 	PGresult *res;
 
+
 	/* clean up */
-	if ((res = PQexec(handle, "ROLLBACK; RESET ALL;"))) {
+	if ((res = PQexec(handle, PQtransactionStatus(handle) == PQTRANS_IDLE ? "RESET ALL" : "ROLLBACK; RESET ALL"))) {
 		PHP_PQclear(res);
 	}
 
