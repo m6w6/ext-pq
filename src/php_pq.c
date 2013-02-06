@@ -3446,12 +3446,49 @@ static PHP_METHOD(pqstm, desc) {
 	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
+ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_desc_async, 0, 0, 0)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqstm, descAsync) {
+	zend_error_handling zeh;
+
+	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
+	if (SUCCESS == zend_parse_parameters_none()) {
+		php_pqstm_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
+		if (obj->conn && obj->name) {
+			php_pqconn_object_t *conn_obj = zend_object_store_get_object(obj->conn TSRMLS_CC);
+
+			if (conn_obj->conn) {
+				conn_obj->poller = PQconsumeInput;
+				if (PQsendDescribePrepared(conn_obj->conn, obj->name)) {
+					RETVAL_TRUE;
+				} else {
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not describe statement: %s", PQerrorMessage(conn_obj->conn));
+					RETVAL_FALSE;
+				}
+
+				php_pqconn_notify_listeners(obj->conn, conn_obj TSRMLS_CC);
+
+			} else {
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Connection not initialized");
+				RETVAL_FALSE;
+			}
+		} else {
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Statement not initialized");
+			RETVAL_FALSE;
+		}
+	}
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+}
+
+
 static zend_function_entry php_pqstm_methods[] = {
 	PHP_ME(pqstm, __construct, ai_pqstm_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
 	PHP_ME(pqstm, bind, ai_pqstm_bind, ZEND_ACC_PUBLIC)
 	PHP_ME(pqstm, exec, ai_pqstm_exec, ZEND_ACC_PUBLIC)
 	PHP_ME(pqstm, desc, ai_pqstm_desc, ZEND_ACC_PUBLIC)
 	PHP_ME(pqstm, execAsync, ai_pqstm_exec_async, ZEND_ACC_PUBLIC)
+	PHP_ME(pqstm, descAsync, ai_pqstm_desc_async, ZEND_ACC_PUBLIC)
 	{0}
 };
 
