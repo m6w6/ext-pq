@@ -1,5 +1,4 @@
 * parse arrays out of PQgetvalue
-* listenAsync & notifyAsync
 * COPY: getAsync & putAsync
 * pq\Exception
 * pq\Event\Result\Destroy, 

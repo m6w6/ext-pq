@@ -9,11 +9,13 @@ echo "Test\n";
 include "_setup.inc";
 
 $c = new pq\Connection(PQ_DSN);
+$c->exec("DROP TABLE IF EXISTS test");
 new pq\Event($c, pq\Event::NOTICE, function($c, $notice) {
 	echo "Got notice: $notice\n";
 });
 $t = new pq\Transaction($c);
-$c->exec("DROP TABLE IF EXISTS test; CREATE TABLE test (id serial, data text)");
+$c->exec("DROP TABLE IF EXISTS test");
+$c->exec("CREATE TABLE test (id serial, data text)");
 $s = $c->prepare("test_insert", "INSERT INTO test (data) VALUES (\$1)", array((new pq\Types($c))["text"]->oid));
 $s->exec(array("a"));
 $s->exec(array("b"));

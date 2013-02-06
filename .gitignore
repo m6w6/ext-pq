@@ -2,9 +2,9 @@
 # /
 *~
 /*.tgz
-/.deps
-/*.lo
-/*.la
+.deps
+*.lo
+*.la
 /config.[^m]*
 /configure*
 /lib*
@@ -14,7 +14,7 @@
 /Make*
 /mk*
 /missing
-/.libs
+.libs
 /build
 /include
 /modules
