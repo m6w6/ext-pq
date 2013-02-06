@@ -522,17 +522,52 @@ static void php_pq_object_delref(void *o TSRMLS_DC)
 	zend_objects_store_del_ref_by_handle_ex(obj->zv.handle, obj->zv.handlers TSRMLS_CC);
 }
 
+static int apply_unlisten(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
+{
+	php_pqconn_object_t *obj = va_arg(argv, php_pqconn_object_t *);
+	char *quoted_channel = PQescapeIdentifier(obj->intern->conn, key->arKey, key->nKeyLength - 1);
+
+	if (quoted_channel) {
+		PGresult *res;
+		char *cmd;
+
+		spprintf(&cmd, 0, "UNLISTEN %s", quoted_channel);
+		if ((res = PQexec(obj->intern->conn, cmd))) {
+			PHP_PQclear(res);
+		}
+
+		efree(cmd);
+		PQfreemem(quoted_channel);
+	}
+
+	return ZEND_HASH_APPLY_REMOVE;
+}
+
+static void php_pqconn_notice_ignore(void *p, const PGresult *res)
+{
+}
+
 static void php_pqconn_object_free(void *o TSRMLS_DC)
 {
 	php_pqconn_object_t *obj = o;
 
 	if (obj->intern) {
-		php_pqconn_event_data_t *evdata = PQinstanceData(obj->intern->conn, php_pqconn_event);
+		php_pqconn_event_data_t *evdata;
+		PGresult *res;
 
-		if (evdata) {
+		if ((evdata = PQinstanceData(obj->intern->conn, php_pqconn_event))) {
+			memset(evdata, 0, sizeof(*evdata));
 			efree(evdata);
 			PQsetInstanceData(obj->intern->conn, php_pqconn_event, NULL);
 		}
+		PQsetNoticeReceiver(obj->intern->conn, php_pqconn_notice_ignore, NULL);
+
+		/* clean up async results */
+		while ((res = PQgetResult(obj->intern->conn))) {
+			PHP_PQclear(res);
+		}
+
+		zend_hash_apply_with_arguments(&obj->intern->listeners TSRMLS_CC, apply_unlisten, 1, obj);
 
 		php_resource_factory_handle_dtor(&obj->intern->factory, obj->intern->conn TSRMLS_CC);
 		php_resource_factory_dtor(&obj->intern->factory);
@@ -1584,6 +1619,7 @@ static STATUS php_pqconn_update_socket(zval *this_ptr, php_pqconn_object_t *obj 
 	if ((CONNECTION_BAD != PQstatus(obj->intern->conn))
 	&&	(-1 < (socket = PQsocket(obj->intern->conn)))
 	&&	(stream = php_stream_fopen_from_fd(socket, "r+b", NULL))) {
+		stream->flags |= PHP_STREAM_FLAG_NO_CLOSE;
 		php_stream_to_zval(stream, zsocket);
 		retval = SUCCESS;
 	} else {
@@ -1618,20 +1654,24 @@ static int apply_event(void *p, void *a TSRMLS_DC)
 	return ZEND_HASH_APPLY_KEEP;
 }
 
-static void php_pqconn_event_connreset(PGEventConnReset *event, php_pqconn_event_data_t *data)
+static void php_pqconn_event_connreset(PGEventConnReset *event)
 {
-	zval **evhs;
-	TSRMLS_DF(data);
+	php_pqconn_event_data_t *data = PQinstanceData(event->conn, php_pqconn_event);
 
-	if (SUCCESS == zend_hash_find(&data->obj->intern->eventhandlers, ZEND_STRS("reset"), (void *) &evhs)) {
-		zval *args, *connection = NULL;
+	if (data) {
+		zval **evhs;
+		TSRMLS_DF(data);
 
-		MAKE_STD_ZVAL(args);
-		array_init(args);
-		php_pq_object_to_zval(data->obj, &connection TSRMLS_CC);
-		add_next_index_zval(args, connection);
-		zend_hash_apply_with_argument(Z_ARRVAL_PP(evhs), apply_event, args TSRMLS_CC);
-		zval_ptr_dtor(&args);
+		if (SUCCESS == zend_hash_find(&data->obj->intern->eventhandlers, ZEND_STRS("reset"), (void *) &evhs)) {
+			zval *args, *connection = NULL;
+
+			MAKE_STD_ZVAL(args);
+			array_init(args);
+			php_pq_object_to_zval(data->obj, &connection TSRMLS_CC);
+			add_next_index_zval(args, connection);
+			zend_hash_apply_with_argument(Z_ARRVAL_PP(evhs), apply_event, args TSRMLS_CC);
+			zval_ptr_dtor(&args);
+		}
 	}
 }
 
@@ -1655,31 +1695,35 @@ static zval *result_instance_zval(PGresult *res TSRMLS_DC)
 	return rid;
 }
 
-static void php_pqconn_event_resultcreate(PGEventResultCreate *event, php_pqconn_event_data_t *data)
+static void php_pqconn_event_resultcreate(PGEventResultCreate *event)
 {
-	zval **evhs;
-	TSRMLS_DF(data);
+	php_pqconn_event_data_t *data = PQinstanceData(event->conn, php_pqconn_event);
 
-	/* event listener */
-	if (SUCCESS == zend_hash_find(&data->obj->intern->eventhandlers, ZEND_STRS("result"), (void *) &evhs)) {
-		zval *args, *connection = NULL, *res = result_instance_zval(event->result TSRMLS_CC);
+	if (data) {
+		zval **evhs;
+		TSRMLS_DF(data);
 
-		MAKE_STD_ZVAL(args);
-		array_init(args);
-		php_pq_object_to_zval(data->obj, &connection TSRMLS_CC);
-		add_next_index_zval(args, connection);
-		add_next_index_zval(args, res);
-		zend_hash_apply_with_argument(Z_ARRVAL_PP(evhs), apply_event, args TSRMLS_CC);
-		zval_ptr_dtor(&args);
-	}
+		/* event listener */
+		if (SUCCESS == zend_hash_find(&data->obj->intern->eventhandlers, ZEND_STRS("result"), (void *) &evhs)) {
+			zval *args, *connection = NULL, *res = result_instance_zval(event->result TSRMLS_CC);
 
-	/* async callback */
-	if (data->obj->intern->onevent.fci.size > 0) {
-		zval *res = result_instance_zval(event->result TSRMLS_CC);
+			MAKE_STD_ZVAL(args);
+			array_init(args);
+			php_pq_object_to_zval(data->obj, &connection TSRMLS_CC);
+			add_next_index_zval(args, connection);
+			add_next_index_zval(args, res);
+			zend_hash_apply_with_argument(Z_ARRVAL_PP(evhs), apply_event, args TSRMLS_CC);
+			zval_ptr_dtor(&args);
+		}
 
-		zend_fcall_info_argn(&data->obj->intern->onevent.fci TSRMLS_CC, 1, &res);
-		zend_fcall_info_call(&data->obj->intern->onevent.fci, &data->obj->intern->onevent.fcc, NULL, NULL TSRMLS_CC);
-		zval_ptr_dtor(&res);
+		/* async callback */
+		if (data->obj->intern->onevent.fci.size > 0) {
+			zval *res = result_instance_zval(event->result TSRMLS_CC);
+
+			zend_fcall_info_argn(&data->obj->intern->onevent.fci TSRMLS_CC, 1, &res);
+			zend_fcall_info_call(&data->obj->intern->onevent.fci, &data->obj->intern->onevent.fcc, NULL, NULL TSRMLS_CC);
+			zval_ptr_dtor(&res);
+		}
 	}
 }
 
@@ -1687,10 +1731,10 @@ static int php_pqconn_event(PGEventId id, void *e, void *data)
 {
 	switch (id) {
 	case PGEVT_CONNRESET:
-		php_pqconn_event_connreset(e, data);
+		php_pqconn_event_connreset(e);
 		break;
 	case PGEVT_RESULTCREATE:
-		php_pqconn_event_resultcreate(e, data);
+		php_pqconn_event_resultcreate(e);
 		break;
 	default:
 		break;
@@ -1755,6 +1799,29 @@ static php_resource_factory_ops_t php_pqconn_resource_factory_ops = {
 	php_pqconn_resource_factory_dtor
 };
 
+static void php_pqconn_persistent_resource_factory_dtor(void *opaque, void *handle TSRMLS_DC)
+{
+	PGresult *res;
+
+	/* clean up */
+	if ((res = PQexec(handle, "ROLLBACK; RESET ALL;"))) {
+		PHP_PQclear(res);
+	}
+
+	/* release to the pool, if the connection is alive */
+	if (CONNECTION_OK == PQstatus(handle)) {
+		php_persistent_handle_release(opaque, handle TSRMLS_CC);
+	} else {
+		PQfinish(handle);
+	}
+}
+
+static php_resource_factory_ops_t php_pqconn_persistent_resource_factory_ops = {
+	(php_resource_factory_handle_ctor_t) php_persistent_handle_acquire,
+	NULL,
+	php_pqconn_persistent_resource_factory_dtor
+};
+
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_construct, 0, 0, 1)
 	ZEND_ARG_INFO(0, dsn)
 	ZEND_ARG_INFO(0, async)
@@ -1778,7 +1845,7 @@ static PHP_METHOD(pqconn, __construct) {
 
 		if (flags & PHP_PQCONN_PERSISTENT) {
 			php_persistent_handle_factory_t *phf = php_persistent_handle_concede(NULL, ZEND_STRL("pq\\Connection"), dsn_str, dsn_len TSRMLS_CC);
-			php_resource_factory_init(&obj->intern->factory, php_persistent_handle_get_resource_factory_ops(), phf, (void (*)(void*)) php_persistent_handle_abandon);
+			php_resource_factory_init(&obj->intern->factory, &php_pqconn_persistent_resource_factory_ops, phf, (void (*)(void*)) php_persistent_handle_abandon);
 		} else{
 			php_resource_factory_init(&obj->intern->factory, &php_pqconn_resource_factory_ops, NULL, NULL);
 		}
@@ -1788,7 +1855,7 @@ static PHP_METHOD(pqconn, __construct) {
 
 		obj->intern->conn = php_resource_factory_handle_ctor(&obj->intern->factory, &rfdata TSRMLS_CC);
 
-		PQregisterEventProc(obj->intern->conn, php_pqconn_event, "ext-pq", evdata);
+		PQregisterEventProc(obj->intern->conn, php_pqconn_event, "ext-pq", NULL);
 		/* the connection might be persistent, so reset event_proc instance data */
 		PQsetInstanceData(obj->intern->conn, php_pqconn_event, evdata);
 		PQsetNoticeReceiver(obj->intern->conn, php_pqconn_notice_recv, evdata);
@@ -1875,7 +1942,7 @@ static PHP_METHOD(pqconn, listen) {
 				PGresult *res;
 				char *cmd;
 
-				spprintf(&cmd, 0, "LISTEN %s", channel_str);
+				spprintf(&cmd, 0, "LISTEN %s", quoted_channel);
 				res = PQexec(obj->intern->conn, cmd);
 
 				efree(cmd);
