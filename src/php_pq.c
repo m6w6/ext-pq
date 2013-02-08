@@ -1810,6 +1810,7 @@ static void php_pqconn_notice_ignore(void *p, const PGresult *res)
 static void php_pqconn_retire(php_persistent_handle_factory_t *f, void **handle TSRMLS_DC)
 {
 	php_pqconn_event_data_t *evdata = PQinstanceData(*handle, php_pqconn_event);
+	PGcancel *cancel;
 	PGresult *res;
 
 	/* go away */
@@ -1818,6 +1819,11 @@ static void php_pqconn_retire(php_persistent_handle_factory_t *f, void **handle 
 	/* ignore notices */
 	PQsetNoticeReceiver(*handle, php_pqconn_notice_ignore, NULL);
 
+	/* cancel async queries */
+	if (PQisBusy(*handle) && (cancel = PQgetCancel(*handle))) {
+		PQcancel(cancel, ZEND_STRL("retiring persistent connection"));
+		PQfreeCancel(cancel);
+	}
 	/* clean up async results */
 	while ((res = PQgetResult(*handle))) {
 		PHP_PQclear(res);
