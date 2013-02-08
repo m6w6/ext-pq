@@ -14,9 +14,12 @@
 #	include "config.h"
 #endif
 
+#define SMART_STR_PREALLOC 256
+
 #include <php.h>
 #include <Zend/zend_interfaces.h>
 #include <ext/standard/info.h>
+#include <ext/standard/php_smart_str.h>
 #include <ext/spl/spl_array.h>
 #include <ext/raphf/php_raphf.h>
 
@@ -2292,7 +2295,7 @@ static int php_pq_types_to_array(HashTable *ht, Oid **types TSRMLS_DC)
 		Oid *tmp;
 
 		/* +1 for when less types than params are specified */
-		*types = tmp = ecalloc(count + 1, sizeof(Oid));
+		*types = tmp = ecalloc(count + 1, sizeof(**types));
 		zend_hash_apply_with_argument(ht, apply_to_oid, &tmp TSRMLS_CC);
 	}
 	
@@ -2314,7 +2317,26 @@ static int php_pq_params_to_array(HashTable *ht, char ***params, HashTable *zdto
 	
 	return count;
 }
+/*
+static Oid *php_pq_ntypes_to_array(zend_bool fill, int argc, ...)
+{
+	int i;
+	Oid *oids = ecalloc(argc + 1, sizeof(*oids));
+	va_list argv;
 
+	va_start(argv, argc);
+	for (i = 0; i < argc; ++i) {
+		if (!fill || !i) {
+			oids[i] = va_arg(argv, Oid);
+		} else {
+			oids[i] = oids[0];
+		}
+	}
+	va_end(argv);
+
+	return oids;
+}
+*/
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_exec_params, 0, 0, 2)
 	ZEND_ARG_INFO(0, query)
 	ZEND_ARG_ARRAY_INFO(0, params, 0)
@@ -2895,13 +2917,14 @@ static zend_function_entry php_pqconn_methods[] = {
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtypes_construct, 0, 0, 1)
 	ZEND_ARG_OBJ_INFO(0, connection, pq\\Connection, 0)
+	ZEND_ARG_ARRAY_INFO(0, namespaces, 1)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtypes, __construct) {
 	zend_error_handling zeh;
-	zval *zconn;
+	zval *zconn, *znsp = NULL;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &zconn, php_pqconn_class_entry)) {
+	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O|a!", &zconn, php_pqconn_class_entry, &znsp)) {
 		php_pqconn_object_t *conn_obj = zend_object_store_get_object(zconn TSRMLS_CC);
 
 		if (conn_obj->intern) {
@@ -2913,7 +2936,11 @@ static PHP_METHOD(pqtypes, __construct) {
 			php_pq_object_addref(conn_obj TSRMLS_CC);
 			zend_hash_init(&obj->intern->types, 300, NULL, ZVAL_PTR_DTOR, 0);
 
-			zend_call_method_with_0_params(&getThis(), Z_OBJCE_P(getThis()), NULL, "refresh", &retval);
+			if (znsp) {
+				zend_call_method_with_1_params(&getThis(), Z_OBJCE_P(getThis()), NULL, "refresh", &retval, znsp);
+			} else {
+				zend_call_method_with_0_params(&getThis(), Z_OBJCE_P(getThis()), NULL, "refresh", &retval);
+			}
 			if (retval) {
 				zval_ptr_dtor(&retval);
 			}
@@ -2928,17 +2955,52 @@ static PHP_METHOD(pqtypes, __construct) {
 	"select t.oid, t.* " \
 	"from pg_type t join pg_namespace n on t.typnamespace=n.oid " \
 	"where typisdefined " \
-	"and typrelid=0 " \
-	"and nspname in ('public', 'pg_catalog')"
+	"and typrelid=0"
+#define PHP_PQ_OID_TEXT 25
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtypes_refresh, 0, 0, 0)
+	ZEND_ARG_ARRAY_INFO(0, namespaces, 1)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtypes, refresh) {
-	if (SUCCESS == zend_parse_parameters_none()) {
+	HashTable *nsp = NULL;
+
+	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|H/!", &nsp)) {
 		php_pqtypes_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
 		if (obj->intern) {
-			PGresult *res = PQexec(obj->intern->conn->intern->conn, PHP_PQ_TYPES_QUERY);
+			PGresult *res;
+
+			if (nsp && zend_hash_num_elements(nsp)) {
+				int i, count;
+				Oid *oids;
+				char **params = NULL;
+				HashTable zdtor;
+				smart_str str = {0};
+
+				smart_str_appends(&str, PHP_PQ_TYPES_QUERY " and nspname in(");
+				zend_hash_init(&zdtor, 0, NULL, ZVAL_PTR_DTOR, 0);
+				count = php_pq_params_to_array(nsp, &params, &zdtor TSRMLS_CC);
+				oids = ecalloc(count + 1, sizeof(*oids));
+				for (i = 0; i < count; ++i) {
+					oids[i] = PHP_PQ_OID_TEXT;
+					if (i) {
+						smart_str_appendc(&str, ',');
+					}
+					smart_str_appendc(&str, '$');
+					smart_str_append_unsigned(&str, i+1);
+				}
+				smart_str_appendc(&str, ')');
+				smart_str_0(&str);
+
+				res = PQexecParams(obj->intern->conn->intern->conn, str.c, count, oids, (const char *const*) params, NULL, NULL, 0);
+
+				smart_str_free(&str);
+				efree(oids);
+				efree(params);
+				zend_hash_destroy(&zdtor);
+			} else {
+				res = PQexec(obj->intern->conn->intern->conn, PHP_PQ_TYPES_QUERY " and nspname in ('public', 'pg_catalog')");
+			}
 
 			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
 
