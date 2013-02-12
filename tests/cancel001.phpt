@@ -22,9 +22,11 @@ var_dump($c->getResult());
 DONE
 --EXPECTF--
 Test
-object(pq\Result)#%d (6) {
+object(pq\Result)#%d (7) {
   ["status"]=>
   int(7)
+  ["statusMessage"]=>
+  string(11) "FATAL_ERROR"
   ["errorMessage"]=>
   string(47) "ERROR:  canceling statement due to user request"
   ["numRows"]=>

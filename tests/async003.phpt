@@ -26,9 +26,11 @@ do {
 DONE
 --EXPECTF--
 Test
-object(pq\Result)#%d (6) {
+object(pq\Result)#%d (7) {
   ["status"]=>
   int(2)
+  ["statusMessage"]=>
+  string(9) "TUPLES_OK"
   ["errorMessage"]=>
   string(0) ""
   ["numRows"]=>
@@ -40,9 +42,11 @@ object(pq\Result)#%d (6) {
   ["fetchType"]=>
   int(0)
 }
-object(pq\Result)#%d (6) {
+object(pq\Result)#%d (7) {
   ["status"]=>
   int(2)
+  ["statusMessage"]=>
+  string(9) "TUPLES_OK"
   ["errorMessage"]=>
   string(0) ""
   ["numRows"]=>

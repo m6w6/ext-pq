@@ -18,9 +18,11 @@
 
 #include <php.h>
 #include <Zend/zend_interfaces.h>
+#include <Zend/zend_exceptions.h>
 #include <ext/standard/info.h>
 #include <ext/standard/php_smart_str.h>
 #include <ext/spl/spl_array.h>
+#include <ext/spl/spl_exceptions.h>
 #include <ext/raphf/php_raphf.h>
 
 #include <libpq-events.h>
@@ -85,6 +87,36 @@ static zend_class_entry *php_pqcancel_class_entry;
 static zend_class_entry *php_pqevent_class_entry;
 static zend_class_entry *php_pqlob_class_entry;
 static zend_class_entry *php_pqcopy_class_entry;
+
+typedef enum php_pqexc_type {
+	EX_DEFAULT,
+	EX_INVALID_ARGUMENT,
+	EX_RUNTIME,
+	EX_CONNECTION_FAILED,
+	EX_BAD_METHODCALL,
+} php_pqexc_type_t;
+
+static zend_class_entry *php_pqexc_interface_class_entry;
+static zend_class_entry *php_pqexc_default_class_entry;
+static zend_class_entry *php_pqexc_invalid_argument_class_entry;
+static zend_class_entry *php_pqexc_runtime_class_entry;
+static zend_class_entry *php_pqexc_bad_methodcall_class_entry;
+
+static zend_class_entry *exce(php_pqexc_type_t type)
+{
+	switch (type) {
+	case EX_DEFAULT:
+	default:
+		return php_pqexc_default_class_entry;
+	case EX_INVALID_ARGUMENT:
+		return php_pqexc_invalid_argument_class_entry;
+	case EX_RUNTIME:
+	case EX_CONNECTION_FAILED:
+		return php_pqexc_runtime_class_entry;
+	case EX_BAD_METHODCALL:
+		return php_pqexc_bad_methodcall_class_entry;
+	}
+}
 
 static zend_object_handlers php_pqconn_object_handlers;
 static zend_object_handlers php_pqtypes_object_handlers;
@@ -197,6 +229,7 @@ typedef struct php_pqtxn {
 	php_pqconn_object_t *conn;
 	php_pqtxn_isolation_t isolation;
 	unsigned savepoint;
+	unsigned open:1;
 	unsigned readonly:1;
 	unsigned deferrable:1;
 } php_pqtxn_t;
@@ -458,11 +491,11 @@ static int php_pqres_count_elements(zval *object, long *count TSRMLS_DC)
 {
 	php_pqres_object_t *obj = zend_object_store_get_object(object TSRMLS_CC);
 
-	if (obj->intern) {
+	if (!obj->intern) {
+		return FAILURE;
+	} else {
 		*count = (long) PQntuples(obj->intern->res);
 		return SUCCESS;
-	} else {
-		return FAILURE;
 	}
 }
 
@@ -472,7 +505,7 @@ static STATUS php_pqres_success(PGresult *res TSRMLS_DC)
 	case PGRES_BAD_RESPONSE:
 	case PGRES_NONFATAL_ERROR:
 	case PGRES_FATAL_ERROR:
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", PHP_PQresultErrorMessage(res));
+		zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "%s", PHP_PQresultErrorMessage(res));
 		return FAILURE;
 	default:
 		return SUCCESS;
@@ -592,6 +625,25 @@ static void php_pqstm_object_free(void *o TSRMLS_DC)
 	php_pqstm_object_t *obj = o;
 
 	if (obj->intern) {
+		char *quoted_name = PQescapeIdentifier(obj->intern->conn->intern->conn, obj->intern->name, strlen(obj->intern->name));
+
+		php_pq_callback_dtor(&obj->intern->conn->intern->onevent);
+
+		if (quoted_name) {
+			PGresult *res;
+			smart_str cmd = {0};
+
+			smart_str_appends(&cmd, "DEALLOCATE ");
+			smart_str_appends(&cmd, quoted_name);
+			smart_str_0(&cmd);
+			PQfreemem(quoted_name);
+
+			if ((res = PQexec(obj->intern->conn->intern->conn, cmd.c))) {
+				PHP_PQclear(res);
+			}
+			smart_str_free(&cmd);
+		}
+
 		php_pq_object_delref(obj->intern->conn TSRMLS_CC);
 		efree(obj->intern->name);
 		zend_hash_destroy(&obj->intern->bound);
@@ -607,6 +659,13 @@ static void php_pqtxn_object_free(void *o TSRMLS_DC)
 	php_pqtxn_object_t *obj = o;
 
 	if (obj->intern) {
+		if (obj->intern->open) {
+			PGresult *res = PQexec(obj->intern->conn->intern->conn, "ROLLBACK");
+
+			if (res) {
+				PHP_PQclear(res);
+			}
+		}
 		php_pq_object_delref(obj->intern->conn TSRMLS_CC);
 		efree(obj->intern);
 		obj->intern = NULL;
@@ -1274,6 +1333,13 @@ static void php_pqres_object_read_status(zval *object, void *o, zval *return_val
 	RETVAL_LONG(PQresultStatus(obj->intern->res));
 }
 
+static void php_pqres_object_read_status_message(zval *object, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqres_object_t *obj = o;
+
+	RETVAL_STRING(PQresStatus(PQresultStatus(obj->intern->res))+sizeof("PGRES"), 1);
+}
+
 static void php_pqres_object_read_error_message(zval *object, void *o, zval *return_value TSRMLS_DC)
 {
 	php_pqres_object_t *obj = o;
@@ -1762,7 +1828,7 @@ static void php_pqconn_resource_factory_dtor(void *opaque, void *handle TSRMLS_D
 {
 	php_pqconn_event_data_t *evdata = PQinstanceData(handle, php_pqconn_event);
 
-	/* we don't care for anthing, except free'ing evdata */
+	/* we don't care for anything, except free'ing evdata */
 	if (evdata) {
 		PQsetInstanceData(handle, php_pqconn_event, NULL);
 		memset(evdata, 0, sizeof(*evdata));
@@ -1780,6 +1846,7 @@ static php_resource_factory_ops_t php_pqconn_resource_factory_ops = {
 
 static void php_pqconn_wakeup(php_persistent_handle_factory_t *f, void **handle TSRMLS_DC)
 {
+	// FIXME: ping server
 }
 
 static int apply_unlisten(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
@@ -1862,39 +1929,47 @@ static PHP_METHOD(pqconn, __construct) {
 	char *dsn_str = "";
 	int dsn_len = 0;
 	long flags = 0;
+	STATUS rv;
 
-	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|sl", &dsn_str, &dsn_len, &flags)) {
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|sl", &dsn_str, &dsn_len, &flags);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
-		php_pqconn_event_data_t *evdata =  php_pqconn_event_data_init(obj TSRMLS_CC);
-		php_pqconn_resource_factory_data_t rfdata = {dsn_str, flags};
 
-		obj->intern = ecalloc(1, sizeof(*obj->intern));
-
-		zend_hash_init(&obj->intern->listeners, 0, NULL, (dtor_func_t) zend_hash_destroy, 0);
-		zend_hash_init(&obj->intern->eventhandlers, 0, NULL, ZVAL_PTR_DTOR, 0);
-
-		if (flags & PHP_PQCONN_PERSISTENT) {
-			php_persistent_handle_factory_t *phf = php_persistent_handle_concede(NULL, ZEND_STRL("pq\\Connection"), dsn_str, dsn_len, php_pqconn_wakeup, php_pqconn_retire TSRMLS_CC);
-			php_resource_factory_init(&obj->intern->factory, php_persistent_handle_get_resource_factory_ops(), phf, (void (*)(void*)) php_persistent_handle_abandon);
+		if (obj->intern) {
+			zend_throw_exception_ex(exce(EX_BAD_METHODCALL), EX_BAD_METHODCALL TSRMLS_CC, "pq\\Connection already initialized");
 		} else {
-			php_resource_factory_init(&obj->intern->factory, &php_pqconn_resource_factory_ops, NULL, NULL);
-		}
+			php_pqconn_event_data_t *evdata =  php_pqconn_event_data_init(obj TSRMLS_CC);
+			php_pqconn_resource_factory_data_t rfdata = {dsn_str, flags};
 
-		if (flags & PHP_PQCONN_ASYNC) {
-			obj->intern->poller = (int (*)(PGconn*)) PQconnectPoll;
-		}
+			obj->intern = ecalloc(1, sizeof(*obj->intern));
 
-		obj->intern->conn = php_resource_factory_handle_ctor(&obj->intern->factory, &rfdata TSRMLS_CC);
+			zend_hash_init(&obj->intern->listeners, 0, NULL, (dtor_func_t) zend_hash_destroy, 0);
+			zend_hash_init(&obj->intern->eventhandlers, 0, NULL, ZVAL_PTR_DTOR, 0);
 
-		PQsetInstanceData(obj->intern->conn, php_pqconn_event, evdata);
-		PQsetNoticeReceiver(obj->intern->conn, php_pqconn_notice_recv, evdata);
+			if (flags & PHP_PQCONN_PERSISTENT) {
+				php_persistent_handle_factory_t *phf = php_persistent_handle_concede(NULL, ZEND_STRL("pq\\Connection"), dsn_str, dsn_len, php_pqconn_wakeup, php_pqconn_retire TSRMLS_CC);
+				php_resource_factory_init(&obj->intern->factory, php_persistent_handle_get_resource_factory_ops(), phf, (void (*)(void*)) php_persistent_handle_abandon);
+			} else {
+				php_resource_factory_init(&obj->intern->factory, &php_pqconn_resource_factory_ops, NULL, NULL);
+			}
 
-		if (SUCCESS != php_pqconn_update_socket(getThis(), obj TSRMLS_CC)) {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Connection failed (%s)", PHP_PQerrorMessage(obj->intern->conn));
+			if (flags & PHP_PQCONN_ASYNC) {
+				obj->intern->poller = (int (*)(PGconn*)) PQconnectPoll;
+			}
+
+			obj->intern->conn = php_resource_factory_handle_ctor(&obj->intern->factory, &rfdata TSRMLS_CC);
+
+			PQsetInstanceData(obj->intern->conn, php_pqconn_event, evdata);
+			PQsetNoticeReceiver(obj->intern->conn, php_pqconn_notice_recv, evdata);
+
+			if (SUCCESS != php_pqconn_update_socket(getThis(), obj TSRMLS_CC)) {
+				zend_throw_exception_ex(exce(EX_CONNECTION_FAILED), EX_CONNECTION_FAILED TSRMLS_CC, "Connection failed (%s)", PHP_PQerrorMessage(obj->intern->conn));
+			}
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_reset, 0, 0, 0)
@@ -1963,41 +2038,43 @@ static PHP_METHOD(pqconn, listen) {
 	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sf", &channel_str, &channel_len, &listener.fci, &listener.fcc)) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		obj->intern->poller = PQconsumeInput;
-
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
 			char *quoted_channel = PQescapeIdentifier(obj->intern->conn, channel_str, channel_len);
 
-			if (quoted_channel) {
+			if (!quoted_channel) {
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to escape channel identifier (%s)", PHP_PQerrorMessage(obj->intern->conn));
+				RETVAL_FALSE;
+			} else {
 				PGresult *res;
-				char *cmd;
+				smart_str cmd = {0};
 
-				spprintf(&cmd, 0, "LISTEN %s", quoted_channel);
-				res = PQexec(obj->intern->conn, cmd);
+				smart_str_appends(&cmd, "LISTEN ");
+				smart_str_appends(&cmd, quoted_channel);
+				smart_str_0(&cmd);
 
-				efree(cmd);
+				res = PQexec(obj->intern->conn, cmd.c);
+
+				smart_str_free(&cmd);
 				PQfreemem(quoted_channel);
 
-				if (res) {
-					if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
+				if (!res) {
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to install listener (%s)", PHP_PQerrorMessage(obj->intern->conn));
+					RETVAL_FALSE;
+				} else {
+					if (SUCCESS != php_pqres_success(res TSRMLS_CC)) {
+						RETVAL_FALSE;
+					} else {
+						obj->intern->poller = PQconsumeInput;
 						php_pqconn_add_listener(obj, channel_str, channel_len, &listener TSRMLS_CC);
 						RETVAL_TRUE;
-					} else {
-						RETVAL_FALSE;
 					}
 					PHP_PQclear(res);
-				} else {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not install listener (%s)", PHP_PQerrorMessage(obj->intern->conn));
-					RETVAL_FALSE;
 				}
 
 				php_pqconn_notify_listeners(obj TSRMLS_CC);
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not escape channel identifier (%s)", PHP_PQerrorMessage(obj->intern->conn));
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-			RETVAL_FALSE;
 		}
 	}
 }
@@ -2014,35 +2091,32 @@ static PHP_METHOD(pqconn, listenAsync) {
 	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sf", &channel_str, &channel_len, &listener.fci, &listener.fcc)) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		obj->intern->poller = PQconsumeInput;
-
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
 			char *quoted_channel = PQescapeIdentifier(obj->intern->conn, channel_str, channel_len);
 
-			if (quoted_channel) {
-				char *cmd;
+			if (!quoted_channel) {
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to escape channel identifier (%s)", PHP_PQerrorMessage(obj->intern->conn));
+			} else {
+				smart_str cmd = {0};
 
-				obj->intern->poller = PQconsumeInput;
+				smart_str_appends(&cmd, "LISTEN ");
+				smart_str_appends(&cmd, quoted_channel);
+				smart_str_0(&cmd);
 
-				spprintf(&cmd, 0, "LISTEN %s", channel_str);
-				if (PQsendQuery(obj->intern->conn, cmd)) {
+				if (!PQsendQuery(obj->intern->conn, cmd.c)) {
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to install listener (%s)", PHP_PQerrorMessage(obj->intern->conn));
+					RETVAL_FALSE;
+				} else {
+					obj->intern->poller = PQconsumeInput;
 					php_pqconn_add_listener(obj, channel_str, channel_len, &listener TSRMLS_CC);
 					RETVAL_TRUE;
-				} else {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not install listener (%s)", PHP_PQerrorMessage(obj->intern->conn));
-					RETVAL_FALSE;
 				}
 
-				efree(cmd);
+				smart_str_free(&cmd);
 				PQfreemem(quoted_channel);
-
-				php_pqconn_notify_listeners(obj TSRMLS_CC);
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not escape channel identifier (%s)", PHP_PQerrorMessage(obj->intern->conn));
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-			RETVAL_FALSE;
 		}
 	}
 }
@@ -2058,29 +2132,27 @@ static PHP_METHOD(pqconn, notify) {
 	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &channel_str, &channel_len, &message_str, &message_len)) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
 			PGresult *res;
 			char *params[2] = {channel_str, message_str};
 
 			res = PQexecParams(obj->intern->conn, "select pg_notify($1, $2)", 2, NULL, (const char *const*) params, NULL, NULL, 0);
 
-			if (res) {
-				if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
-					RETVAL_TRUE;
-				} else {
+			if (!res) {
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to notify listeners (%s)", PHP_PQerrorMessage(obj->intern->conn));
+				RETVAL_FALSE;
+			} else {
+				if (SUCCESS != php_pqres_success(res TSRMLS_CC)) {
 					RETVAL_FALSE;
+				} else {
+					RETVAL_TRUE;
 				}
 				PHP_PQclear(res);
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not notify listeners (%s)", PHP_PQerrorMessage(obj->intern->conn));
-				RETVAL_FALSE;
 			}
 
 			php_pqconn_notify_listeners(obj TSRMLS_CC);
-
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-			RETVAL_FALSE;
 		}
 	}
 }
@@ -2096,23 +2168,20 @@ static PHP_METHOD(pqconn, notifyAsync) {
 	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &channel_str, &channel_len, &message_str, &message_len)) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
 			char *params[2] = {channel_str, message_str};
 
-			obj->intern->poller = PQconsumeInput;
-
-			if (PQsendQueryParams(obj->intern->conn, "select pg_notify($1, $2)", 2, NULL, (const char *const*) params, NULL, NULL, 0)) {
-				RETVAL_TRUE;
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not notify listeners (%s)", PHP_PQerrorMessage(obj->intern->conn));
+			if (!PQsendQueryParams(obj->intern->conn, "select pg_notify($1, $2)", 2, NULL, (const char *const*) params, NULL, NULL, 0)) {
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to notify listeners (%s)", PHP_PQerrorMessage(obj->intern->conn));
 				RETVAL_FALSE;
+			} else {
+				obj->intern->poller = PQconsumeInput;
+				RETVAL_TRUE;
 			}
 
 			php_pqconn_notify_listeners(obj TSRMLS_CC);
-
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-			RETVAL_FALSE;
 		}
 	}
 }
@@ -2123,22 +2192,16 @@ static PHP_METHOD(pqconn, poll) {
 	if (SUCCESS == zend_parse_parameters_none()) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
-			if (obj->intern->poller) {
-				if (obj->intern->poller == PQconsumeInput) {
-					RETVAL_LONG(obj->intern->poller(obj->intern->conn) * PGRES_POLLING_OK);
-					php_pqconn_notify_listeners(obj TSRMLS_CC);
-					return;
-				} else {
-					RETURN_LONG(obj->intern->poller(obj->intern->conn));
-				}
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "No asynchronous operation active");
-			}
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else if (!obj->intern->poller) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "No asynchronous operation active");
+		} else if (obj->intern->poller == PQconsumeInput) {
+			RETVAL_LONG(obj->intern->poller(obj->intern->conn) * PGRES_POLLING_OK);
 		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
+			RETVAL_LONG(obj->intern->poller(obj->intern->conn));
 		}
-		RETURN_FALSE;
+		php_pqconn_notify_listeners(obj TSRMLS_CC);
 	}
 }
 
@@ -2149,33 +2212,34 @@ static PHP_METHOD(pqconn, exec) {
 	zend_error_handling zeh;
 	char *query_str;
 	int query_len;
+	STATUS rv;
 
-	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &query_str, &query_len)) {
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &query_str, &query_len);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
 			PGresult *res = PQexec(obj->intern->conn, query_str);
 
-			php_pqconn_notify_listeners(obj TSRMLS_CC);
+			if (!res) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to execute query (%s)", PHP_PQerrorMessage(obj->intern->conn));
+			} else if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
+				php_pqres_t *r = ecalloc(1, sizeof(*r));
 
-			if (res) {
-				if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
-					php_pqres_t *r = ecalloc(1, sizeof(*r));
-
-					r->res = res;
-					ZEND_INIT_SYMTABLE(&r->bound);
-					return_value->type = IS_OBJECT;
-					return_value->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, r, NULL TSRMLS_CC);
-				}
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not execute query (%s)", PHP_PQerrorMessage(obj->intern->conn));
+				r->res = res;
+				ZEND_INIT_SYMTABLE(&r->bound);
+				return_value->type = IS_OBJECT;
+				return_value->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, r, NULL TSRMLS_CC);
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
+
+			php_pqconn_notify_listeners(obj TSRMLS_CC);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_get_result, 0, 0, 0)
@@ -2184,22 +2248,23 @@ static PHP_METHOD(pqconn, getResult) {
 	if (SUCCESS == zend_parse_parameters_none()) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connectio not initialized");
+		} else {
 			PGresult *res = PQgetResult(obj->intern->conn);
 
-			if (res) {
+			if (!res) {
+				RETVAL_NULL();
+			} else {
 				php_pqres_t *r = ecalloc(1, sizeof(*r));
 
 				r->res = res;
 				ZEND_INIT_SYMTABLE(&r->bound);
 				return_value->type = IS_OBJECT;
 				return_value->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, r, NULL TSRMLS_CC);
-			} else {
-				RETVAL_NULL();
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-			RETVAL_FALSE;
+
+			php_pqconn_notify_listeners(obj TSRMLS_CC);
 		}
 	}
 }
@@ -2213,37 +2278,31 @@ static PHP_METHOD(pqconn, execAsync) {
 	php_pq_callback_t resolver = {{0}};
 	char *query_str;
 	int query_len;
+	STATUS rv;
 
-	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|f", &query_str, &query_len, &resolver.fci, &resolver.fcc)) {
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|f", &query_str, &query_len, &resolver.fci, &resolver.fcc);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else if (!PQsendQuery(obj->intern->conn, query_str)) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to enable unbuffered mode (%s)", PHP_PQerrorMessage(obj->intern->conn));
+		} else if (obj->intern->unbuffered && !PQsetSingleRowMode(obj->intern->conn)) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to request unbuffered result handling (%s)", PHP_PQerrorMessage(obj->intern->conn));
+		} else {
+			obj->intern->poller = PQconsumeInput;
 			php_pq_callback_dtor(&obj->intern->onevent);
 			if (resolver.fci.size > 0) {
 				obj->intern->onevent = resolver;
 				php_pq_callback_addref(&obj->intern->onevent);
 			}
-
-			obj->intern->poller = PQconsumeInput;
-
-			if (PQsendQuery(obj->intern->conn, query_str)) {
-				if (obj->intern->unbuffered) {
-					if (!PQsetSingleRowMode(obj->intern->conn)) {
-						php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Could not enable unbuffered mode (%s)", PHP_PQerrorMessage(obj->intern->conn));
-					}
-				}
-				RETVAL_TRUE;
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not execute query (%s)", PHP_PQerrorMessage(obj->intern->conn));
-				RETVAL_FALSE;
-			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-			RETVAL_FALSE;
+			php_pqconn_notify_listeners(obj TSRMLS_CC);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 static int apply_to_oid(void *p, void *arg TSRMLS_DC)
@@ -2354,12 +2413,18 @@ static PHP_METHOD(pqconn, execParams) {
 	int query_len;
 	zval *zparams;
 	zval *ztypes = NULL;
+	STATUS rv;
 
-	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sa/|a/!", &query_str, &query_len, &zparams, &ztypes)) {
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sa/|a/!", &query_str, &query_len, &zparams, &ztypes);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
 			PGresult *res;
 			int count;
 			Oid *types = NULL;
@@ -2383,9 +2448,9 @@ static PHP_METHOD(pqconn, execParams) {
 				efree(params);
 			}
 
-			php_pqconn_notify_listeners(obj TSRMLS_CC);
-
-			if (res) {
+			if (!res) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to execute query (%s)", PHP_PQerrorMessage(obj->intern->conn));
+			} else {
 				if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
 					php_pqres_t *r = ecalloc(1, sizeof(*r));
 
@@ -2394,16 +2459,11 @@ static PHP_METHOD(pqconn, execParams) {
 					return_value->type = IS_OBJECT;
 					return_value->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, r, NULL TSRMLS_CC);
 				}
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not execute query (%s)", PHP_PQerrorMessage(obj->intern->conn));
-				RETVAL_FALSE;
+
+				php_pqconn_notify_listeners(obj TSRMLS_CC);
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-			RETVAL_FALSE;
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_exec_params_async, 0, 0, 2)
@@ -2419,12 +2479,18 @@ static PHP_METHOD(pqconn, execParamsAsync) {
 	int query_len;
 	zval *zparams;
 	zval *ztypes = NULL;
+	STATUS rv;
 
-	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sa/|a/!f", &query_str, &query_len, &zparams, &ztypes, &resolver.fci, &resolver.fcc)) {
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sa/|a/!f", &query_str, &query_len, &zparams, &ztypes, &resolver.fci, &resolver.fcc);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
 			int count;
 			Oid *types = NULL;
 			char **params = NULL;
@@ -2437,24 +2503,18 @@ static PHP_METHOD(pqconn, execParamsAsync) {
 				php_pq_types_to_array(Z_ARRVAL_P(ztypes), &types TSRMLS_CC);
 			}
 
-			php_pq_callback_dtor(&obj->intern->onevent);
-			if (resolver.fci.size > 0) {
-				obj->intern->onevent = resolver;
-				php_pq_callback_addref(&obj->intern->onevent);
-			}
-
-			obj->intern->poller = PQconsumeInput;
-
-			if (PQsendQueryParams(obj->intern->conn, query_str, count, types, (const char *const*) params, NULL, NULL, 0)) {
-				if (obj->intern->unbuffered) {
-					if (!PQsetSingleRowMode(obj->intern->conn)) {
-						php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Could not enable unbuffered mode (%s)", PHP_PQerrorMessage(obj->intern->conn));
-					}
-				}
-				RETVAL_TRUE;
+			if (!PQsendQueryParams(obj->intern->conn, query_str, count, types, (const char *const*) params, NULL, NULL, 0)) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to execute query (%s)", PHP_PQerrorMessage(obj->intern->conn));
+			} else if (obj->intern->unbuffered && !PQsetSingleRowMode(obj->intern->conn)) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to enable unbuffered mode (%s)", PHP_PQerrorMessage(obj->intern->conn));
 			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not execute query (%s)", PHP_PQerrorMessage(obj->intern->conn));
-				RETVAL_FALSE;
+				obj->intern->poller = PQconsumeInput;
+				php_pq_callback_dtor(&obj->intern->onevent);
+				if (resolver.fci.size > 0) {
+					obj->intern->onevent = resolver;
+					php_pq_callback_addref(&obj->intern->onevent);
+				}
+				php_pqconn_notify_listeners(obj TSRMLS_CC);
 			}
 
 			zend_hash_destroy(&zdtor);
@@ -2464,12 +2524,6 @@ static PHP_METHOD(pqconn, execParamsAsync) {
 			if (params) {
 				efree(params);
 			}
-
-			php_pqconn_notify_listeners(obj TSRMLS_CC);
-
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-			RETVAL_FALSE;
 		}
 	}
 	zend_restore_error_handling(&zeh TSRMLS_CC);
@@ -2497,12 +2551,13 @@ static STATUS php_pqconn_prepare(zval *object, php_pqconn_object_t *obj, const c
 		efree(types);
 	}
 
-	if (res) {
+	if (!res) {
+		rv = FAILURE;
+		zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to prepare statement (%s)", PHP_PQerrorMessage(obj->intern->conn));
+	} else {
 		rv = php_pqres_success(res TSRMLS_CC);
 		PHP_PQclear(res);
-	} else {
-		rv = FAILURE;
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not prepare statement (%s)", PHP_PQerrorMessage(obj->intern->conn));
+		php_pqconn_notify_listeners(obj TSRMLS_CC);
 	}
 	
 	return rv;
@@ -2518,29 +2573,29 @@ static PHP_METHOD(pqconn, prepare) {
 	zval *ztypes = NULL;
 	char *name_str, *query_str;
 	int name_len, *query_len;
+	STATUS rv;
 
-	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|a/!", &name_str, &name_len, &query_str, &query_len, &ztypes)) {
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|a/!", &name_str, &name_len, &query_str, &query_len, &ztypes);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
-			if (SUCCESS == php_pqconn_prepare(getThis(), obj, name_str, query_str, ztypes ? Z_ARRVAL_P(ztypes) : NULL TSRMLS_CC)) {
-				php_pqstm_t *stm = ecalloc(1, sizeof(*stm));
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else if (SUCCESS == php_pqconn_prepare(getThis(), obj, name_str, query_str, ztypes ? Z_ARRVAL_P(ztypes) : NULL TSRMLS_CC)) {
+			php_pqstm_t *stm = ecalloc(1, sizeof(*stm));
 
-				php_pq_object_addref(obj TSRMLS_CC);
-				stm->conn = obj;
-				stm->name = estrdup(name_str);
-				ZEND_INIT_SYMTABLE(&stm->bound);
+			php_pq_object_addref(obj TSRMLS_CC);
+			stm->conn = obj;
+			stm->name = estrdup(name_str);
+			ZEND_INIT_SYMTABLE(&stm->bound);
 
-				return_value->type = IS_OBJECT;
-				return_value->value.obj = php_pqstm_create_object_ex(php_pqstm_class_entry, stm, NULL TSRMLS_CC);
-			}
-			php_pqconn_notify_listeners(obj TSRMLS_CC);
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
+			return_value->type = IS_OBJECT;
+			return_value->value.obj = php_pqstm_create_object_ex(php_pqstm_class_entry, stm, NULL TSRMLS_CC);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 static STATUS php_pqconn_prepare_async(zval *object, php_pqconn_object_t *obj, const char *name, const char *query, HashTable *typest TSRMLS_DC)
@@ -2557,16 +2612,16 @@ static STATUS php_pqconn_prepare_async(zval *object, php_pqconn_object_t *obj, c
 		count = php_pq_types_to_array(typest, &types TSRMLS_CC);
 	}
 	
-	if (PQsendPrepare(obj->intern->conn, name, query, count, types)) {
-		if (obj->intern->unbuffered) {
-			if (!PQsetSingleRowMode(obj->intern->conn)) {
-				php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Could not enable unbuffered mode (%s)", PHP_PQerrorMessage(obj->intern->conn));
-			}
-		}
-		rv = SUCCESS;
-	} else {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not prepare statement (%s)", PHP_PQerrorMessage(obj->intern->conn));
+	if (!PQsendPrepare(obj->intern->conn, name, query, count, types)) {
 		rv = FAILURE;
+		zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to prepare statement (%s)", PHP_PQerrorMessage(obj->intern->conn));
+	} else if (obj->intern->unbuffered && !PQsetSingleRowMode(obj->intern->conn)) {
+		rv = FAILURE;
+		zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to enable unbuffered mode (%s)", PHP_PQerrorMessage(obj->intern->conn));
+	} else {
+		rv = SUCCESS;
+		obj->intern->poller = PQconsumeInput;
+		php_pqconn_notify_listeners(obj TSRMLS_CC);
 	}
 	
 	if (types) {
@@ -2586,30 +2641,29 @@ static PHP_METHOD(pqconn, prepareAsync) {
 	zval *ztypes = NULL;
 	char *name_str, *query_str;
 	int name_len, *query_len;
+	STATUS rv;
 
-	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|a/!", &name_str, &name_len, &query_str, &query_len, &ztypes)) {
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|a/!", &name_str, &name_len, &query_str, &query_len, &ztypes);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
-			obj->intern->poller = PQconsumeInput;
-			if (SUCCESS == php_pqconn_prepare_async(getThis(), obj, name_str, query_str, ztypes ? Z_ARRVAL_P(ztypes) : NULL TSRMLS_CC)) {
-				php_pqstm_t *stm = ecalloc(1, sizeof(*stm));
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else if (SUCCESS == php_pqconn_prepare_async(getThis(), obj, name_str, query_str, ztypes ? Z_ARRVAL_P(ztypes) : NULL TSRMLS_CC)) {
+			php_pqstm_t *stm = ecalloc(1, sizeof(*stm));
 
-				php_pq_object_addref(obj TSRMLS_CC);
-				stm->conn = obj;
-				stm->name = estrdup(name_str);
-				ZEND_INIT_SYMTABLE(&stm->bound);
+			php_pq_object_addref(obj TSRMLS_CC);
+			stm->conn = obj;
+			stm->name = estrdup(name_str);
+			ZEND_INIT_SYMTABLE(&stm->bound);
 
-				return_value->type = IS_OBJECT;
-				return_value->value.obj = php_pqstm_create_object_ex(php_pqstm_class_entry, stm, NULL TSRMLS_CC);
-			}
-			php_pqconn_notify_listeners(obj TSRMLS_CC);
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
+			return_value->type = IS_OBJECT;
+			return_value->value.obj = php_pqstm_create_object_ex(php_pqstm_class_entry, stm, NULL TSRMLS_CC);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_quote, 0, 0, 1)
@@ -2622,19 +2676,18 @@ static PHP_METHOD(pqconn, quote) {
 	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &str, &len)) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
 			char *quoted = PQescapeLiteral(obj->intern->conn, str, len);
 
-			if (quoted) {
+			if (!quoted) {
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to quote string (%s)", PHP_PQerrorMessage(obj->intern->conn));
+				RETVAL_FALSE;
+			} else {
 				RETVAL_STRING(quoted, 1);
 				PQfreemem(quoted);
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not quote string (%s)", PHP_PQerrorMessage(obj->intern->conn));
-				RETVAL_FALSE;
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-			RETVAL_FALSE;
 		}
 	}
 }
@@ -2649,19 +2702,18 @@ static PHP_METHOD(pqconn, quoteName) {
 	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &str, &len)) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
 			char *quoted = PQescapeIdentifier(obj->intern->conn, str, len);
 
-			if (quoted) {
+			if (!quoted) {
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to quote name (%s)", PHP_PQerrorMessage(obj->intern->conn));
+				RETVAL_FALSE;
+			} else {
 				RETVAL_STRING(quoted, 1);
 				PQfreemem(quoted);
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not quote name (%s)", PHP_PQerrorMessage(obj->intern->conn));
-				RETVAL_FALSE;
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-			RETVAL_FALSE;
 		}
 	}
 }
@@ -2676,20 +2728,19 @@ static PHP_METHOD(pqconn, escapeBytea) {
 	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &str, &len)) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
 			size_t escaped_len;
 			char *escaped_str = (char *) PQescapeByteaConn(obj->intern->conn, (unsigned char *) str, len, &escaped_len);
 
-			if (escaped_str) {
+			if (!escaped_str) {
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to escape bytea (%s)", PHP_PQerrorMessage(obj->intern->conn));
+				RETVAL_FALSE;
+			} else {
 				RETVAL_STRINGL(escaped_str, escaped_len - 1, 1);
 				PQfreemem(escaped_str);
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not escape bytea (%s)", PHP_PQerrorMessage(obj->intern->conn));
-				RETVAL_FALSE;
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-			RETVAL_FALSE;
 		}
 	}
 }
@@ -2704,20 +2755,19 @@ static PHP_METHOD(pqconn, unescapeBytea) {
 	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &str, &len)) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
 			size_t unescaped_len;
 			char *unescaped_str = (char *) PQunescapeBytea((unsigned char *)str, &unescaped_len);
 
-			if (unescaped_str) {
+			if (!unescaped_str) {
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to unescape bytea (%s)", PHP_PQerrorMessage(obj->intern->conn));
+				RETVAL_FALSE;
+			} else {
 				RETVAL_STRINGL(unescaped_str, unescaped_len, 1);
 				PQfreemem(unescaped_str);
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not unescape bytea (%s)", PHP_PQerrorMessage(obj->intern->conn));
-				RETVAL_FALSE;
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-			RETVAL_FALSE;
 		}
 	}
 }
@@ -2738,61 +2788,79 @@ static const char *isolation_level(long *isolation) {
 
 static STATUS php_pqconn_start_transaction(zval *zconn, php_pqconn_object_t *conn_obj, long isolation, zend_bool readonly, zend_bool deferrable TSRMLS_DC)
 {
+	STATUS rv = FAILURE;
+
 	if (!conn_obj) {
 		conn_obj = zend_object_store_get_object(zconn TSRMLS_CC);
 	}
 
-	if (conn_obj->intern) {
-		PGresult *res;
-		char *cmd;
-
-		spprintf(&cmd, 0, "START TRANSACTION ISOLATION LEVEL %s, READ %s, %s DEFERRABLE",
-				isolation_level(&isolation), readonly ? "ONLY" : "WRITE", deferrable ? "": "NOT");
-
-		res = PQexec(conn_obj->intern->conn, cmd);
-
-		efree(cmd);
-
-		if (res) {
-			STATUS rv = php_pqres_success(res TSRMLS_CC);
-
-			PHP_PQclear(res);
-			return rv;
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not start transaction (%s)", PHP_PQerrorMessage(conn_obj->intern->conn));
-			return FAILURE;
-		}
+	if (!conn_obj->intern) {
+		zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
 	} else {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-		return FAILURE;
+		PGresult *res;
+		smart_str cmd = {0};
+		const char *il = isolation_level(&isolation);
+
+		smart_str_appends(&cmd, "START TRANSACTION ISOLATION LEVEL ");
+		smart_str_appends(&cmd, il);
+		smart_str_appends(&cmd, ", READ ");
+		smart_str_appends(&cmd, readonly ? "ONLY" : "WRITE");
+		smart_str_appends(&cmd, ",");
+		smart_str_appends(&cmd, deferrable ? "" : " NOT");
+		smart_str_appends(&cmd, " DEFERRABLE");
+		smart_str_0(&cmd);
+
+		res = PQexec(conn_obj->intern->conn, cmd.c);
+
+		if (!res) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to start transaction (%s)", PHP_PQerrorMessage(conn_obj->intern->conn));
+		} else {
+			rv = php_pqres_success(res TSRMLS_CC);
+			PHP_PQclear(res);
+			php_pqconn_notify_listeners(conn_obj TSRMLS_CC);
+		}
+
+		smart_str_free(&cmd);
 	}
+
+	return rv;
 }
 
 static STATUS php_pqconn_start_transaction_async(zval *zconn, php_pqconn_object_t *conn_obj, long isolation, zend_bool readonly, zend_bool deferrable TSRMLS_DC)
 {
+	STATUS rv = FAILURE;
+
 	if (!conn_obj) {
 		conn_obj = zend_object_store_get_object(zconn TSRMLS_CC);
 	}
 
-	if (conn_obj->intern->conn) {
-		char *cmd;
-
-		spprintf(&cmd, 0, "START TRANSACTION ISOLATION LEVEL %s, READ %s, %s DEFERRABLE",
-				isolation_level(&isolation), readonly ? "ONLY" : "WRITE", deferrable ? "": "NOT");
-
-		if (PQsendQuery(conn_obj->intern->conn, cmd)) {
-			conn_obj->intern->poller = PQconsumeInput;
-			efree(cmd);
-			return SUCCESS;
-		} else {
-			efree(cmd);
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not start transaction (%s)", PHP_PQerrorMessage(conn_obj->intern->conn));
-			return FAILURE;
-		}
+	if (!conn_obj->intern) {
+		zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
 	} else {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-		return FAILURE;
+		smart_str cmd = {0};
+		const char *il = isolation_level(&isolation);
+
+		smart_str_appends(&cmd, "START TRANSACTION ISOLATION LEVEL ");
+		smart_str_appends(&cmd, il);
+		smart_str_appends(&cmd, ", READ ");
+		smart_str_appends(&cmd, readonly ? "ONLY" : "WRITE");
+		smart_str_appends(&cmd, ",");
+		smart_str_appends(&cmd, deferrable ? "" : "NOT ");
+		smart_str_appends(&cmd, " DEFERRABLE");
+		smart_str_0(&cmd);
+
+		if (!PQsendQuery(conn_obj->intern->conn, cmd.c)) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to start transaction (%s)", PHP_PQerrorMessage(conn_obj->intern->conn));
+		} else {
+			rv = SUCCESS;
+			conn_obj->intern->poller = PQconsumeInput;
+			php_pqconn_notify_listeners(conn_obj TSRMLS_CC);
+		}
+
+		smart_str_free(&cmd);
 	}
+
+	return rv;
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_start_transaction, 0, 0, 0)
@@ -2804,10 +2872,13 @@ static PHP_METHOD(pqconn, startTransaction) {
 	zend_error_handling zeh;
 	long isolation = PHP_PQTXN_READ_COMMITTED;
 	zend_bool readonly = 0, deferrable = 0;
+	STATUS rv;
 
-	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|lbb", &isolation, &readonly, &deferrable)) {
-		STATUS rv;
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|lbb", &isolation, &readonly, &deferrable);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
 		rv = php_pqconn_start_transaction(getThis(), obj, isolation, readonly, deferrable TSRMLS_CC);
@@ -2817,6 +2888,7 @@ static PHP_METHOD(pqconn, startTransaction) {
 
 			php_pq_object_addref(obj TSRMLS_CC);
 			txn->conn = obj;
+			txn->open = 1;
 			txn->isolation = isolation;
 			txn->readonly = readonly;
 			txn->deferrable = deferrable;
@@ -2825,7 +2897,6 @@ static PHP_METHOD(pqconn, startTransaction) {
 			return_value->value.obj = php_pqtxn_create_object_ex(php_pqtxn_class_entry, txn, NULL TSRMLS_CC);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 
@@ -2838,10 +2909,12 @@ static PHP_METHOD(pqconn, startTransactionAsync) {
 	zend_error_handling zeh;
 	long isolation = PHP_PQTXN_READ_COMMITTED;
 	zend_bool readonly = 0, deferrable = 0;
+	STATUS rv;
 
-	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|lbb", &isolation, &readonly, &deferrable)) {
-		STATUS rv;
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|lbb", &isolation, &readonly, &deferrable);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+	if (SUCCESS == rv) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
 		rv = php_pqconn_start_transaction_async(getThis(), obj, isolation, readonly, deferrable TSRMLS_CC);
@@ -2859,7 +2932,6 @@ static PHP_METHOD(pqconn, startTransactionAsync) {
 			return_value->value.obj = php_pqtxn_create_object_ex(php_pqtxn_class_entry, txn, NULL TSRMLS_CC);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_trace, 0, 0, 0)
@@ -2870,27 +2942,27 @@ static PHP_METHOD(pqconn, trace) {
 
 	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|r!", &zstream)) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
-		if (obj->intern) {
-			if (zstream) {
+
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
+			if (!zstream) {
+				PQuntrace(obj->intern->conn);
+				RETVAL_TRUE;
+			} else {
 				FILE *fp;
 				php_stream *stream = NULL;
 
 				php_stream_from_zval(stream, &zstream);
 
-				if (SUCCESS == php_stream_cast(stream, PHP_STREAM_AS_STDIO, (void *) &fp, REPORT_ERRORS)) {
+				if (SUCCESS != php_stream_cast(stream, PHP_STREAM_AS_STDIO, (void *) &fp, REPORT_ERRORS)) {
+					RETVAL_FALSE;
+				} else {
 					stream->flags |= PHP_STREAM_FLAG_NO_CLOSE;
 					PQtrace(obj->intern->conn, fp);
 					RETVAL_TRUE;
-				} else {
-					RETVAL_FALSE;
 				}
-			} else {
-				PQuntrace(obj->intern->conn);
-				RETVAL_TRUE;
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-			RETVAL_FALSE;
 		}
 	}
 }
@@ -2928,33 +3000,39 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtypes, __construct) {
 	zend_error_handling zeh;
 	zval *zconn, *znsp = NULL;
+	STATUS rv;
 
-	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O|a!", &zconn, php_pqconn_class_entry, &znsp)) {
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O|a!", &zconn, php_pqconn_class_entry, &znsp);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqconn_object_t *conn_obj = zend_object_store_get_object(zconn TSRMLS_CC);
 
-		if (conn_obj->intern) {
-			zval *retval = NULL;
+		if (!conn_obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
 			php_pqtypes_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+			zval *retval = NULL;
 
 			obj->intern = ecalloc(1, sizeof(*obj->intern));
 			obj->intern->conn = conn_obj;
 			php_pq_object_addref(conn_obj TSRMLS_CC);
 			zend_hash_init(&obj->intern->types, 300, NULL, ZVAL_PTR_DTOR, 0);
 
+			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh TSRMLS_CC);
 			if (znsp) {
 				zend_call_method_with_1_params(&getThis(), Z_OBJCE_P(getThis()), NULL, "refresh", &retval, znsp);
 			} else {
 				zend_call_method_with_0_params(&getThis(), Z_OBJCE_P(getThis()), NULL, "refresh", &retval);
 			}
+			zend_restore_error_handling(&zeh TSRMLS_CC);
+
 			if (retval) {
 				zval_ptr_dtor(&retval);
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 #define PHP_PQ_TYPES_QUERY \
@@ -2969,14 +3047,24 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqtypes_refresh, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtypes, refresh) {
 	HashTable *nsp = NULL;
+	zend_error_handling zeh;
+	STATUS rv;
 
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|H/!", &nsp)) {
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|H/!", &nsp);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqtypes_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Types not initialized");
+		} else {
 			PGresult *res;
 
-			if (nsp && zend_hash_num_elements(nsp)) {
+			if (!nsp || !zend_hash_num_elements(nsp)) {
+				res = PQexec(obj->intern->conn->intern->conn, PHP_PQ_TYPES_QUERY " and nspname in ('public', 'pg_catalog')");
+			} else {
 				int i, count;
 				Oid *oids;
 				char **params = NULL;
@@ -3004,14 +3092,12 @@ static PHP_METHOD(pqtypes, refresh) {
 				efree(oids);
 				efree(params);
 				zend_hash_destroy(&zdtor);
-			} else {
-				res = PQexec(obj->intern->conn->intern->conn, PHP_PQ_TYPES_QUERY " and nspname in ('public', 'pg_catalog')");
 			}
 
-			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
-
-			if (res) {
-				if (PGRES_TUPLES_OK == PQresultStatus(res)) {
+			if (!res) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to fetch types (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+			} else {
+				if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
 					int r, rows;
 
 					for (r = 0, rows = PQntuples(res); r < rows; ++r) {
@@ -3024,16 +3110,11 @@ static PHP_METHOD(pqtypes, refresh) {
 						zend_hash_index_update(&obj->intern->types, oid, (void *) &row, sizeof(zval *), NULL);
 						zend_hash_add(&obj->intern->types, name, strlen(name) + 1, (void *) &row, sizeof(zval *), NULL);
 					}
-				} else {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not fetch types (%s)", PHP_PQresultErrorMessage(res));
 				}
-				PHP_PQclear(res);
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not fetch types (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-			}
 
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Types not initialized");
+				PHP_PQclear(res);
+				php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
+			}
 		}
 	}
 }
@@ -3137,24 +3218,24 @@ static PHP_METHOD(pqres, bind) {
 	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z/z", &zcol, &zref)) {
 		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Result not initialized");
+		} else {
 			php_pqres_col_t col;
 
-			if (SUCCESS == column_nn(obj, zcol, &col TSRMLS_CC)) {
+			if (SUCCESS != column_nn(obj, zcol, &col TSRMLS_CC)) {
+				RETVAL_FALSE;
+			} else {
 				Z_ADDREF_P(zref);
-				if (SUCCESS == zend_hash_index_update(&obj->intern->bound, col.num, (void *) &zref, sizeof(zval *), NULL)) {
-					zend_hash_sort(&obj->intern->bound, zend_qsort, compare_index, 0 TSRMLS_CC);
-					RETVAL_TRUE;
-				} else {
+
+				if (SUCCESS != zend_hash_index_update(&obj->intern->bound, col.num, (void *) &zref, sizeof(zval *), NULL)) {
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to bind column %s@%d", col.name, col.num);
 					RETVAL_FALSE;
+				} else {
+					zend_hash_sort(&obj->intern->bound, zend_qsort, compare_index, 0 TSRMLS_CC);
+					RETVAL_TRUE;
 				}
-			} else {
-				RETVAL_FALSE;
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Result not initialized");
-			RETVAL_FALSE;
 		}
 	}
 }
@@ -3163,18 +3244,21 @@ static int apply_bound(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key 
 {
 	zval **zvalue, **zbound = p;
 	zval **zrow = va_arg(argv, zval **);
+	STATUS *rv = va_arg(argv, STATUS *);
 
-	if (SUCCESS == zend_hash_index_find(Z_ARRVAL_PP(zrow), key->h, (void *) &zvalue)) {
+	if (SUCCESS != zend_hash_index_find(Z_ARRVAL_PP(zrow), key->h, (void *) &zvalue)) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to find column ad index %lu", key->h);
+		*rv = FAILURE;
+		return ZEND_HASH_APPLY_STOP;
+	} else {
 		zval_dtor(*zbound);
 		ZVAL_COPY_VALUE(*zbound, *zvalue);
 		ZVAL_NULL(*zvalue);
 		zval_ptr_dtor(zvalue);
 		Z_ADDREF_P(*zbound);
 		*zvalue = *zbound;
+		*rv = SUCCESS;
 		return ZEND_HASH_APPLY_KEEP;
-	} else {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to find column ad index %lu", key->h);
-		return ZEND_HASH_APPLY_STOP;
 	}
 }
 
@@ -3182,23 +3266,33 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_bound, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, fetchBound) {
 	zend_error_handling zeh;
+	STATUS rv;
 
-	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters_none()) {
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Result not initialized");
+		} else {
 			zval **row = NULL;
 
-			if (SUCCESS == php_pqres_iteration(getThis(), obj, PHP_PQRES_FETCH_ARRAY, &row TSRMLS_CC)) {
-				if (row) {
-					zend_hash_apply_with_arguments(&obj->intern->bound TSRMLS_CC, apply_bound, 1, row);
+			if (SUCCESS == php_pqres_iteration(getThis(), obj, PHP_PQRES_FETCH_ARRAY, &row TSRMLS_CC) && row) {
+				zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh TSRMLS_CC);
+				zend_hash_apply_with_arguments(&obj->intern->bound TSRMLS_CC, apply_bound, 2, row, &rv);
+				zend_restore_error_handling(&zeh TSRMLS_CC);
+
+				if (SUCCESS != rv) {
+					zval_ptr_dtor(row);
+				} else {
 					RETVAL_ZVAL(*row, 1, 0);
 				}
 			}
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_row, 0, 0, 0)
@@ -3208,25 +3302,31 @@ static PHP_METHOD(pqres, fetchRow) {
 	zend_error_handling zeh;
 	php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 	long fetch_type = -1;
+	STATUS rv;
 
-	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &fetch_type)) {
-		if (obj->intern) {
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &fetch_type);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Result not initialized");
+		} else {
 			zval **row = NULL;
 
 			if (fetch_type == -1) {
 				 fetch_type = obj->intern->iter ? obj->intern->iter->fetch_type : PHP_PQRES_FETCH_ARRAY;
 			}
+
+			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh TSRMLS_CC);
 			php_pqres_iteration(getThis(), obj, fetch_type, &row TSRMLS_CC);
+			zend_restore_error_handling(&zeh TSRMLS_CC);
 
 			if (row) {
 				RETVAL_ZVAL(*row, 1, 0);
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Result not initialized");
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 static zval **column_at(zval *row, int col TSRMLS_DC)
@@ -3235,14 +3335,14 @@ static zval **column_at(zval *row, int col TSRMLS_DC)
 	HashTable *ht = HASH_OF(row);
 	int count = zend_hash_num_elements(ht);
 
-	if (col < count) {
+	if (col >= count) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Column index %d exceeds column count %d", col, count);
+	} else {
 		zend_hash_internal_pointer_reset(ht);
 		while (col-- > 0) {
 			zend_hash_move_forward(ht);
 		}
 		zend_hash_get_current_data(ht, (void *) &data);
-	} else {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Column index %d exceeds column count %d", col, count);
 	}
 	return data;
 }
@@ -3253,16 +3353,22 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, fetchCol) {
 	zend_error_handling zeh;
 	long fetch_col = 0;
+	STATUS rv;
 
-	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &fetch_col)) {
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &fetch_col);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Result not initialized");
+		} else {
 			zval **row = NULL;
 
+			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh TSRMLS_CC);
 			php_pqres_iteration(getThis(), obj, obj->intern->iter ? obj->intern->iter->fetch_type : 0, &row TSRMLS_CC);
-
 			if (row) {
 				zval **col = column_at(*row, fetch_col TSRMLS_CC);
 
@@ -3270,11 +3376,9 @@ static PHP_METHOD(pqres, fetchCol) {
 					RETVAL_ZVAL(*col, 1, 0);
 				}
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Result not initialized");
+			zend_restore_error_handling(&zeh TSRMLS_CC);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 static int apply_to_col(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
@@ -3285,15 +3389,15 @@ static int apply_to_col(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key
 	STATUS *rv = va_arg(argv, STATUS *);
 
 	col = *cols;
-	if (SUCCESS == column_nn(obj, *c, col TSRMLS_CC)) {
-		*rv = SUCCESS;
-	} else {
+
+	if (SUCCESS != column_nn(obj, *c, col TSRMLS_CC)) {
 		*rv = FAILURE;
 		return ZEND_HASH_APPLY_STOP;
+	} else {
+		*rv = SUCCESS;
+		++*cols;
+		return ZEND_HASH_APPLY_KEEP;
 	}
-	++*cols;
-
-	return ZEND_HASH_APPLY_KEEP;
 }
 
 static php_pqres_col_t *php_pqres_convert_to_cols(php_pqres_object_t *obj, HashTable *ht TSRMLS_DC)
@@ -3321,13 +3425,18 @@ static PHP_METHOD(pqres, map) {
 	zend_error_handling zeh;
 	zval *zkeys = 0, *zvals = 0;
 	long fetch_type = -1;
-
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|z/!z/!l", &zkeys, &zvals, &fetch_type)) {
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|z/!z/!l", &zkeys, &zvals, &fetch_type);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Result not initialized");
+		} else {
 			int ks = 0, vs = 0;
 			php_pqres_col_t def = {PQfname(obj->intern->res, 0), 0}, *keys = NULL, *vals = NULL;
 
@@ -3391,7 +3500,7 @@ static PHP_METHOD(pqres, map) {
 								break;
 							}
 							if (SUCCESS != zend_symtable_update(HASH_OF(*cur), key, len + 1, (void *) &tmp, sizeof(zval *), (void *) &cur)) {
-								php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to create map");
+								zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to create map");
 								goto err;
 							}
 						}
@@ -3426,11 +3535,8 @@ static PHP_METHOD(pqres, map) {
 			if (vals) {
 				efree(vals);
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Result not initialized");
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqres_count, 0, 0, 0)
@@ -3439,10 +3545,10 @@ static PHP_METHOD(pqres, count) {
 	if (SUCCESS == zend_parse_parameters_none()) {
 		long count;
 
-		if (SUCCESS == php_pqres_count_elements(getThis(), &count TSRMLS_CC)) {
-			RETVAL_LONG(count);
+		if (SUCCESS != php_pqres_count_elements(getThis(), &count TSRMLS_CC)) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Result not initialized");
 		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Result not initialized");
+			RETVAL_LONG(count);
 		}
 	}
 }
@@ -3470,20 +3576,23 @@ static PHP_METHOD(pqstm, __construct) {
 	char *name_str, *query_str;
 	int name_len, *query_len;
 	zend_bool async = 0;
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Oss|a/!b", &zconn, php_pqconn_class_entry, &name_str, &name_len, &query_str, &query_len, &ztypes, &async)) {
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Oss|a/!b", &zconn, php_pqconn_class_entry, &name_str, &name_len, &query_str, &query_len, &ztypes, &async);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqstm_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 		php_pqconn_object_t *conn_obj = zend_object_store_get_object(zconn TSRMLS_CC);
 
-		if (conn_obj->intern) {
-			STATUS rv;
+		if (!conn_obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
 			if (async) {
-				conn_obj->intern->poller = PQconsumeInput;
 				rv = php_pqconn_prepare_async(zconn, conn_obj, name_str, query_str, ztypes ? Z_ARRVAL_P(ztypes) : NULL TSRMLS_CC);
 			} else {
 				rv = php_pqconn_prepare(zconn, conn_obj, name_str, query_str, ztypes ? Z_ARRVAL_P(ztypes) : NULL TSRMLS_CC);
-				php_pqconn_notify_listeners(conn_obj TSRMLS_CC);
 			}
 
 			if (SUCCESS == rv) {
@@ -3495,11 +3604,8 @@ static PHP_METHOD(pqstm, __construct) {
 				ZEND_INIT_SYMTABLE(&stm->bound);
 				obj->intern = stm;
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_bind, 0, 0, 2)
 	ZEND_ARG_INFO(0, param_no)
@@ -3512,12 +3618,12 @@ static PHP_METHOD(pqstm, bind) {
 	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lz", &param_no, &param_ref)) {
 		php_pqstm_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Statement not initialized");
+		} else {
 			Z_ADDREF_P(param_ref);
 			zend_hash_index_update(&obj->intern->bound, param_no, (void *) &param_ref, sizeof(zval *), NULL);
 			zend_hash_sort(&obj->intern->bound, zend_qsort, compare_index, 0 TSRMLS_CC);
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Statement not initialized");
 		}
 	}
 }
@@ -3528,55 +3634,52 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqstm, exec) {
 	zend_error_handling zeh;
 	zval *zparams = NULL;
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|a/!", &zparams)) {
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|a/!", &zparams);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqstm_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
-			if (obj->intern->conn->intern) {
-				int count = 0;
-				char **params = NULL;
-				HashTable zdtor;
-				PGresult *res;
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Statement not initialized");
+		} else {
+			int count = 0;
+			char **params = NULL;
+			HashTable zdtor;
+			PGresult *res;
 
-				ZEND_INIT_SYMTABLE(&zdtor);
+			ZEND_INIT_SYMTABLE(&zdtor);
 
-				if (zparams) {
-					count = php_pq_params_to_array(Z_ARRVAL_P(zparams), &params, &zdtor TSRMLS_CC);
-				} else {
-					count = php_pq_params_to_array(&obj->intern->bound, &params, &zdtor TSRMLS_CC);
-				}
+			if (zparams) {
+				count = php_pq_params_to_array(Z_ARRVAL_P(zparams), &params, &zdtor TSRMLS_CC);
+			} else {
+				count = php_pq_params_to_array(&obj->intern->bound, &params, &zdtor TSRMLS_CC);
+			}
 
-				res = PQexecPrepared(obj->intern->conn->intern->conn, obj->intern->name, count, (const char *const*) params, NULL, NULL, 0);
+			res = PQexecPrepared(obj->intern->conn->intern->conn, obj->intern->name, count, (const char *const*) params, NULL, NULL, 0);
 
-				if (params) {
-					efree(params);
-				}
-				zend_hash_destroy(&zdtor);
+			if (params) {
+				efree(params);
+			}
+			zend_hash_destroy(&zdtor);
+
+			if (!res) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to execute statement (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+			} else if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
+				php_pqres_t *r = ecalloc(1, sizeof(*r));
+
+				r->res = res;
+				ZEND_INIT_SYMTABLE(&r->bound);
+				return_value->type = IS_OBJECT;
+				return_value->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, r, NULL TSRMLS_CC);
 
 				php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
-
-				if (res) {
-					if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
-						php_pqres_t *r = ecalloc(1, sizeof(*r));
-
-						r->res = res;
-						ZEND_INIT_SYMTABLE(&r->bound);
-						return_value->type = IS_OBJECT;
-						return_value->value.obj = php_pqres_create_object_ex(php_pqres_class_entry, r, NULL TSRMLS_CC);
-					}
-				} else {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not execute statement (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-				}
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Statement not initialized");
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_exec_async, 0, 0, 0)
@@ -3587,130 +3690,111 @@ static PHP_METHOD(pqstm, execAsync) {
 	zend_error_handling zeh;
 	zval *zparams = NULL;
 	php_pq_callback_t resolver = {{0}};
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|a/!f", &zparams, &resolver.fci, &resolver.fcc)) {
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|a/!f", &zparams, &resolver.fci, &resolver.fcc);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqstm_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
-			if (obj->intern->conn->intern) {
-				int count;
-				char **params = NULL;
-				HashTable zdtor;
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Statement not initialized");
+		} else {
+			int count;
+			char **params = NULL;
+			HashTable zdtor;
 
-				if (zparams) {
-					ZEND_INIT_SYMTABLE(&zdtor);
-					count = php_pq_params_to_array(Z_ARRVAL_P(zparams), &params, &zdtor TSRMLS_CC);
-				}
+			if (zparams) {
+				ZEND_INIT_SYMTABLE(&zdtor);
+				count = php_pq_params_to_array(Z_ARRVAL_P(zparams), &params, &zdtor TSRMLS_CC);
+			}
 
+			if (!PQsendQueryPrepared(obj->intern->conn->intern->conn, obj->intern->name, count, (const char *const*) params, NULL, NULL, 0)) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+			} else if (obj->intern->conn->intern->unbuffered && !PQsetSingleRowMode(obj->intern->conn->intern->conn)) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to enable unbuffered mode (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+			} else {
 				php_pq_callback_dtor(&obj->intern->conn->intern->onevent);
 				if (resolver.fci.size > 0) {
 					obj->intern->conn->intern->onevent = resolver;
 					php_pq_callback_addref(&obj->intern->conn->intern->onevent);
 				}
-
 				obj->intern->conn->intern->poller = PQconsumeInput;
-
-				if (PQsendQueryPrepared(obj->intern->conn->intern->conn, obj->intern->name, count, (const char *const*) params, NULL, NULL, 0)) {
-					if (obj->intern->conn->intern->unbuffered) {
-						if (!PQsetSingleRowMode(obj->intern->conn->intern->conn)) {
-							php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Could not enable unbuffered mode (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-						}
-					}
-					RETVAL_TRUE;
-				} else {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not execute statement (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-					RETVAL_FALSE;
-				}
-
-				if (params) {
-					efree(params);
-				}
-				if (zparams) {
-					zend_hash_destroy(&zdtor);
-				}
-
-				php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
-
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-				RETVAL_FALSE;
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Statement not initialized");
-			RETVAL_FALSE;
+
+			if (params) {
+				efree(params);
+			}
+			if (zparams) {
+				zend_hash_destroy(&zdtor);
+			}
+
+			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_desc, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqstm, desc) {
 	zend_error_handling zeh;
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters_none()) {
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqstm_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
-			if (obj->intern->conn->intern) {
-				PGresult *res = PQdescribePrepared(obj->intern->conn->intern->conn, obj->intern->name);
-
-				php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
-
-				if (res) {
-					if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
-						int p, params;
-
-						array_init(return_value);
-						for (p = 0, params = PQnparams(res); p < params; ++p) {
-							add_next_index_long(return_value, PQparamtype(res, p));
-						}
-					}
-				} else {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not describe statement (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-				}
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
-			}
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Statement not initialized");
 		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Statement not initialized");
+			PGresult *res = PQdescribePrepared(obj->intern->conn->intern->conn, obj->intern->name);
+
+			if (!res) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to describe statement (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+			} else {
+				if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
+					int p, params;
+
+					array_init(return_value);
+					for (p = 0, params = PQnparams(res); p < params; ++p) {
+						add_next_index_long(return_value, PQparamtype(res, p));
+					}
+				}
+				PHP_PQclear(res);
+				php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
+			}
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_desc_async, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqstm, descAsync) {
 	zend_error_handling zeh;
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters_none()) {
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqstm_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
-
-			obj->intern->conn->intern->poller = PQconsumeInput;
-
-			if (PQsendDescribePrepared(obj->intern->conn->intern->conn, obj->intern->name)) {
-				RETVAL_TRUE;
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not describe statement: %s", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-				RETVAL_FALSE;
-			}
-
-			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
-
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Statement not initialized");
+		} else if (!PQsendDescribePrepared(obj->intern->conn->intern->conn, obj->intern->name)) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to describe statement: %s", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Statement not initialized");
-			RETVAL_FALSE;
+			obj->intern->conn->intern->poller = PQconsumeInput;
+			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
-
 
 static zend_function_entry php_pqstm_methods[] = {
 	PHP_ME(pqstm, __construct, ai_pqstm_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
@@ -3734,14 +3818,18 @@ static PHP_METHOD(pqtxn, __construct) {
 	zval *zconn;
 	long isolation = PHP_PQTXN_READ_COMMITTED;
 	zend_bool async = 0, readonly = 0, deferrable = 0;
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O|blbb", &zconn, php_pqconn_class_entry, &async, &isolation, &readonly, &deferrable)) {
-		STATUS rv;
-		php_pqtxn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O|blbb", &zconn, php_pqconn_class_entry, &async, &isolation, &readonly, &deferrable);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqconn_object_t *conn_obj = zend_object_store_get_object(zconn TSRMLS_CC);
 
-		if (conn_obj->intern) {
+		if (!conn_obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
 			if (async) {
 				rv = php_pqconn_start_transaction_async(zconn, conn_obj, isolation, readonly, deferrable TSRMLS_CC);
 			} else {
@@ -3749,277 +3837,342 @@ static PHP_METHOD(pqtxn, __construct) {
 			}
 
 			if (SUCCESS == rv) {
+				php_pqtxn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
 				obj->intern = ecalloc(1, sizeof(*obj->intern));
 
 				php_pq_object_addref(conn_obj TSRMLS_CC);
 				obj->intern->conn = conn_obj;
+				obj->intern->open = 1;
 				obj->intern->isolation = isolation;
 				obj->intern->readonly = readonly;
 				obj->intern->deferrable = deferrable;
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_savepoint, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, savepoint) {
 	zend_error_handling zeh;
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters_none()) {
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqtxn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
-			char *cmd;
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transaction not initialized");
+		} else if (!obj->intern->open) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transaction already closed");
+		} else {
 			PGresult *res;
+			smart_str cmd = {0};
 
-			spprintf(&cmd, 0, "SAVEPOINT \"%u\"", ++obj->intern->savepoint);
-			res = PQexec(obj->intern->conn->intern->conn, cmd);
+			smart_str_appends(&cmd, "SAVEPOINT \"");
+			smart_str_append_unsigned(&cmd, ++obj->intern->savepoint);
+			smart_str_appends(&cmd, "\"");
+			smart_str_0(&cmd);
 
-			if (res) {
+			res = PQexec(obj->intern->conn->intern->conn, cmd.c);
+
+			if (!res) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to create %s (%s)", cmd.c, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+			} else {
 				php_pqres_success(res TSRMLS_CC);
 				PHP_PQclear(res);
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to create %s (%s)", cmd, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			}
 
-			efree(cmd);
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Transaction not initialized");
+			smart_str_free(&cmd);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_savepoint_async, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, savepointAsync) {
 	zend_error_handling zeh;
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters_none()) {
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqtxn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
-			char *cmd;
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transaction not initialized");
+		} else if (!obj->intern->open) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transaction already closed");
+		} else {
+			smart_str cmd = {0};
 
-			spprintf(&cmd, 0, "SAVEPOINT \"%u\"", ++obj->intern->savepoint);
-			if (!PQsendQuery(obj->intern->conn->intern->conn, cmd)) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to create %s (%s)", cmd, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+			smart_str_appends(&cmd, "SAVEPOINT \"");
+			smart_str_append_unsigned(&cmd, ++obj->intern->savepoint);
+			smart_str_appends(&cmd, "\"");
+			smart_str_0(&cmd);
+
+			if (!PQsendQuery(obj->intern->conn->intern->conn, cmd.c)) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to create %s (%s)", cmd.c, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			}
 
-			efree(cmd);
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Transaction not initialized");
+			smart_str_free(&cmd);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_commit, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, commit) {
 	zend_error_handling zeh;
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters_none()) {
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqtxn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
-			PGresult *res;
-
-			if (obj->intern->savepoint) {
-				char *cmd;
-
-				spprintf(&cmd, 0, "RELEASE SAVEPOINT \"%u\"", obj->intern->savepoint--);
-				res = PQexec(obj->intern->conn->intern->conn, cmd);
-
-				if (res) {
-					php_pqres_success(res TSRMLS_CC);
-					PHP_PQclear(res);
-				} else {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to %s (%s)", cmd, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-				}
-
-				efree(cmd);
-			} else {
-				res = PQexec(obj->intern->conn->intern->conn, "COMMIT");
-
-				if (res) {
-					php_pqres_success(res TSRMLS_CC);
-					PHP_PQclear(res);
-				} else {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to commit transaction (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-				}
-			}
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transacation not initialized");
+		} else if (!obj->intern->open) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transacation already closed");
 		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Transaction not initialized");
+			PGresult *res;
+			smart_str cmd = {0};
+
+			if (!obj->intern->savepoint) {
+				res = PQexec(obj->intern->conn->intern->conn, "COMMIT");
+			} else {
+				smart_str_appends(&cmd, "RELEASE SAVEPOINT \"");
+				smart_str_append_unsigned(&cmd, obj->intern->savepoint--);
+				smart_str_appends(&cmd, "\"");
+				smart_str_0(&cmd);
+
+				res = PQexec(obj->intern->conn->intern->conn, cmd.c);
+			}
+
+			if (!res) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to %s (%s)", cmd.c ? cmd.c : "commit transaction", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+			} else {
+				if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
+					if (!cmd.c) {
+						obj->intern->open = 0;
+					}
+				}
+				PHP_PQclear(res);
+			}
+
+			smart_str_free(&cmd);
+			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_commit_async, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, commitAsync) {
 	zend_error_handling zeh;
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters_none()) {
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqtxn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
-			obj->intern->conn->intern->poller = PQconsumeInput;
-
-			if (obj->intern->savepoint) {
-				char *cmd;
-
-				spprintf(&cmd, 0, "RELEASE SAVEPOINT \"%u\"", obj->intern->savepoint--);
-				if (!PQsendQuery(obj->intern->conn->intern->conn, cmd)) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to %s (%s)", cmd, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-				}
-
-				efree(cmd);
-			} else {
-				if (!PQsendQuery(obj->intern->conn->intern->conn, "COMMIT")) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to commit transaction (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-				}
-			}
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transaction not initialized");
+		} else if (!obj->intern->open) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transaction already closed");
 		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Transaction not initialized");
+			int rc;
+			smart_str cmd = {0};
+
+			if (!obj->intern->savepoint) {
+				rc = PQsendQuery(obj->intern->conn->intern->conn, "COMMIT");
+			} else {
+				smart_str_appends(&cmd, "RELEASE SAVEPOINT \"");
+				smart_str_append_unsigned(&cmd, obj->intern->savepoint--);
+				smart_str_appends(&cmd, "\"");
+				smart_str_0(&cmd);
+
+				rc = PQsendQuery(obj->intern->conn->intern->conn, cmd.c);
+			}
+
+			if (!rc) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to %s (%s)", cmd.c ? cmd.c : "commmit transaction", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+			} else {
+				if (!cmd.c) {
+					obj->intern->open = 0;
+				}
+				obj->intern->conn->intern->poller = PQconsumeInput;
+				php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
+			}
+
+			smart_str_free(&cmd);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_rollback, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, rollback) {
 	zend_error_handling zeh;
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters_none()) {
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqtxn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
-			PGresult *res;
-
-			if (obj->intern->savepoint) {
-				char *cmd;
-
-				spprintf(&cmd, 0, "ROLLBACK TO SAVEPOINT \"%u\"", obj->intern->savepoint--);
-				res = PQexec(obj->intern->conn->intern->conn, cmd);
-
-				if (res) {
-					php_pqres_success(res TSRMLS_CC);
-					PHP_PQclear(res);
-				} else {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to %s (%s)", cmd, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-				}
-
-				efree(cmd);
-			} else {
-				res = PQexec(obj->intern->conn->intern->conn, "ROLLBACK");
-
-				if (res) {
-					php_pqres_success(res TSRMLS_CC);
-					PHP_PQclear(res);
-				} else {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to rollback transaction (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-				}
-			}
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transaction not initialized");
+		} else if (!obj->intern->open) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transaction already closed");
 		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Transaction not initialized");
+			PGresult *res;
+			smart_str cmd = {0};
+
+			if (!obj->intern->savepoint) {
+				res = PQexec(obj->intern->conn->intern->conn, "ROLLBACK");
+			} else {
+				smart_str_appends(&cmd, "ROLLBACK TO SAVEPOINT \"");
+				smart_str_append_unsigned(&cmd, obj->intern->savepoint--);
+				smart_str_appends(&cmd, "\"");
+				smart_str_0(&cmd);
+
+				res = PQexec(obj->intern->conn->intern->conn, cmd.c);
+			}
+
+			if (!res) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to %s (%s)", cmd.c ? cmd.c : "rollback transaction", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+			} else {
+				if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
+					if (!cmd.c) {
+						obj->intern->open = 0;
+					}
+				}
+				PHP_PQclear(res);
+			}
+
+			smart_str_free(&cmd);
+			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_rollback_async, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, rollbackAsync) {
 	zend_error_handling zeh;
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters_none()) {
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqtxn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
-			obj->intern->conn->intern->poller = PQconsumeInput;
-
-			if (obj->intern->savepoint) {
-				char *cmd;
-
-				spprintf(&cmd, 0, "ROLLBACK TO SAVEPOINT \"%u\"", obj->intern->savepoint--);
-				if (!PQsendQuery(obj->intern->conn->intern->conn, cmd)) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to %s (%s)", cmd, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-				}
-
-				efree(cmd);
-			} else {
-				if (!PQsendQuery(obj->intern->conn->intern->conn, "ROLLBACK")) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not rollback transaction (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-				}
-			}
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transaction not initialized");
+		} else if (!obj->intern->open) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transaction already closed");
 		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Transaction not initialized");
+			int rc;
+			smart_str cmd = {0};
+
+			if (!obj->intern->savepoint) {
+				rc = PQsendQuery(obj->intern->conn->intern->conn, "ROLLBACK");
+			} else {
+				smart_str_appends(&cmd, "ROLLBACK TO SAVEPOINT \"");
+				smart_str_append_unsigned(&cmd, obj->intern->savepoint--);
+				smart_str_appends(&cmd, "\"");
+				smart_str_0(&cmd);
+
+				rc = PQsendQuery(obj->intern->conn->intern->conn, cmd.c);
+			}
+
+			if (!rc) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to %s (%s)", cmd.c ? cmd.c : "rollback transaction", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+			} else {
+				if (!cmd.c) {
+					obj->intern->open = 0;
+				}
+				obj->intern->conn->intern->poller = PQconsumeInput;
+			}
+
+			smart_str_free(&cmd);
+			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_export_snapshot, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, exportSnapshot) {
 	zend_error_handling zeh;
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters_none()) {
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqtxn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transaction not initialized");
+		} else {
 			PGresult *res = PQexec(obj->intern->conn->intern->conn, "SELECT pg_export_snapshot()");
 
-			if (res) {
+			if (!res) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to export transaction snapshot (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+			} else {
 				if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
 					RETVAL_STRING(PQgetvalue(res, 0, 0), 1);
 				}
 
 				PHP_PQclear(res);
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to export transaction snapshot (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Transaction not initialized");
+
+			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_export_snapshot_async, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, exportSnapshotAsync) {
 	zend_error_handling zeh;
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters_none()) {
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqtxn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
-			obj->intern->conn->intern->poller = PQconsumeInput;
-
-			if (!PQsendQuery(obj->intern->conn->intern->conn, "SELECT pg_export_snapshot()")) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to export transaction snapshot (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-			}
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transaction not initialized");
+		} else if (!PQsendQuery(obj->intern->conn->intern->conn, "SELECT pg_export_snapshot()")) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to export transaction snapshot (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Transaction not initialized");
+			obj->intern->conn->intern->poller = PQconsumeInput;
+			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_import_snapshot, 0, 0, 1)
@@ -4029,33 +4182,46 @@ static PHP_METHOD(pqtxn, importSnapshot) {
 	zend_error_handling zeh;
 	char *snapshot_str;
 	int snapshot_len;
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &snapshot_str, &snapshot_len)) {
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &snapshot_str, &snapshot_len);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqtxn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
-			if (obj->intern->isolation >= PHP_PQTXN_REPEATABLE_READ) {
-				char *cmd, *sid = PQescapeLiteral(obj->intern->conn->intern->conn, snapshot_str, snapshot_len);
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transaction not initialized");
+		} else if (obj->intern->isolation < PHP_PQTXN_REPEATABLE_READ) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transaction must have at least isolation level REPEATABLE READ to be able to import a snapshot");
+		} else {
+			char *sid = PQescapeLiteral(obj->intern->conn->intern->conn, snapshot_str, snapshot_len);
+
+			if (!sid) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to quote snapshot identifier (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+			} else {
 				PGresult *res;
+				smart_str cmd = {0};
 
-				spprintf(&cmd, 0, "SET TRANSACTION SNAPSHOT %s", sid);
-				res = PQexec(obj->intern->conn->intern->conn, cmd);
+				smart_str_appends(&cmd, "SET TRANSACTION SNAPSHOT ");
+				smart_str_appends(&cmd, sid);
+				smart_str_0(&cmd);
 
-				if (res) {
+				res = PQexec(obj->intern->conn->intern->conn, cmd.c);
+
+				if (!res) {
+					zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to import transaction snapshot (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+				} else {
 					php_pqres_success(res TSRMLS_CC);
 					PHP_PQclear(res);
-				} else {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to %s (%s)", cmd, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				}
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "A transaction must have at least isolation level REPEATABLE READ to be able to import a snapshot");
+
+				smart_str_free(&cmd);
+				php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
 			}
-		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Transaction not initialized");
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_import_snapshot_async, 0, 0, 1)
@@ -4065,35 +4231,42 @@ static PHP_METHOD(pqtxn, importSnapshotAsync) {
 	zend_error_handling zeh;
 	char *snapshot_str;
 	int snapshot_len;
+	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, NULL, &zeh TSRMLS_CC);
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &snapshot_str, &snapshot_len)) {
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &snapshot_str, &snapshot_len);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqtxn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
-		if (obj->intern) {
-			if (obj->intern->isolation >= PHP_PQTXN_REPEATABLE_READ) {
-				char *sid = PQescapeLiteral(obj->intern->conn->intern->conn, snapshot_str, snapshot_len);
-
-				if (sid) {
-					char *cmd;
-					obj->intern->conn->intern->poller = PQconsumeInput;
-
-					spprintf(&cmd, 0, "SET TRANSACTION SNAPSHOT %s", sid);
-					if (!PQsendQuery(obj->intern->conn->intern->conn, cmd)) {
-						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to %s (%s)", cmd, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-					}
-					efree(cmd);
-				} else {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to quote snapshot identifier (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
-				}
-			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "A transaction must have at least isolation level REPEATABLE READ to be able to import a snapshot");
-			}
+		if (!obj->intern) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transaction not initialized");
+		} else if (obj->intern->isolation < PHP_PQTXN_REPEATABLE_READ) {
+			zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "pq\\Transaction must have at least isolation level REPEATABLE READ to be able to import a snapshot");
 		} else {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Transaction not initialized");
+			char *sid = PQescapeLiteral(obj->intern->conn->intern->conn, snapshot_str, snapshot_len);
+
+			if (!sid) {
+				zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to quote snapshot identifier (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+			} else {
+				smart_str cmd = {0};
+
+				smart_str_appends(&cmd, "SET TRANSACTION SNAPSHOT ");
+				smart_str_appends(&cmd, sid);
+				smart_str_0(&cmd);
+
+				if (!PQsendQuery(obj->intern->conn->intern->conn, cmd.c)) {
+					zend_throw_exception_ex(exce(EX_RUNTIME), EX_RUNTIME TSRMLS_CC, "Failed to %s (%s)", cmd.c, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+				} else {
+					obj->intern->conn->intern->poller = PQconsumeInput;
+				}
+
+				smart_str_free(&cmd);
+				php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
+			}
 		}
 	}
-	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_open_lob, 0, 0, 1)
@@ -4248,7 +4421,7 @@ static PHP_METHOD(pqcancel, __construct) {
 				php_pq_object_addref(conn_obj TSRMLS_CC);
 				obj->intern->conn = conn_obj;
 			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not acquire cancel (%s)", PHP_PQerrorMessage(conn_obj->intern->conn));
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to acquire cancel (%s)", PHP_PQerrorMessage(conn_obj->intern->conn));
 			}
 		} else {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Connection not initialized");
@@ -4270,7 +4443,7 @@ static PHP_METHOD(pqcancel, cancel) {
 			char err[256];
 
 			if (!PQcancel(obj->intern->cancel, err, sizeof(err))) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Could not request cancellation: %s", err);
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to request cancellation: %s", err);
 			}
 		} else {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "pq\\Cancel not initialized");
@@ -4762,6 +4935,10 @@ static zend_function_entry php_pqcopy_methods[] = {
 	{0}
 };
 
+static zend_function_entry php_pqexc_methods[] = {
+	{0}
+};
+
 /* {{{ PHP_MINIT_FUNCTION
  */
 static PHP_MINIT_FUNCTION(pq)
@@ -4769,6 +4946,30 @@ static PHP_MINIT_FUNCTION(pq)
 	zend_class_entry ce = {0};
 	php_pq_object_prophandler_t ph = {0};
 
+	INIT_NS_CLASS_ENTRY(ce, "pq", "Exception", php_pqexc_methods);
+	php_pqexc_interface_class_entry = zend_register_internal_interface(&ce TSRMLS_CC);
+
+	memset(&ce, 0, sizeof(ce));
+	INIT_NS_CLASS_ENTRY(ce, "pq\\Exception", "Exception", php_pqexc_methods);
+	php_pqexc_default_class_entry = zend_register_internal_class_ex(&ce, zend_exception_get_default(TSRMLS_C), "Exception" TSRMLS_CC);
+	zend_class_implements(php_pqexc_default_class_entry TSRMLS_CC, 1, php_pqexc_interface_class_entry);
+
+	memset(&ce, 0, sizeof(ce));
+	INIT_NS_CLASS_ENTRY(ce, "pq\\Exception", "InvalidArgument", php_pqexc_methods);
+	php_pqexc_invalid_argument_class_entry = zend_register_internal_class_ex(&ce, spl_ce_InvalidArgumentException, "InvalidArgumentException" TSRMLS_CC);
+	zend_class_implements(php_pqexc_invalid_argument_class_entry TSRMLS_CC, 1, php_pqexc_interface_class_entry);
+
+	memset(&ce, 0, sizeof(ce));
+	INIT_NS_CLASS_ENTRY(ce, "pq\\Exception", "Runtime", php_pqexc_methods);
+	php_pqexc_runtime_class_entry = zend_register_internal_class_ex(&ce, spl_ce_RuntimeException, "RuntimeException" TSRMLS_CC);
+	zend_class_implements(php_pqexc_runtime_class_entry TSRMLS_CC, 1, php_pqexc_interface_class_entry);
+
+	memset(&ce, 0, sizeof(ce));
+	INIT_NS_CLASS_ENTRY(ce, "pq\\Exception", "BadMethodCall", php_pqexc_methods);
+	php_pqexc_bad_methodcall_class_entry = zend_register_internal_class_ex(&ce, spl_ce_BadMethodCallException, "BadMethodCallException" TSRMLS_CC);
+	zend_class_implements(php_pqexc_bad_methodcall_class_entry TSRMLS_CC, 1, php_pqexc_interface_class_entry);
+
+	memset(&ce, 0, sizeof(ce));
 	INIT_NS_CLASS_ENTRY(ce, "pq", "Connection", php_pqconn_methods);
 	php_pqconn_class_entry = zend_register_internal_class_ex(&ce, NULL, NULL TSRMLS_CC);
 	php_pqconn_class_entry->create_object = php_pqconn_create_object;
@@ -4903,6 +5104,10 @@ static PHP_MINIT_FUNCTION(pq)
 	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("status"), ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqres_object_read_status;
 	zend_hash_add(&php_pqres_object_prophandlers, "status", sizeof("status"), (void *) &ph, sizeof(ph), NULL);
+
+	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("statusMessage"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqres_object_read_status_message;
+	zend_hash_add(&php_pqres_object_prophandlers, "statusMessage", sizeof("statusMessage"), (void *) &ph, sizeof(ph), NULL);
 
 	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("errorMessage"), ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqres_object_read_error_message;
