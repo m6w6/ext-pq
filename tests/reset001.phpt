@@ -9,13 +9,15 @@ echo "Test\n";
 include "_setup.inc";
 
 $c = new pq\Connection(PQ_DSN);
-var_dump($c->reset());
-var_dump($c->reset());
+$c->reset();
+var_dump($c->status);
+$c->reset();
+var_dump($c->status);
 
 ?>
 DONE
 --EXPECT--
 Test
-bool(true)
-bool(true)
+int(0)
+int(0)
 DONE
