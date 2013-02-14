@@ -4,4 +4,9 @@ function _ext($ext) {
 }
 _ext("pq");
 include "_setup.inc";
-defined("PQ_DSN") or die("skip PG_DSN undefined");
+defined("PQ_DSN") or die("skip PQ_DSN undefined");
+try {
+	new pq\Connection(PQ_DSN);
+} catch (pq\Exception $e) {
+	die("skip could not connect to PQ_DSN ".$e->getMessage());
+}

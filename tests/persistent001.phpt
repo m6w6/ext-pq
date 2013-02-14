@@ -13,7 +13,14 @@ for ($i=0; $i<100; ++$i) {
 
 	if ($i % 2) {
 		$t = new pq\Transaction($c);
+		$c->listen("chan", function($chan, $msg) {
+			// dummy
+		});
+		$e = new pq\Event($c, pq\Event::RESULT, function($c, $res) {
+		});
 	}
+	
+	if (!($i%10)) gc_collect_cycles();
 
 	$c->exec("");
 }
@@ -23,7 +30,7 @@ DONE
 --EXPECTF--
 Test
 array(1) {
-  ["%s"]=>
+  ["%S"]=>
   array(2) {
     ["used"]=>
     int(1)

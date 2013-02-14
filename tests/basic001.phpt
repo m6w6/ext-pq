@@ -14,6 +14,7 @@ $res = $con->exec("SELECT 1 as one, 2 as two from generate_series(1,2)");
 var_dump($res->status == pq\Result::TUPLES_OK);
 var_dump($res->numRows);
 var_dump($res->numCols);
+var_dump(count($res) == $res->count(), $res->numRows == count($res));
 
 foreach ($res as $rowNum => $rowData) {
 	printf("%d.0 => %d\n", $rowNum, $rowData[0]);
@@ -36,6 +37,8 @@ Test
 bool(true)
 int(2)
 int(2)
+bool(true)
+bool(true)
 0.0 => 1
 0.1 => 2
 1.0 => 1

@@ -17,7 +17,7 @@ $c->execAsync("SELECT pg_sleep(2)");
 $x->cancel();
 
 var_dump($c->getResult());
-
+printf("%s\n", $c->errorMessage);
 ?>
 DONE
 --EXPECTF--
@@ -38,4 +38,5 @@ object(pq\Result)#%d (7) {
   ["fetchType"]=>
   int(0)
 }
+ERROR:  canceling statement due to user request
 DONE

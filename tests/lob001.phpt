@@ -1,7 +1,7 @@
 --TEST--
 large objects
 --SKIPIF--
-<? php include "_skipif.inc"; ?>
+<?php include "_skipif.inc"; ?>
 --FILE--
 <?php
 echo "Test\n";
@@ -14,20 +14,25 @@ $t = $c->startTransaction();
 $lob = $t->createLOB();
 $lob->write(file_get_contents(__FILE__));
 var_dump($lob->tell());
+
 $lob->seek(0, SEEK_SET);
 $dat = $lob->read(filesize(__FILE__));
-var_dump(hash("md5", $dat));
-var_dump(hash_file("md5", __FILE__));
+var_dump(hash("md5", $dat)==hash_file("md5", __FILE__));
+
 $lob->truncate(5);
+
 $lob = new pq\Lob($t, $lob->oid);
 var_dump($lob->read(123));
+
+$t->commit();
+$t->unlinkLOB($lob->oid);
+
 ?>
 DONE
---EXPECT--
+--EXPECTF--
 Test
-int(416)
-string(32) "d422937493386635bd56b9a9885e7614"
-string(32) "d422937493386635bd56b9a9885e7614"
-string(5) "<?php"
+int(451)
+bool(true)
+string(5) "%c?php"
 DONE
 

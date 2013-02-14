@@ -13,7 +13,9 @@ $c->exec("DROP TABLE IF EXISTS test");
 new pq\Event($c, pq\Event::NOTICE, function($c, $notice) {
 	echo "Got notice: $notice\n";
 });
+var_dump($c->transactionStatus == pq\Connection::TRANS_IDLE);
 $t = new pq\Transaction($c);
+var_dump($t->connection->transactionStatus == pq\Connection::TRANS_INTRANS);
 $c->exec("DROP TABLE IF EXISTS test");
 $c->exec("CREATE TABLE test (id serial, data text)");
 $s = $c->prepare("test_insert", "INSERT INTO test (data) VALUES (\$1)", array((new pq\Types($c))["text"]->oid));
@@ -25,13 +27,17 @@ while ($row = $r->fetchRow(pq\Result::FETCH_OBJECT)) {
 	printf("%d => %s\n", $row->id, $row->data);
 }
 $t->rollback();
+var_dump($c->transactionStatus == pq\Connection::TRANS_IDLE);
 ?>
 DONE
 --EXPECT--
 Test
+bool(true)
+bool(true)
 Got notice: NOTICE:  table "test" does not exist, skipping
 Got notice: NOTICE:  CREATE TABLE will create implicit sequence "test_id_seq" for serial column "test.id"
 1 => a
 2 => b
 3 => c
+bool(true)
 DONE

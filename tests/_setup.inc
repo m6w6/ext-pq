@@ -1,2 +1,2 @@
 <?php
-define("PQ_DSN", "dbname=mike");
+define("PQ_DSN", "");
