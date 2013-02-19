@@ -3689,6 +3689,37 @@ static PHP_METHOD(pqres, map) {
 	}
 }
 
+ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_all, 0, 0, 0)
+	ZEND_ARG_INFO(0, fetch_type)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqres, fetchAll) {
+	zend_error_handling zeh;
+	long fetch_type = -1;
+	STATUS rv;
+	
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &fetch_type);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+	
+	if (SUCCESS == rv) {
+		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+		if (!obj->intern) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Result not initialized");
+		} else {
+			int r, rows = PQntuples(obj->intern->res);
+
+			if (fetch_type == -1) {
+				 fetch_type = obj->intern->iter ? obj->intern->iter->fetch_type : PHP_PQRES_FETCH_ARRAY;
+			}
+
+			array_init(return_value);
+			for (r = 0; r < rows; ++r) {
+				add_next_index_zval(return_value, php_pqres_row_to_zval(obj->intern->res, r, fetch_type, NULL TSRMLS_CC));
+			}
+		}
+	}
+}
+
 ZEND_BEGIN_ARG_INFO_EX(ai_pqres_count, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, count) {
@@ -3708,6 +3739,7 @@ static zend_function_entry php_pqres_methods[] = {
 	PHP_ME(pqres, fetchBound, ai_pqres_fetch_bound, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, fetchRow, ai_pqres_fetch_row, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, fetchCol, ai_pqres_fetch_col, ZEND_ACC_PUBLIC)
+	PHP_ME(pqres, fetchAll, ai_pqres_fetch_all, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, count, ai_pqres_count, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, map, ai_pqres_map, ZEND_ACC_PUBLIC)
 	{0}
