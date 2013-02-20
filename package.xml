@@ -38,10 +38,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <file role="doc" name="EXPERIMENTAL" />
    <file role="doc" name="LICENSE" />
    <file role="src" name="config.m4" />
-   <dir name="src">
-    <file role="src" name="php_pq.h" />
-    <file role="src" name="php_pq.c" />
-   </dir>
+   <file role="src" name="php_pq.h" />
+   <file role="src" name="php_pq.c" />
    <dir name="tests">
     <file role="test" name="async001.phpt" />
     <file role="test" name="async002.phpt" />
@@ -51,15 +49,25 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file role="test" name="async006.phpt" />
     <file role="test" name="basic001.phpt" />
     <file role="test" name="basic002.phpt" />
+    <file role="test" name="bound001.phpt" />
     <file role="test" name="cancel001.phpt" />
     <file role="test" name="copy001.phpt" />
+    <file role="test" name="encoding001.phpt" />
+    <file role="test" name="exceptions001.phpt" />
+    <file role="test" name="exceptions002.phpt" />
+    <file role="test" name="fetch001.phpt" />
+    <file role="test" name="info001.phpt" />
     <file role="test" name="lob001.phpt" />
     <file role="test" name="map001.phpt" />
     <file role="test" name="notify001.phpt" />
+    <file role="test" name="persistent001.phpt" />
     <file role="test" name="reset001.phpt" />
     <file role="test" name="savepoint001.phpt" />
     <file role="test" name="stm_desc001.phpt" />
     <file role="test" name="trans001.phpt" />
+    <file role="test" name="trans002.phpt" />
+    <file role="test" name="types001.phpt" />
+    <file role="test" name="unbuffered001.phpt" />
     <file role="test" name="_setup.inc" />
     <file role="test" name="_skipif.inc" />
    </dir>
@@ -76,7 +84,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <package>
     <name>raphf</name>
     <channel>pecl.php.net</channel>
-    <min>1.0.0</min>
+    <min>0.1.0</min>
     <providesextension>raphf</providesextension>
    </package>
   </required>

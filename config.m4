@@ -1,5 +1,5 @@
-PHP_ARG_WITH(pq, for pq support,
-[  --with-pq             Include pq support])
+PHP_ARG_WITH(pq, [whether to enable libpq (PostgreSQL) support],
+[  --with-pq             Include libpq support])
 
 if test "$PHP_PQ" != "no"; then
 	SEARCH_PATH="/usr/local /usr /opt"
@@ -17,7 +17,7 @@ if test "$PHP_PQ" != "no"; then
 	done
 
 	if test -z "$PQ_DIR"; then
-		AC_MSG_FAILURE(could not find include/libpq-events.h)
+		AC_MSG_ERROR(could not find include/libpq-events.h)
 	fi
 	PHP_ADD_INCLUDE($PQ_DIR/include)
 
@@ -30,11 +30,9 @@ if test "$PHP_PQ" != "no"; then
 	],[
 		-L$PQ_DIR/$PHP_LIBDIR
 	])
-	PHP_CHECK_LIBRARY(pq, PQlibVersion, AC_DEFINE(HAVE_PQLIBVERSION, 1, Have PQlibVersion))
+	PHP_CHECK_LIBRARY(pq, PQlibVersion, [AC_DEFINE(HAVE_PQLIBVERSION, 1, Have PQlibVersion)])
 
-	PQ_SRC="src/php_pq.c"
-	PHP_NEW_EXTENSION(pq, $PQ_SRC, $ext_shared)
-    PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
+	PHP_NEW_EXTENSION(pq, php_pq.c, $ext_shared)
     PHP_ADD_EXTENSION_DEP(pq, raphf)
 fi
 
