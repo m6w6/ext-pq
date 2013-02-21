@@ -427,37 +427,39 @@ static zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_
 		}
 	}
 
-	for (c = 0, cols = PQnfields(res); c < cols; ++c) {
-		if (PQgetisnull(res, row, c)) {
-			switch (fetch_type) {
-			case PHP_PQRES_FETCH_OBJECT:
-				add_property_null(data, PQfname(res, c));
-				break;
+	if (PQntuples(res) > row) {
+		for (c = 0, cols = PQnfields(res); c < cols; ++c) {
+			if (PQgetisnull(res, row, c)) {
+				switch (fetch_type) {
+				case PHP_PQRES_FETCH_OBJECT:
+					add_property_null(data, PQfname(res, c));
+					break;
 
-			case PHP_PQRES_FETCH_ASSOC:
-				add_assoc_null(data, PQfname(res, c));
-				break;
+				case PHP_PQRES_FETCH_ASSOC:
+					add_assoc_null(data, PQfname(res, c));
+					break;
 
-			case PHP_PQRES_FETCH_ARRAY:
-				add_index_null(data, c);
-				break;
-			}
-		} else {
-			char *val = PQgetvalue(res, row, c);
-			int len = PQgetlength(res, row, c);
+				case PHP_PQRES_FETCH_ARRAY:
+					add_index_null(data, c);
+					break;
+				}
+			} else {
+				char *val = PQgetvalue(res, row, c);
+				int len = PQgetlength(res, row, c);
 
-			switch (fetch_type) {
-			case PHP_PQRES_FETCH_OBJECT:
-				add_property_stringl(data, PQfname(res, c), val, len, 1);
-				break;
+				switch (fetch_type) {
+				case PHP_PQRES_FETCH_OBJECT:
+					add_property_stringl(data, PQfname(res, c), val, len, 1);
+					break;
 
-			case PHP_PQRES_FETCH_ASSOC:
-				add_assoc_stringl(data, PQfname(res, c), val, len, 1);
-				break;
+				case PHP_PQRES_FETCH_ASSOC:
+					add_assoc_stringl(data, PQfname(res, c), val, len, 1);
+					break;
 
-			case PHP_PQRES_FETCH_ARRAY:
-				add_index_stringl(data, c, val, len ,1);
-				break;
+				case PHP_PQRES_FETCH_ARRAY:
+					add_index_stringl(data, c, val, len ,1);
+					break;
+				}
 			}
 		}
 	}
@@ -470,10 +472,9 @@ static void php_pqres_iterator_current(zend_object_iterator *i, zval ***data_ptr
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
 	php_pqres_object_t *obj = zend_object_store_get_object(iter->zi.data TSRMLS_CC);
 
-	if (iter->current_val) {
-		zval_ptr_dtor(&iter->current_val);
+	if (!iter->current_val) {
+		iter->current_val = php_pqres_row_to_zval(obj->intern->res, iter->index, iter->fetch_type, NULL TSRMLS_CC);
 	}
-	iter->current_val = php_pqres_row_to_zval(obj->intern->res, iter->index, iter->fetch_type, NULL TSRMLS_CC);
 	*data_ptr = &iter->current_val;
 }
 
@@ -486,10 +487,21 @@ static int php_pqres_iterator_key(zend_object_iterator *i, char **key_str, uint 
 	return HASH_KEY_IS_LONG;
 }
 
+static void php_pqres_iterator_invalidate(zend_object_iterator *i TSRMLS_DC)
+{
+	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
+
+	if (iter->current_val) {
+		zval_ptr_dtor(&iter->current_val);
+		iter->current_val = NULL;
+	}
+}
+
 static void php_pqres_iterator_next(zend_object_iterator *i TSRMLS_DC)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
 
+	php_pqres_iterator_invalidate(i TSRMLS_CC);
 	++iter->index;
 }
 
@@ -497,6 +509,7 @@ static void php_pqres_iterator_rewind(zend_object_iterator *i TSRMLS_DC)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
 
+	php_pqres_iterator_invalidate(i TSRMLS_CC);
 	iter->index = 0;
 }
 
@@ -513,7 +526,7 @@ static zend_object_iterator_funcs php_pqres_iterator_funcs = {
 	/* rewind to start of data (optional, may be NULL) */
 	php_pqres_iterator_rewind,
 	/* invalidate current value/key (optional, may be NULL) */
-	NULL
+	php_pqres_iterator_invalidate
 };
 
 static int php_pqres_count_elements(zval *object, long *count TSRMLS_DC)
@@ -3256,7 +3269,9 @@ static STATUS php_pqres_iteration(zval *this_ptr, php_pqres_object_t *obj, php_p
 	 obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 	}
 
-	if (!obj->intern->iter) {
+	if (obj->intern->iter) {
+		obj->intern->iter->zi.funcs->move_forward((zend_object_iterator *) obj->intern->iter TSRMLS_CC);
+	} else {
 		obj->intern->iter = (php_pqres_iterator_t *) php_pqres_iterator_init(Z_OBJCE_P(getThis()), getThis(), 0 TSRMLS_CC);
 		obj->intern->iter->zi.funcs->rewind((zend_object_iterator *) obj->intern->iter TSRMLS_CC);
 	}
@@ -3264,7 +3279,6 @@ static STATUS php_pqres_iteration(zval *this_ptr, php_pqres_object_t *obj, php_p
 	obj->intern->iter->fetch_type = fetch_type;
 	if (SUCCESS == (rv = obj->intern->iter->zi.funcs->valid((zend_object_iterator *) obj->intern->iter TSRMLS_CC))) {
 		obj->intern->iter->zi.funcs->get_current_data((zend_object_iterator *) obj->intern->iter, row TSRMLS_CC);
-		obj->intern->iter->zi.funcs->move_forward((zend_object_iterator *) obj->intern->iter TSRMLS_CC);
 	}
 	obj->intern->iter->fetch_type = orig_fetch;
 

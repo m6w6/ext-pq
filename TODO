@@ -1,8 +1,5 @@
 * parse arrays out of PQgetvalue
 * COPY: getAsync & putAsync
-* pq\Exception
-* pq\Event\Result\Destroy, 
-* pq\Event\Connection\Destroy
 * fetchInto/fetchCtor?
 * unlisten?
 * LOB stream wrapper
