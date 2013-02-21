@@ -11,7 +11,7 @@ include "_setup.inc";
 $c = new pq\Connection(PQ_DSN);
 $c->reset();
 var_dump($c->status);
-new pq\Event($c, pq\Event::RESET, function ($c) { print "RESET!\n"; });
+$c->on(pq\Connection::EVENT_RESET, function ($c) { print "RESET!\n"; });
 $c->reset();
 var_dump($c->status);
 

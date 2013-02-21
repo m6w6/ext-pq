@@ -16,7 +16,7 @@ for ($i=0; $i<100; ++$i) {
 		$c->listen("chan", function($chan, $msg) {
 			// dummy
 		});
-		$e = new pq\Event($c, pq\Event::RESULT, function($c, $res) {
+		$c->on(pq\Connection::EVENT_RESULT, function($c, $res) {
 		});
 	}
 	

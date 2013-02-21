@@ -10,7 +10,7 @@ include "_setup.inc";
 
 $c = new pq\Connection(PQ_DSN);
 $c->exec("DROP TABLE IF EXISTS test");
-new pq\Event($c, pq\Event::NOTICE, function($c, $notice) {
+$c->on(pq\Connection::EVENT_NOTICE, function($c, $notice) {
 	echo "Got notice: $notice\n";
 });
 var_dump($c->transactionStatus == pq\Connection::TRANS_IDLE);
