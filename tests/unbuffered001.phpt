@@ -26,22 +26,17 @@ $c->execAsync("SELECT a from generate_series(1,10) a", function($res) {
 		break;
 	}
 });
+
 do {
 	while ($c->busy) {
-		switch ($c->poll()) {
-			case pq\Connection::POLLING_READING:
-				$w=$e=array();
-				$r=array($c->socket);
-				stream:select($r,$w,$e,1);
-				break;
-			case pq\Connection::POLLING_WRITING:
-				$r=$e=array();
-				$w=array($c->socket);
-				stream_select($r,$w,$e,1);
-				break;
+		$r = array($c->socket);
+		$w = $e = null;
+		if (stream_select($r, $w, $e, null)) {
+			$c->poll();
 		}
 	}
 } while ($c->getResult());
+
 ?>
 DONE
 --EXPECTF--
