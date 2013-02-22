@@ -295,6 +295,7 @@ typedef struct php_pqevent_object {
 typedef struct php_pqlob {
 	int lofd;
 	Oid loid;
+	int stream;
 	php_pqtxn_object_t *txn;
 } php_pqlob_t;
 
@@ -791,6 +792,11 @@ static void php_pqlob_object_free(void *o TSRMLS_DC)
 	if (obj->intern) {
 		if (obj->intern->lofd) {
 			lo_close(obj->intern->txn->intern->conn->intern->conn, obj->intern->lofd);
+		}
+		/* invalidate the stream */
+		if (obj->intern->stream) {
+			zend_list_delete(obj->intern->stream);
+			obj->intern->stream = 0;
 		}
 		php_pq_object_delref(obj->intern->txn TSRMLS_CC);
 		efree(obj->intern);
@@ -1611,6 +1617,23 @@ static void php_pqlob_object_read_oid(zval *object, void *o, zval *return_value 
 	php_pqlob_object_t *obj = o;
 
 	RETVAL_LONG(obj->intern->loid);
+}
+
+static void php_pqlob_object_update_stream(zval *this_ptr, php_pqlob_object_t *obj, zval **zstream TSRMLS_DC);
+
+static void php_pqlob_object_read_stream(zval *object, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqlob_object_t *obj = o;
+
+	if (!obj->intern->stream) {
+		zval *zstream;
+
+		php_pqlob_object_update_stream(object, obj, &zstream TSRMLS_CC);
+		RETVAL_ZVAL(zstream, 1, 1);
+	} else {
+		RETVAL_RESOURCE(obj->intern->stream);
+		zend_list_addref(obj->intern->stream);
+	}
 }
 
 static void php_pqcopy_object_read_connection(zval *object, void *o, zval *return_value TSRMLS_DC)
@@ -4467,7 +4490,7 @@ static PHP_METHOD(pqtxn, openLOB) {
 			int lofd = lo_open(obj->intern->conn->intern->conn, loid, mode);
 
 			if (lofd < 0) {
-				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to open large object with oid=%ld with mode '%s' (%s)", loid, strmode(mode), PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to open large object with oid=%u with mode '%s' (%s)", loid, strmode(mode), PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			} else {
 				php_pqlob_t *lob = ecalloc(1, sizeof(*lob));
 
@@ -4511,7 +4534,7 @@ static PHP_METHOD(pqtxn, createLOB) {
 				int lofd = lo_open(obj->intern->conn->intern->conn, loid, mode);
 
 				if (lofd < 0) {
-					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to open large object with oid=%ld with mode '%s': %s", loid, strmode(mode), PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to open large object with oid=%u with mode '%s': %s", loid, strmode(mode), PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				} else {
 					php_pqlob_t *lob = ecalloc(1, sizeof(*lob));
 
@@ -4551,7 +4574,7 @@ static PHP_METHOD(pqtxn, unlinkLOB) {
 			int rc = lo_unlink(obj->intern->conn->intern->conn, loid);
 
 			if (rc != 1) {
-				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to unlink LOB (oid=%ld): %s", loid, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to unlink LOB (oid=%u): %s", loid, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			}
 
 			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
@@ -4642,6 +4665,123 @@ static zend_function_entry php_pqcancel_methods[] = {
 	{0}
 };
 
+static size_t php_pqlob_stream_write(php_stream *stream, const char *buffer, size_t length TSRMLS_DC)
+{
+	php_pqlob_object_t *obj = stream->abstract;
+	int written = 0;
+
+	if (obj) {
+		written = lo_write(obj->intern->txn->intern->conn->intern->conn, obj->intern->lofd, buffer, length);
+
+		if (written < 0) {
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to write to LOB with oid=%u (%s)", obj->intern->loid, PHP_PQerrorMessage(obj->intern->txn->intern->conn->intern->conn));
+		}
+
+		php_pqconn_notify_listeners(obj->intern->txn->intern->conn TSRMLS_CC);
+	}
+
+	return written;
+}
+
+static size_t php_pqlob_stream_read(php_stream *stream, char *buffer, size_t length TSRMLS_DC)
+{
+	php_pqlob_object_t *obj = stream->abstract;
+	int read = 0;
+
+	if (obj) {
+
+		if (!buffer && !length) {
+			if (lo_tell(obj->intern->txn->intern->conn->intern->conn, obj->intern->lofd) == lo_lseek(obj->intern->txn->intern->conn->intern->conn, obj->intern->lofd, 0, SEEK_CUR)) {
+				return EOF;
+			}
+		} else {
+			read = lo_read(obj->intern->txn->intern->conn->intern->conn, obj->intern->lofd, buffer, length);
+
+			if (read < 0) {
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to read from LOB with oid=%d (%s)", obj->intern->loid, PHP_PQerrorMessage(obj->intern->txn->intern->conn->intern->conn));
+			}
+		}
+
+		php_pqconn_notify_listeners(obj->intern->txn->intern->conn TSRMLS_CC);
+	}
+
+	return read;
+}
+
+static STATUS php_pqlob_stream_close(php_stream *stream, int close_handle TSRMLS_DC)
+{
+	return SUCCESS;
+}
+
+static int php_pqlob_stream_flush(php_stream *stream TSRMLS_DC)
+{
+	return SUCCESS;
+}
+
+static STATUS php_pqlob_stream_seek(php_stream *stream, off_t offset, int whence, off_t *newoffset TSRMLS_DC)
+{
+	STATUS rv = FAILURE;
+	php_pqlob_object_t *obj = stream->abstract;
+
+	if (obj) {
+		int position = lo_lseek(obj->intern->txn->intern->conn->intern->conn, obj->intern->lofd, offset, whence);
+
+		if (position < 0) {
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to seek offset in LOB with oid=%d (%s)", obj->intern->loid, PHP_PQerrorMessage(obj->intern->txn->intern->conn->intern->conn));
+			rv = FAILURE;
+		} else {
+			*newoffset = position;
+			rv = SUCCESS;
+		}
+
+		php_pqconn_notify_listeners(obj->intern->txn->intern->conn TSRMLS_CC);
+	}
+
+	return rv;
+}
+
+static php_stream_ops php_pqlob_stream_ops = {
+	/* stdio like functions - these are mandatory! */
+	php_pqlob_stream_write,
+	php_pqlob_stream_read,
+	php_pqlob_stream_close,
+	php_pqlob_stream_flush,
+
+	"pq\\LOB stream",
+
+	/* these are optional */
+	php_pqlob_stream_seek,
+	NULL, /* cast */
+	NULL, /* stat */
+	NULL, /* set_option */
+};
+
+static void php_pqlob_object_update_stream(zval *this_ptr, php_pqlob_object_t *obj, zval **zstream_ptr TSRMLS_DC)
+{
+	zval *zstream, zmember;
+	php_stream *stream;
+
+	INIT_PZVAL(&zmember);
+	ZVAL_STRINGL(&zmember, "stream", sizeof("stream")-1, 0);
+
+	MAKE_STD_ZVAL(zstream);
+	if (!obj) {
+		obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+	}
+	stream = php_stream_alloc(&php_pqlob_stream_ops, obj, NULL, "r+b");
+	stream->flags |= PHP_STREAM_FLAG_NO_FCLOSE;
+	zend_list_addref(obj->intern->stream = stream->rsrc_id);
+	php_stream_to_zval(stream, zstream);
+
+	zend_get_std_object_handlers()->write_property(getThis(), &zmember, zstream, NULL TSRMLS_CC);
+
+	if (zstream_ptr) {
+		*zstream_ptr = zstream;
+	} else {
+		zval_ptr_dtor(&zstream);
+	}
+}
+
 ZEND_BEGIN_ARG_INFO_EX(ai_pqlob_construct, 0, 0, 1)
 	ZEND_ARG_OBJ_INFO(0, transaction, pq\\Transaction, 0)
 	ZEND_ARG_INFO(0, oid)
@@ -4675,7 +4815,7 @@ static PHP_METHOD(pqlob, __construct) {
 				int lofd = lo_open(txn_obj->intern->conn->intern->conn, loid, mode);
 
 				if (lofd < 0) {
-					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to open large object with oid=%ld with mode '%s' (%s)", loid, strmode(mode), PHP_PQerrorMessage(txn_obj->intern->conn->intern->conn));
+					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to open large object with oid=%u with mode '%s' (%s)", loid, strmode(mode), PHP_PQerrorMessage(txn_obj->intern->conn->intern->conn));
 				} else {
 					php_pqlob_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
@@ -4714,7 +4854,7 @@ static PHP_METHOD(pqlob, write) {
 			int written = lo_write(obj->intern->txn->intern->conn->intern->conn, obj->intern->lofd, data_str, data_len);
 
 			if (written < 0) {
-				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to write to LOB with oid=%ld (%s)", obj->intern->loid, PHP_PQerrorMessage(obj->intern->txn->intern->conn->intern->conn));
+				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to write to LOB with oid=%u (%s)", obj->intern->loid, PHP_PQerrorMessage(obj->intern->txn->intern->conn->intern->conn));
 			} else {
 				RETVAL_LONG(written);
 			}
@@ -5389,7 +5529,7 @@ static PHP_MINIT_FUNCTION(pq)
 	php_pqlob_object_handlers.get_property_ptr_ptr = NULL;
 	php_pqlob_object_handlers.get_debug_info = php_pq_object_debug_info;
 
-	zend_hash_init(&php_pqlob_object_prophandlers, 2, NULL, NULL, 1);
+	zend_hash_init(&php_pqlob_object_prophandlers, 3, NULL, NULL, 1);
 
 	zend_declare_property_null(php_pqlob_class_entry, ZEND_STRL("transaction"), ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqlob_object_read_transaction;
@@ -5398,6 +5538,10 @@ static PHP_MINIT_FUNCTION(pq)
 	zend_declare_property_long(php_pqlob_class_entry, ZEND_STRL("oid"), InvalidOid, ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqlob_object_read_oid;
 	zend_hash_add(&php_pqlob_object_prophandlers, "oid", sizeof("oid"), (void *) &ph, sizeof(ph), NULL);
+
+	zend_declare_property_null(php_pqlob_class_entry, ZEND_STRL("stream"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqlob_object_read_stream;
+	zend_hash_add(&php_pqlob_object_prophandlers, "stream", sizeof("stream"), (void *) &ph, sizeof(ph), NULL);
 
 	zend_declare_class_constant_long(php_pqlob_class_entry, ZEND_STRL("INVALID_OID"), InvalidOid TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqlob_class_entry, ZEND_STRL("R"), INV_READ TSRMLS_CC);
