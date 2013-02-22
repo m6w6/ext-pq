@@ -4582,6 +4582,76 @@ static PHP_METHOD(pqtxn, unlinkLOB) {
 	}
 }
 
+ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_import_lob, 0, 0, 1)
+	ZEND_ARG_INFO(0, local_path)
+	ZEND_ARG_INFO(0, oid)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqtxn, importLOB) {
+	zend_error_handling zeh;
+	char *path_str;
+	int path_len;
+	long oid = InvalidOid;
+	STATUS rv;
+
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p|l", &path_str, &path_len, &oid);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (rv == SUCCESS) {
+		php_pqtxn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
+		if (!obj->intern) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Transaction not initialized");
+		} else {
+			if (oid == InvalidOid) {
+				oid = lo_import(obj->intern->conn->intern->conn, path_str);
+			} else {
+				oid = lo_import_with_oid(obj->intern->conn->intern->conn, path_str, oid);
+			}
+
+			if (oid == InvalidOid) {
+				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to import LOB from '%s' (%s)", path_str, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+			} else {
+				RETVAL_LONG(oid);
+			}
+
+			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
+		}
+	}
+}
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_export_lob, 0, 0, 2)
+	ZEND_ARG_INFO(0, oid)
+	ZEND_ARG_INFO(0, local_path)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqtxn, exportLOB) {
+	zend_error_handling zeh;
+	char *path_str;
+	int path_len;
+	long oid;
+	STATUS rv;
+
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lp", &oid, &path_str, &path_len);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (rv == SUCCESS) {
+		php_pqtxn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
+		if (!obj->intern) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Transaction not initialized");
+		} else {
+			int rc = lo_export(obj->intern->conn->intern->conn, oid, path_str);
+
+			if (rc == -1) {
+				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to export LOB (oid=%u) to '%s' (%s)", oid, path_str, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+			}
+
+			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
+		}
+	}
+}
+
 static zend_function_entry php_pqtxn_methods[] = {
 	PHP_ME(pqtxn, __construct, ai_pqtxn_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
 	PHP_ME(pqtxn, commit, ai_pqtxn_commit, ZEND_ACC_PUBLIC)
@@ -4597,6 +4667,8 @@ static zend_function_entry php_pqtxn_methods[] = {
 	PHP_ME(pqtxn, openLOB, ai_pqtxn_open_lob, ZEND_ACC_PUBLIC)
 	PHP_ME(pqtxn, createLOB, ai_pqtxn_create_lob, ZEND_ACC_PUBLIC)
 	PHP_ME(pqtxn, unlinkLOB, ai_pqtxn_unlink_lob, ZEND_ACC_PUBLIC)
+	PHP_ME(pqtxn, importLOB, ai_pqtxn_import_lob, ZEND_ACC_PUBLIC)
+	PHP_ME(pqtxn, exportLOB, ai_pqtxn_export_lob, ZEND_ACC_PUBLIC)
 	{0}
 };
 
