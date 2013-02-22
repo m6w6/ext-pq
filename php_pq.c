@@ -2366,7 +2366,7 @@ static PHP_METHOD(pqconn, getResult) {
 		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connectio not initialized");
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
 		} else {
 			PGresult *res = PQgetResult(obj->intern->conn);
 
