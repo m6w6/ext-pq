@@ -2,5 +2,6 @@
 * COPY: getAsync & putAsync
 * fetchInto/fetchCtor?
 * unlisten?
+* unregister event handler?
 * LOB stream wrapper
 * LOB convenience import/export over php streams
