@@ -479,6 +479,14 @@ static void php_pqres_iterator_current(zend_object_iterator *i, zval ***data_ptr
 	*data_ptr = &iter->current_val;
 }
 
+#if PHP_VERSION_ID >= 50500
+static void php_pqres_iterator_key(zend_object_iterator *i, zval *key TSRMLS_DC)
+{
+	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
+
+	ZVAL_LONG(key, iter->index);
+}
+#else
 static int php_pqres_iterator_key(zend_object_iterator *i, char **key_str, uint *key_len, ulong *key_num TSRMLS_DC)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
@@ -487,6 +495,7 @@ static int php_pqres_iterator_key(zend_object_iterator *i, char **key_str, uint 
 
 	return HASH_KEY_IS_LONG;
 }
+#endif
 
 static void php_pqres_iterator_invalidate(zend_object_iterator *i TSRMLS_DC)
 {
