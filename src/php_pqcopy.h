@@ -11,34 +11,42 @@
 */
 
 
-#ifndef PHP_PQ_H
-#define PHP_PQ_H
+#ifndef PHP_PQCOPY_H
+#define PHP_PQCOPY_H
 
-#define PHP_PQ_EXT_VERSION "0.1.0"
+#include "php_pqconn.h"
 
-int pq_module_number;
-zend_module_entry pq_module_entry;
-#define phpext_pq_ptr &pq_module_entry
+typedef enum php_pqcopy_direction {
+	PHP_PQCOPY_FROM_STDIN,
+	PHP_PQCOPY_TO_STDOUT
+} php_pqcopy_direction_t;
 
-#ifdef PHP_WIN32
-#	define PHP_PQ_API __declspec(dllexport)
-#elif defined(__GNUC__) && __GNUC__ >= 4
-#	define PHP_PQ_API __attribute__ ((visibility("default")))
-#else
-#	define PHP_PQ_API
+typedef enum php_pqcopy_status {
+	PHP_PQCOPY_FAIL,
+	PHP_PQCOPY_CONT,
+	PHP_PQCOPY_DONE
+} php_pqcopy_status_t;
+
+typedef struct php_pqcopy {
+	php_pqcopy_direction_t direction;
+	char *expression;
+	char *options;
+	php_pqconn_object_t *conn;
+} php_pqcopy_t;
+
+typedef struct php_pqcopy_object {
+	zend_object zo;
+	zend_object_value zv;
+	HashTable *prophandler;
+	php_pqcopy_t *intern;
+} php_pqcopy_object_t;
+
+zend_class_entry *php_pqcopy_class_entry;
+zend_object_value php_pqcopy_create_object_ex(zend_class_entry *ce, php_pqcopy_t *intern, php_pqcopy_object_t **ptr TSRMLS_DC);
+
+PHP_MINIT_FUNCTION(pqcopy);
+
 #endif
-
-#ifdef ZTS
-#	include "TSRM.h"
-#	define TSRMLS_DF(d) TSRMLS_D = (d)->ts
-#	define TSRMLS_CF(d) (d)->ts = TSRMLS_C
-#else
-#	define TSRMLS_DF(d)
-#	define TSRMLS_CF(d)
-#endif
-
-#endif	/* PHP_PQ_H */
-
 
 /*
  * Local variables:

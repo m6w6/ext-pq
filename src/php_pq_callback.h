@@ -6,39 +6,25 @@
     | modification, are permitted provided that the conditions mentioned |
     | in the accompanying LICENSE file are met.                          |
     +--------------------------------------------------------------------+
-    | Copyright (c) 2013, Michael Wallner <mike@php.net>                |
+    | Copyright (c) 2013, Michael Wallner <mike@php.net>                 |
     +--------------------------------------------------------------------+
 */
 
+#ifndef PHP_PQ_CALLBACK_H
+#define PHP_PQ_CALLBACK_H
 
-#ifndef PHP_PQ_H
-#define PHP_PQ_H
+#include <Zend/zend_interfaces.h>
 
-#define PHP_PQ_EXT_VERSION "0.1.0"
+typedef struct php_pq_callback {
+	zend_fcall_info fci;
+	zend_fcall_info_cache fcc;
+	void *data;
+} php_pq_callback_t;
 
-int pq_module_number;
-zend_module_entry pq_module_entry;
-#define phpext_pq_ptr &pq_module_entry
+void php_pq_callback_dtor(php_pq_callback_t *cb);
+void php_pq_callback_addref(php_pq_callback_t *cb);
 
-#ifdef PHP_WIN32
-#	define PHP_PQ_API __declspec(dllexport)
-#elif defined(__GNUC__) && __GNUC__ >= 4
-#	define PHP_PQ_API __attribute__ ((visibility("default")))
-#else
-#	define PHP_PQ_API
 #endif
-
-#ifdef ZTS
-#	include "TSRM.h"
-#	define TSRMLS_DF(d) TSRMLS_D = (d)->ts
-#	define TSRMLS_CF(d) (d)->ts = TSRMLS_C
-#else
-#	define TSRMLS_DF(d)
-#	define TSRMLS_CF(d)
-#endif
-
-#endif	/* PHP_PQ_H */
-
 
 /*
  * Local variables:

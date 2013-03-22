@@ -11,34 +11,27 @@
 */
 
 
-#ifndef PHP_PQ_H
-#define PHP_PQ_H
+#ifndef PHP_PQEXC_H
+#define PHP_PQEXC_H
 
-#define PHP_PQ_EXT_VERSION "0.1.0"
+typedef enum php_pqexc_type {
+	EX_INVALID_ARGUMENT,
+	EX_RUNTIME,
+	EX_CONNECTION_FAILED,
+	EX_IO,
+	EX_ESCAPE,
+	EX_BAD_METHODCALL,
+	EX_UNINITIALIZED,
+	EX_DOMAIN,
+	EX_SQL
+} php_pqexc_type_t;
 
-int pq_module_number;
-zend_module_entry pq_module_entry;
-#define phpext_pq_ptr &pq_module_entry
+zend_class_entry *exce(php_pqexc_type_t type);
+zval *throw_exce(php_pqexc_type_t type TSRMLS_DC, const char *fmt, ...);
 
-#ifdef PHP_WIN32
-#	define PHP_PQ_API __declspec(dllexport)
-#elif defined(__GNUC__) && __GNUC__ >= 4
-#	define PHP_PQ_API __attribute__ ((visibility("default")))
-#else
-#	define PHP_PQ_API
+PHP_MINIT_FUNCTION(pqexc);
+
 #endif
-
-#ifdef ZTS
-#	include "TSRM.h"
-#	define TSRMLS_DF(d) TSRMLS_D = (d)->ts
-#	define TSRMLS_CF(d) (d)->ts = TSRMLS_C
-#else
-#	define TSRMLS_DF(d)
-#	define TSRMLS_CF(d)
-#endif
-
-#endif	/* PHP_PQ_H */
-
 
 /*
  * Local variables:

@@ -11,34 +11,31 @@
 */
 
 
-#ifndef PHP_PQ_H
-#define PHP_PQ_H
+#ifndef PHP_PQLOB_H
+#define PHP_PQLOB_H
 
-#define PHP_PQ_EXT_VERSION "0.1.0"
+#include "php_pqtxn.h"
 
-int pq_module_number;
-zend_module_entry pq_module_entry;
-#define phpext_pq_ptr &pq_module_entry
+typedef struct php_pqlob {
+	int lofd;
+	Oid loid;
+	int stream;
+	php_pqtxn_object_t *txn;
+} php_pqlob_t;
 
-#ifdef PHP_WIN32
-#	define PHP_PQ_API __declspec(dllexport)
-#elif defined(__GNUC__) && __GNUC__ >= 4
-#	define PHP_PQ_API __attribute__ ((visibility("default")))
-#else
-#	define PHP_PQ_API
+typedef struct php_pqlob_object {
+	zend_object zo;
+	zend_object_value zv;
+	HashTable *prophandler;
+	php_pqlob_t *intern;
+} php_pqlob_object_t;
+
+zend_class_entry *php_pqlob_class_entry;
+zend_object_value php_pqlob_create_object_ex(zend_class_entry *ce, php_pqlob_t *intern, php_pqlob_object_t **ptr TSRMLS_DC);
+
+PHP_MINIT_FUNCTION(pqlob);
+
 #endif
-
-#ifdef ZTS
-#	include "TSRM.h"
-#	define TSRMLS_DF(d) TSRMLS_D = (d)->ts
-#	define TSRMLS_CF(d) (d)->ts = TSRMLS_C
-#else
-#	define TSRMLS_DF(d)
-#	define TSRMLS_CF(d)
-#endif
-
-#endif	/* PHP_PQ_H */
-
 
 /*
  * Local variables:

@@ -32,7 +32,25 @@ if test "$PHP_PQ" != "no"; then
 	])
 	PHP_CHECK_LIBRARY(pq, PQlibVersion, [AC_DEFINE(HAVE_PQLIBVERSION, 1, Have PQlibVersion)])
 
-	PHP_NEW_EXTENSION(pq, php_pq.c, $ext_shared)
+	PQ_SRC="\
+		src/php_pq_module.c\
+		src/php_pq_misc.c\
+		src/php_pq_callback.c\
+		src/php_pq_object.c\
+		src/php_pqcancel.c\
+		src/php_pqconn.c\
+		src/php_pqconn_event.c\
+		src/php_pqcopy.c\
+		src/php_pqexc.c\
+		src/php_pqlob.c\
+		src/php_pqres.c\
+		src/php_pqstm.c\
+		src/php_pqtxn.c\
+		src/php_pqtypes.c\
+	"
+	PHP_NEW_EXTENSION(pq, $PQ_SRC, $ext_shared)
+	PHP_ADD_BUILD_DIR($ext_builddir/src)
+	PHP_ADD_INCLUDE($ext_srcdir/src)
     PHP_ADD_EXTENSION_DEP(pq, raphf)
 fi
 

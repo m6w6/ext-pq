@@ -19,10 +19,10 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>mike@php.net</email>
   <active>yes</active>
  </lead>
- <date>2013-01-31</date>
+ <date>2013-03-22</date>
  <version>
-  <release>1.0.0dev</release>
-  <api>1.0.0</api>
+  <release>0.1.0</release>
+  <api>0.1.0</api>
  </version>
  <stability>
   <release>beta</release>
@@ -35,11 +35,38 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <contents>
   <dir name="/">
    <file role="doc" name="CREDITS" />
-   <file role="doc" name="EXPERIMENTAL" />
    <file role="doc" name="LICENSE" />
    <file role="src" name="config.m4" />
    <file role="src" name="php_pq.h" />
-   <file role="src" name="php_pq.c" />
+   <dir name="src">
+    <file role="src" name="php_pq_callback.c" />
+    <file role="src" name="php_pq_callback.h" />
+    <file role="src" name="php_pqcancel.c" />
+    <file role="src" name="php_pqcancel.h" />
+    <file role="src" name="php_pqconn.c" />
+    <file role="src" name="php_pqconn_event.c" />
+    <file role="src" name="php_pqconn_event.h" />
+    <file role="src" name="php_pqconn.h" />
+    <file role="src" name="php_pqcopy.c" />
+    <file role="src" name="php_pqcopy.h" />
+    <file role="src" name="php_pqexc.c" />
+    <file role="src" name="php_pqexc.h" />
+    <file role="src" name="php_pqlob.c" />
+    <file role="src" name="php_pqlob.h" />
+    <file role="src" name="php_pq_misc.c" />
+    <file role="src" name="php_pq_misc.h" />
+    <file role="src" name="php_pq_module.c" />
+    <file role="src" name="php_pq_object.c" />
+    <file role="src" name="php_pq_object.h" />
+    <file role="src" name="php_pqres.c" />
+    <file role="src" name="php_pqres.h" />
+    <file role="src" name="php_pqstm.c" />
+    <file role="src" name="php_pqstm.h" />
+    <file role="src" name="php_pqtxn.c" />
+    <file role="src" name="php_pqtxn.h" />
+    <file role="src" name="php_pqtypes.c" />
+    <file role="src" name="php_pqtypes.h" />
+   </dir>
    <dir name="tests">
     <file role="test" name="async001.phpt" />
     <file role="test" name="async002.phpt" />
@@ -58,6 +85,9 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file role="test" name="fetch001.phpt" />
     <file role="test" name="info001.phpt" />
     <file role="test" name="lob001.phpt" />
+    <file role="test" name="lob002.phpt" />
+    <file role="test" name="lob003.phpt" />
+    <file role="test" name="lob004.phpt" />
     <file role="test" name="map001.phpt" />
     <file role="test" name="notify001.phpt" />
     <file role="test" name="persistent001.phpt" />

@@ -11,34 +11,26 @@
 */
 
 
-#ifndef PHP_PQ_H
-#define PHP_PQ_H
+#ifndef PHP_PQCONN_EVENT_H
+#define PHP_PQCONN_EVENT_H
 
-#define PHP_PQ_EXT_VERSION "0.1.0"
+#include <libpq-events.h>
 
-int pq_module_number;
-zend_module_entry pq_module_entry;
-#define phpext_pq_ptr &pq_module_entry
+#include "php_pqconn.h"
 
-#ifdef PHP_WIN32
-#	define PHP_PQ_API __declspec(dllexport)
-#elif defined(__GNUC__) && __GNUC__ >= 4
-#	define PHP_PQ_API __attribute__ ((visibility("default")))
-#else
-#	define PHP_PQ_API
-#endif
-
+typedef struct php_pqconn_event_data {
+	php_pqconn_object_t *obj;
 #ifdef ZTS
-#	include "TSRM.h"
-#	define TSRMLS_DF(d) TSRMLS_D = (d)->ts
-#	define TSRMLS_CF(d) (d)->ts = TSRMLS_C
-#else
-#	define TSRMLS_DF(d)
-#	define TSRMLS_CF(d)
+	void ***ts;
 #endif
+} php_pqconn_event_data_t;
 
-#endif	/* PHP_PQ_H */
+php_pqconn_event_data_t *php_pqconn_event_data_init(php_pqconn_object_t *obj TSRMLS_DC);
+void php_pqconn_notice_recv(void *p, const PGresult *res);
+void php_pqconn_notice_ignore(void *p, const PGresult *res);
+int php_pqconn_event(PGEventId id, void *e, void *data);
 
+#endif
 
 /*
  * Local variables:
