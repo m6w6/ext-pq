@@ -880,6 +880,7 @@ PHP_MINIT_FUNCTION(pqres)
 	php_pqres_object_handlers.clone_obj = NULL;
 	php_pqres_object_handlers.get_property_ptr_ptr = NULL;
 	php_pqres_object_handlers.get_debug_info = php_pq_object_debug_info;
+	php_pqres_object_handlers.get_properties = php_pq_object_properties;
 	php_pqres_object_handlers.count_elements = php_pqres_count_elements;
 
 	zend_hash_init(&php_pqres_object_prophandlers, 6, NULL, NULL, 1);

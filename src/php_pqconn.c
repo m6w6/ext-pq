@@ -1502,6 +1502,7 @@ PHP_MINIT_FUNCTION(pqconn)
 	php_pqconn_object_handlers.write_property = php_pq_object_write_prop;
 	php_pqconn_object_handlers.clone_obj = NULL;
 	php_pqconn_object_handlers.get_property_ptr_ptr = NULL;
+	php_pqconn_object_handlers.get_properties = php_pq_object_properties;
 	php_pqconn_object_handlers.get_debug_info = php_pq_object_debug_info;
 
 	zend_hash_init(&php_pqconn_object_prophandlers, 14, NULL, NULL, 1);

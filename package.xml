@@ -19,9 +19,9 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>mike@php.net</email>
   <active>yes</active>
  </lead>
- <date>2013-03-22</date>
+ <date>2013-04-13</date>
  <version>
-  <release>0.1.0</release>
+  <release>0.2.0dev</release>
   <api>0.1.0</api>
  </version>
  <stability>
@@ -30,7 +30,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license>BSD, revised</license>
  <notes><![CDATA[
-* Initial release
+* Implemented get_properties() object handler.
 ]]></notes>
  <contents>
   <dir name="/">

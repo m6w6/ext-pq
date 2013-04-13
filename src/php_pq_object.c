@@ -70,7 +70,7 @@ static int apply_pi_to_ht(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_k
 	if (addref) {
 		Z_ADDREF_P(property);
 	}
-	zend_hash_add(ht, pi->name, pi->name_length + 1, (void *) &property, sizeof(zval *), NULL);
+	zend_hash_update(ht, pi->name, pi->name_length + 1, (void *) &property, sizeof(zval *), NULL);
 
 	return ZEND_HASH_APPLY_KEEP;
 }
@@ -83,6 +83,16 @@ HashTable *php_pq_object_debug_info(zval *object, int *temp TSRMLS_DC)
 	*temp = 1;
 	ALLOC_HASHTABLE(ht);
 	ZEND_INIT_SYMTABLE(ht);
+
+	zend_hash_apply_with_arguments(&obj->zo.ce->properties_info TSRMLS_CC, apply_pi_to_ht, 4, ht, object, obj, 1);
+
+	return ht;
+}
+
+HashTable *php_pq_object_properties(zval *object TSRMLS_DC)
+{
+	HashTable *ht = zend_get_std_object_handlers()->get_properties(object TSRMLS_CC);
+	php_pq_object_t *obj = zend_object_store_get_object(object TSRMLS_CC);
 
 	zend_hash_apply_with_arguments(&obj->zo.ce->properties_info TSRMLS_CC, apply_pi_to_ht, 4, ht, object, obj, 1);
 
