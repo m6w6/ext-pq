@@ -463,6 +463,7 @@ PHP_MINIT_FUNCTION(pqlob)
 	php_pqlob_object_handlers.write_property = php_pq_object_write_prop;
 	php_pqlob_object_handlers.clone_obj = NULL;
 	php_pqlob_object_handlers.get_property_ptr_ptr = NULL;
+	php_pqlob_object_handlers.get_gc = NULL;
 	php_pqlob_object_handlers.get_properties = php_pq_object_properties;
 	php_pqlob_object_handlers.get_debug_info = php_pq_object_debug_info;
 

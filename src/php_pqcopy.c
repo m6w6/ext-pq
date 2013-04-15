@@ -322,6 +322,7 @@ PHP_MINIT_FUNCTION(pqcopy)
 	php_pqcopy_object_handlers.write_property = php_pq_object_write_prop;
 	php_pqcopy_object_handlers.clone_obj = NULL;
 	php_pqcopy_object_handlers.get_property_ptr_ptr = NULL;
+	php_pqcopy_object_handlers.get_gc = NULL;
 	php_pqcopy_object_handlers.get_properties = php_pq_object_properties;
 	php_pqcopy_object_handlers.get_debug_info = php_pq_object_debug_info;
 

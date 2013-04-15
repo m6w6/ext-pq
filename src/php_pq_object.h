@@ -33,7 +33,6 @@ void php_pq_object_addref(void *o TSRMLS_DC);
 void php_pq_object_delref(void *o TSRMLS_DC);
 HashTable *php_pq_object_debug_info(zval *object, int *temp TSRMLS_DC);
 HashTable *php_pq_object_properties(zval *object TSRMLS_DC);
-HashTable *php_pq_object_gc(zval *object, zval ***gc_argv, int *gc_argc TSRMLS_DC);
 zend_class_entry *ancestor(zend_class_entry *ce);
 zval *php_pq_object_read_prop(zval *object, zval *member, int type, const zend_literal *key TSRMLS_DC);
 void php_pq_object_write_prop(zval *object, zval *member, zval *value, const zend_literal *key TSRMLS_DC);
