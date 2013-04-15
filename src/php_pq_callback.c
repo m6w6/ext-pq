@@ -38,6 +38,23 @@ void php_pq_callback_addref(php_pq_callback_t *cb)
 	}
 }
 
+zval *php_pq_callback_to_zval(php_pq_callback_t *cb)
+{
+	zval *zcb;
+
+	php_pq_callback_addref(cb);
+
+	if (cb->fci.object_ptr) {
+		MAKE_STD_ZVAL(zcb);
+		array_init_size(zcb, 2);
+		add_next_index_zval(zcb, cb->fci.object_ptr);
+		add_next_index_zval(zcb, cb->fci.function_name);
+	} else {
+		zcb = cb->fci.function_name;
+	}
+
+	return zcb;
+}
 /*
  * Local variables:
  * tab-width: 4

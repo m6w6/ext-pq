@@ -99,6 +99,13 @@ HashTable *php_pq_object_properties(zval *object TSRMLS_DC)
 	return ht;
 }
 
+HashTable *php_pq_object_gc(zval *object, zval ***gc_argv, int *gc_argc TSRMLS_DC)
+{
+	*gc_argv = NULL;
+	*gc_argc = 0;
+	return NULL;
+}
+
 zend_class_entry *ancestor(zend_class_entry *ce)
 {
 	while (ce->parent) {

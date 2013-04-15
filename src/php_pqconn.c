@@ -311,12 +311,40 @@ static void php_pqconn_object_read_options(zval *object, void *o, zval *return_v
 	}
 }
 
+static int apply_read_event_handler_ex(void *p, void *arg TSRMLS_DC)
+{
+	HashTable *rv = arg;
+	zval *zcb = php_pq_callback_to_zval(p);
+
+	zend_hash_next_index_insert(rv, &zcb, sizeof(zval *), NULL);
+
+	return ZEND_HASH_APPLY_KEEP;
+}
+
+static int apply_read_event_handlers(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
+{
+	HashTable *evhs = p, *rv = va_arg(argv, HashTable *);
+	zval *entry, **entry_ptr;
+
+	MAKE_STD_ZVAL(entry);
+	array_init_size(entry, zend_hash_num_elements(evhs));
+
+	if (key->nKeyLength) {
+		zend_hash_add(rv, key->arKey, key->nKeyLength, &entry, sizeof(zval *), (void *) &entry_ptr);
+	} else {
+		zend_hash_index_update(rv, key->h, &entry, sizeof(zval *), (void *) &entry_ptr);
+	}
+
+	zend_hash_apply_with_argument(evhs, apply_read_event_handler_ex, Z_ARRVAL_PP(entry_ptr) TSRMLS_CC);
+
+	return ZEND_HASH_APPLY_KEEP;
+}
 static void php_pqconn_object_read_event_handlers(zval *object, void *o, zval *return_value TSRMLS_DC)
 {
 	php_pqconn_object_t *obj = o;
 
 	array_init(return_value);
-	zend_hash_copy(Z_ARRVAL_P(return_value), &obj->intern->eventhandlers, (copy_ctor_func_t) zval_add_ref, NULL, sizeof(zval *));
+	zend_hash_apply_with_arguments(&obj->intern->eventhandlers TSRMLS_CC, apply_read_event_handlers, 1, Z_ARRVAL_P(return_value) TSRMLS_CC);
 }
 
 static STATUS php_pqconn_update_socket(zval *this_ptr, php_pqconn_object_t *obj TSRMLS_DC)
@@ -1502,6 +1530,7 @@ PHP_MINIT_FUNCTION(pqconn)
 	php_pqconn_object_handlers.write_property = php_pq_object_write_prop;
 	php_pqconn_object_handlers.clone_obj = NULL;
 	php_pqconn_object_handlers.get_property_ptr_ptr = NULL;
+	php_pqconn_object_handlers.get_gc = php_pq_object_gc;
 	php_pqconn_object_handlers.get_properties = php_pq_object_properties;
 	php_pqconn_object_handlers.get_debug_info = php_pq_object_debug_info;
 
