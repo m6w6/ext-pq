@@ -614,16 +614,18 @@ static zval **column_at(zval *row, int col TSRMLS_DC)
 	return data;
 }
 
-ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_col, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_col, 0, 0, 1)
+	ZEND_ARG_INFO(1, col_val)
 	ZEND_ARG_INFO(0, col_num)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, fetchCol) {
 	zend_error_handling zeh;
+	zval *fetch_val;
 	long fetch_col = 0;
 	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &fetch_col);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z|l", &fetch_val, &fetch_col);
 	zend_restore_error_handling(&zeh TSRMLS_CC);
 
 	if (SUCCESS == rv) {
@@ -636,11 +638,17 @@ static PHP_METHOD(pqres, fetchCol) {
 
 			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh TSRMLS_CC);
 			php_pqres_iteration(getThis(), obj, obj->intern->iter ? obj->intern->iter->fetch_type : 0, &row TSRMLS_CC);
-			if (row) {
+			if (!row) {
+				RETVAL_FALSE;
+			} else {
 				zval **col = column_at(*row, fetch_col TSRMLS_CC);
 
-				if (col) {
-					RETVAL_ZVAL(*col, 1, 0);
+				if (!col) {
+					RETVAL_FALSE;
+				} else {
+					zval_dtor(fetch_val);
+					ZVAL_ZVAL(fetch_val, *col, 1, 1);
+					RETVAL_TRUE;
 				}
 			}
 			zend_restore_error_handling(&zeh TSRMLS_CC);

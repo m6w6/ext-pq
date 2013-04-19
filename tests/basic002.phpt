@@ -13,7 +13,8 @@ $s = $c->prepare("test1", "SELECT \$1",array($t["text"]->oid));
 $r = $s->exec(array("fooo"));
 
 printf("%s\n", $r->errorMessage);
-printf("%s\n", $r->fetchCol());
+$r->fetchCol($val);
+printf("%s\n", $val);
 ?>
 DONE
 --EXPECT--
