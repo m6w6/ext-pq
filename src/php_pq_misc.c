@@ -86,21 +86,37 @@ static int apply_to_param(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_k
 	params = (char ***) va_arg(argv, char ***);
 	zdtor = (HashTable *) va_arg(argv, HashTable *);
 
-	if (Z_TYPE_PP(zparam) == IS_NULL) {
+	switch (Z_TYPE_PP(zparam)) {
+	case IS_NULL:
 		**params = NULL;
 		++*params;
-	} else {
-		if (Z_TYPE_PP(zparam) != IS_STRING) {
-			convert_to_string_ex(zparam);
-		}
+		break;
 
+	case IS_BOOL:
+		**params = Z_BVAL_PP(zparam) ? "t" : "f";
+		++*params;
+		break;
+
+	case IS_DOUBLE:
+		SEPARATE_ZVAL(zparam);
+		Z_TYPE_PP(zparam) = IS_STRING;
+		Z_STRLEN_PP(zparam) = spprintf(&Z_STRVAL_PP(zparam), 0, "%F", Z_DVAL_PP((zval **)p));
+		/* no break */
+
+	default:
+		convert_to_string_ex(zparam);
+		/* no break */
+
+	case IS_STRING:
 		**params = Z_STRVAL_PP(zparam);
 		++*params;
 
 		if (*zparam != *(zval **)p) {
 			zend_hash_next_index_insert(zdtor, zparam, sizeof(zval *), NULL);
 		}
+		break;
 	}
+
 	return ZEND_HASH_APPLY_KEEP;
 }
 
