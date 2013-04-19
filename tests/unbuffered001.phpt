@@ -16,7 +16,7 @@ var_dump($c->unbuffered);
 $c->execAsync("SELECT a from generate_series(1,10) a", function($res) {
 	switch ($res->status) {
 	case pq\Result::SINGLE_TUPLE:
-		$res->fetchCol($val);
+		$res->fetchCol("a", $val);
 		printf("%s\n", $val);
 		break;
 	case pq\Result::TUPLES_OK:
