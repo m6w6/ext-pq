@@ -21,3 +21,4 @@
 /autom4te*
 /.dep.inc
 run-tests.php
+php_pq_type.h

@@ -3,8 +3,8 @@ fetch bound
 --SKIPIF--
 <?php 
 include "_skipif.inc";
-if (pq\Types::DEFINED) {
-	die("skip pq\Types::DEFINED == true");
+if (!pq\Types::DEFINED) {
+	die("skip pq\Types::DEFINED == false");
 } 
 ?>
 --FILE--
@@ -27,24 +27,24 @@ DONE
 Test
 array(3) {
   [0]=>
-  &string(1) "2"
+  &int(2)
   [1]=>
-  &string(1) "4"
+  &int(4)
   [2]=>
-  &string(1) "6"
+  &int(6)
 }
-string(1) "2"
-string(1) "4"
-string(1) "6"
+int(2)
+int(4)
+int(6)
 array(3) {
   [0]=>
-  &string(1) "3"
+  &int(3)
   [1]=>
-  &string(1) "6"
+  &int(6)
   [2]=>
-  &string(1) "9"
+  &int(9)
 }
-string(1) "3"
-string(1) "6"
-string(1) "9"
+int(3)
+int(6)
+int(9)
 DONE

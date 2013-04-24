@@ -126,20 +126,65 @@ zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch
 					break;
 				}
 			} else {
+				zval *zv;
 				char *val = PQgetvalue(res, row, c);
 				int len = PQgetlength(res, row, c);
 
+				MAKE_STD_ZVAL(zv);
+
+				switch (PQftype(res, c)) {
+#ifdef HAVE_PHP_PQ_TYPE_H
+#	undef PHP_PQ_TYPE
+#	include "php_pq_type.h"
+				case PHP_PQ_OID_BOOL:
+					ZVAL_BOOL(zv, *val == 't');
+					break;
+#if SIZEOF_LONG >= 8
+				case PHP_PQ_OID_INT8:
+				case PHP_PQ_OID_TID:
+#endif
+				case PHP_PQ_OID_INT4:
+				case PHP_PQ_OID_INT2:
+				case PHP_PQ_OID_XID:
+				case PHP_PQ_OID_OID:
+					ZVAL_LONG(zv, zend_atol(val, len));
+					break;
+
+				case PHP_PQ_OID_FLOAT4:
+				case PHP_PQ_OID_FLOAT8:
+					ZVAL_DOUBLE(zv, zend_strtod(val, NULL));
+					break;
+
+				case PHP_PQ_OID_ABSTIME:
+				case PHP_PQ_OID_DATE:
+				case PHP_PQ_OID_TIMESTAMP:
+				case PHP_PQ_OID_TIMESTAMPTZ:
+					php_pq_date_from_string(val, len, zv TSRMLS_CC);
+					break;
+
+
+#else
+				case 18: /* BOOL */
+					ZVAL_BOOL(zv, *val == 't');
+					break;
+#endif
+				default:
+					ZVAL_STRINGL(zv, val, len, 1);
+					break;
+				}
+
 				switch (fetch_type) {
 				case PHP_PQRES_FETCH_OBJECT:
-					add_property_stringl(data, PQfname(res, c), val, len, 1);
+					add_property_zval(data, PQfname(res, c), zv);
+					zval_ptr_dtor(&zv);
 					break;
 
 				case PHP_PQRES_FETCH_ASSOC:
-					add_assoc_stringl(data, PQfname(res, c), val, len, 1);
+					add_assoc_zval(data, PQfname(res, c), zv);
 					break;
 
 				case PHP_PQRES_FETCH_ARRAY:
-					add_index_stringl(data, c, val, len ,1);
+					add_index_zval(data, c, zv);
 					break;
 				}
 			}

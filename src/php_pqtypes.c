@@ -225,7 +225,9 @@ static PHP_METHOD(pqtypes, __construct) {
 	"from pg_type t join pg_namespace n on t.typnamespace=n.oid " \
 	"where typisdefined " \
 	"and typrelid=0"
-#define PHP_PQ_OID_TEXT 25
+#ifndef PHP_PQ_OID_TEXT
+# define PHP_PQ_OID_TEXT 25
+#endif
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtypes_refresh, 0, 0, 0)
 	ZEND_ARG_ARRAY_INFO(0, namespaces, 1)
@@ -337,6 +339,15 @@ PHP_MINIT_FUNCTION(pqtypes)
 	zend_declare_property_null(php_pqtypes_class_entry, ZEND_STRL("connection"), ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqtypes_object_read_connection;
 	zend_hash_add(&php_pqtypes_object_prophandlers, "connection", sizeof("connection"), (void *) &ph, sizeof(ph), NULL);
+
+#ifdef HAVE_PHP_PQ_TYPE_H
+#	undef PHP_PQ_TYPE
+#	define PHP_PQ_TYPE(name, oid) zend_declare_class_constant_long(php_pqtypes_class_entry, ZEND_STRL(name), oid TSRMLS_CC);
+#	include "php_pq_type.h"
+	zend_declare_class_constant_bool(php_pqtypes_class_entry, ZEND_STRL("DEFINED"), 1 TSRMLS_CC);
+#else
+	zend_declare_class_constant_bool(php_pqtypes_class_entry, ZEND_STRL("DEFINED"), 0 TSRMLS_CC);
+#endif
 
 	return SUCCESS;
 }

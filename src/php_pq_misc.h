@@ -33,6 +33,8 @@ int compare_index(const void *lptr, const void *rptr TSRMLS_DC);
 int php_pq_types_to_array(HashTable *ht, Oid **types TSRMLS_DC);
 int php_pq_params_to_array(HashTable *ht, char ***params, HashTable *zdtor TSRMLS_DC);
 
+zval *php_pq_date_from_string(char *datetime_str, size_t datetime_len, zval *zv TSRMLS_DC);
+
 #endif
 
 /*

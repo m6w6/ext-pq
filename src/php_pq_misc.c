@@ -15,7 +15,7 @@
 #endif
 
 #include <php.h>
-
+#include <ext/date/php_date.h>
 #include <libpq/libpq-fs.h>
 
 #include "php_pq.h"
@@ -173,6 +173,24 @@ Oid *php_pq_ntypes_to_array(zend_bool fill, int argc, ...)
 	return oids;
 }
 */
+
+zval *php_pq_date_from_string(char *datetime_str, size_t datetime_len, zval *zv TSRMLS_DC)
+{
+	php_date_obj *dobj;
+
+	if (!zv) {
+		MAKE_STD_ZVAL(zv);
+	}
+
+	php_date_instantiate(php_date_get_date_ce(), zv TSRMLS_CC);
+	dobj = zend_object_store_get_object(zv TSRMLS_CC);
+	if (!php_date_initialize(dobj, datetime_str, datetime_len, NULL, NULL, 1 TSRMLS_CC)) {
+		zval_dtor(zv);
+		ZVAL_NULL(zv);
+	}
+
+	return zv;
+}
 
 /*
  * Local variables:
