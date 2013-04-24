@@ -52,6 +52,7 @@
 
 static PHP_MINIT_FUNCTION(pq)
 {
+	PHP_MINIT_CALL(pq_misc);
 	PHP_MINIT_CALL(pqexc);
 
 	PHP_MINIT_CALL(pqconn);

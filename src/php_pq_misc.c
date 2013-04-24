@@ -16,6 +16,12 @@
 
 #include <php.h>
 #include <ext/date/php_date.h>
+#if defined(HAVE_JSON) && !defined(COMPILE_DL_JSON)
+#	include <ext/json/php_json.h>
+#endif
+
+#include <Zend/zend_interfaces.h>
+
 #include <libpq/libpq-fs.h>
 
 #include "php_pq.h"
@@ -174,7 +180,26 @@ Oid *php_pq_ntypes_to_array(zend_bool fill, int argc, ...)
 }
 */
 
-zval *php_pq_date_from_string(char *datetime_str, size_t datetime_len, zval *zv TSRMLS_DC)
+zend_class_entry *php_pqdt_class_entry;
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqdt_to_string, 0, 0, 0)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqdt, __toString)
+{
+	zval *rv;
+
+	zend_call_method_with_1_params(&getThis(), php_pqdt_class_entry, NULL, "format", &rv,
+			zend_read_property(php_pqdt_class_entry, getThis(), ZEND_STRL("format"), 0 TSRMLS_CC));
+	RETVAL_ZVAL(rv, 1, 1);
+}
+
+static zend_function_entry php_pqdt_methods[] = {
+	PHP_ME(pqdt, __toString, ai_pqdt_to_string, ZEND_ACC_PUBLIC)
+	PHP_MALIAS(pqdt, jsonSerialize, __toString, ai_pqdt_to_string, ZEND_ACC_PUBLIC)
+	{0}
+};
+
+zval *php_pqdt_from_string(char *dt_str, size_t dt_len, char *fmt, zval *zv TSRMLS_DC)
 {
 	php_date_obj *dobj;
 
@@ -182,14 +207,33 @@ zval *php_pq_date_from_string(char *datetime_str, size_t datetime_len, zval *zv 
 		MAKE_STD_ZVAL(zv);
 	}
 
-	php_date_instantiate(php_date_get_date_ce(), zv TSRMLS_CC);
+	php_date_instantiate(php_pqdt_class_entry, zv TSRMLS_CC);
 	dobj = zend_object_store_get_object(zv TSRMLS_CC);
-	if (!php_date_initialize(dobj, datetime_str, datetime_len, NULL, NULL, 1 TSRMLS_CC)) {
+	if (!php_date_initialize(dobj, dt_str, dt_len, NULL, NULL, 1 TSRMLS_CC)) {
 		zval_dtor(zv);
 		ZVAL_NULL(zv);
+	} else if (fmt) {
+		zend_update_property_string(php_pqdt_class_entry, zv, ZEND_STRL("format"), fmt TSRMLS_CC);
 	}
 
 	return zv;
+}
+
+PHP_MINIT_FUNCTION(pq_misc)
+{
+	zend_class_entry **json, ce = {0};
+
+	INIT_NS_CLASS_ENTRY(ce ,"pq", "DateTime", php_pqdt_methods);
+	php_pqdt_class_entry = zend_register_internal_class_ex(&ce, php_date_get_date_ce(), "DateTime" TSRMLS_CC);
+
+	zend_declare_property_stringl(php_pqdt_class_entry, ZEND_STRL("format"), ZEND_STRL("Y-m-d H:i:s.u"), ZEND_ACC_PUBLIC TSRMLS_CC);
+
+	/* stop reading this file right here! */
+	if (SUCCESS == zend_hash_find(CG(class_table), ZEND_STRS("jsonserializable"), (void *) &json)) {
+		zend_class_implements(php_pqdt_class_entry TSRMLS_CC, 1, *json);
+	}
+
+	return SUCCESS;
 }
 
 /*

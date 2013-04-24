@@ -155,11 +155,20 @@ zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch
 					ZVAL_DOUBLE(zv, zend_strtod(val, NULL));
 					break;
 
-				case PHP_PQ_OID_ABSTIME:
 				case PHP_PQ_OID_DATE:
+					php_pqdt_from_string(val, len, "Y-m-d", zv TSRMLS_CC);
+					break;
+
+				case PHP_PQ_OID_ABSTIME:
+					php_pqdt_from_string(val, len, "Y-m-d H:i:s", zv TSRMLS_CC);
+					break;
+
 				case PHP_PQ_OID_TIMESTAMP:
+					php_pqdt_from_string(val, len, "Y-m-d H:i:s.u", zv TSRMLS_CC);
+					break;
+
 				case PHP_PQ_OID_TIMESTAMPTZ:
-					php_pq_date_from_string(val, len, zv TSRMLS_CC);
+					php_pqdt_from_string(val, len, "Y-m-d H:i:s.uO", zv TSRMLS_CC);
 					break;
 
 
