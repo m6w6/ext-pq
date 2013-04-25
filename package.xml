@@ -12,17 +12,30 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <name>pq</name>
  <channel>pecl.php.net</channel>
  <summary>libpq binding</summary>
- <description>Binding for libpq (PostgreSQL client library)</description>
+ <description>
+ Binding for libpq (PostgreSQL client library)
+ Documents: https://bitbucket.org/mike_php_net/ext-pq/wiki
+ 
+ Highlights:
+ * Nearly 100% support for using asynchronously:
+   https://bitbucket.org/mike_php_net/ext-pq/wiki/AsyncOperations
+ * Extended type support by pg_type:
+   https://bitbucket.org/mike_php_net/ext-pq/wiki/UsingTypes
+ * Fetching simple multi-dimensional array maps:
+   https://bitbucket.org/mike_php_net/ext-pq/wiki/FetchingResults#markdown-header-fetching-simple-maps
+ * Working Gateway implementation: 
+   https://bitbucket.org/mike_php_net/pq-gateway/src/
+ </description>
  <lead>
   <name>Michael Wallner</name>
   <user>mike</user>
   <email>mike@php.net</email>
   <active>yes</active>
  </lead>
- <date>2013-04-13</date>
+ <date>2013-04-25</date>
  <version>
-  <release>0.2.0dev</release>
-  <api>0.1.0</api>
+  <release>0.2.0</release>
+  <api>0.2.0</api>
  </version>
  <stability>
   <release>beta</release>
@@ -30,6 +43,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license>BSD, revised</license>
  <notes><![CDATA[
+* Fixed pq\Result::fetchCol()
 * Fixed type handling of boolean/double input parameters.
 * Added extented type handling of result parameters if PostgreSQL server headers are present.
 * Implemented get_properties() object handler.
