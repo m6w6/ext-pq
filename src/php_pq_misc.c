@@ -16,6 +16,7 @@
 
 #include <php.h>
 #include <ext/date/php_date.h>
+#include <ext/standard/php_string.h>
 #if defined(HAVE_JSON) && !defined(COMPILE_DL_JSON)
 #	include <ext/json/php_json.h>
 #endif
@@ -234,6 +235,220 @@ PHP_MINIT_FUNCTION(pq_misc)
 	}
 
 	return SUCCESS;
+}
+
+typedef struct _HashTableList {
+	HashTable ht;
+	struct _HashTableList *parent;
+} HashTableList;
+
+typedef struct _ArrayParserState {
+	const char *ptr, *end;
+	HashTableList *list;
+#ifdef ZTS
+	void ***ts;
+#endif
+	unsigned quotes:1;
+	unsigned escaped:1;
+} ArrayParserState;
+
+static char caa(ArrayParserState *a, const char *any, unsigned advance)
+{
+	const char *p = any;
+	TSRMLS_FETCH_FROM_CTX(a->ts);
+
+	do {
+		if (*p == *a->ptr) {
+			a->ptr += advance;
+			return *p;
+		}
+	} while (*++p);
+
+	php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to parse array: expected one of '%s', got '%c'", any, *a->ptr); \
+	return 0;
+}
+
+static STATUS add_element(ArrayParserState *a, const char *start)
+{
+	zval *zelem;
+	TSRMLS_FETCH_FROM_CTX(a->ts);
+
+	MAKE_STD_ZVAL(zelem);
+	if (a->quotes) {
+		ZVAL_STRINGL(zelem, start, a->ptr - start, 1);
+		php_stripslashes(Z_STRVAL_P(zelem), &Z_STRLEN_P(zelem) TSRMLS_CC);
+	} else if ((a->ptr - start == 4) && !strncmp(start, "NULL", 4)) {
+		ZVAL_NULL(zelem);
+	} else {
+		long lval = 0;
+		double dval = 0;
+
+		switch (is_numeric_string(start, a->ptr - start, &lval, &dval, 0)) {
+		case IS_LONG:
+			ZVAL_LONG(zelem, lval);
+			break;
+
+		case IS_DOUBLE:
+			ZVAL_DOUBLE(zelem, dval);
+			break;
+
+		default:
+			ZVAL_STRINGL(zelem, start, a->ptr - start, 1);
+			break;
+		}
+	}
+
+	return zend_hash_next_index_insert(&a->list->ht, &zelem, sizeof(zval *), NULL);
+}
+
+static STATUS parse_array(ArrayParserState *a);
+
+static STATUS parse_element(ArrayParserState *a)
+{
+	const char *el;
+	TSRMLS_FETCH_FROM_CTX(a->ts);
+
+	switch (*a->ptr) {
+	case '{':
+		return parse_array(a);
+
+	case '"':
+		a->quotes = 1;
+		++a->ptr;
+		break;
+	}
+
+	for (el = a->ptr; a->ptr < a->end; ++a->ptr) {
+		switch (*a->ptr) {
+		case '"':
+			if (a->escaped) {
+				a->escaped = 0;
+			} else if (a->quotes) {
+				if (SUCCESS != add_element(a, el)) {
+					return FAILURE;
+				}
+				a->quotes = 0;
+				++a->ptr;
+				return SUCCESS;
+			} else {
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to parse element, unexpected quote: '%.*s'", (int) (a->ptr - el), el);
+				return FAILURE;
+			}
+			break;
+
+		case ',':
+		case '}':
+			if (!a->quotes) {
+				return add_element(a, el);
+			}
+			break;
+
+		case '\\':
+			a->escaped = !a->escaped;
+			break;
+
+		default:
+			a->escaped = 0;
+			break;
+		}
+	}
+
+	php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to parse element, reached end of input");
+	return FAILURE;
+}
+
+static STATUS parse_elements(ArrayParserState *a)
+{
+	TSRMLS_FETCH_FROM_CTX(a->ts);
+
+	while (SUCCESS == parse_element(a)) {
+		switch (caa(a, ",}", 0)) {
+		case 0:
+			return FAILURE;
+
+		case '}':
+			return SUCCESS;
+
+		default:
+			if (!*++a->ptr) {
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to parse elements, reached end of input");
+				return FAILURE;
+			}
+			break;
+		}
+	}
+
+	return FAILURE;
+}
+
+static STATUS parse_array(ArrayParserState *a)
+{
+	HashTableList *list;
+
+	if (!caa(a, "{", 1)) {
+		return FAILURE;
+	}
+
+	list = ecalloc(1, sizeof(*list));
+	ZEND_INIT_SYMTABLE(&list->ht);
+
+	if (a->list) {
+		zval *zcur;
+
+		MAKE_STD_ZVAL(zcur);
+		Z_TYPE_P(zcur) = IS_ARRAY;
+		Z_ARRVAL_P(zcur) = &list->ht;
+
+		zend_hash_next_index_insert(&a->list->ht, &zcur, sizeof(zval *), NULL);
+
+		list->parent = a->list;
+	}
+	a->list = list;
+
+	if (SUCCESS != parse_elements(a)) {
+		return FAILURE;
+	}
+
+	if (!caa(a, "}", 1)) {
+		return FAILURE;
+	}
+
+	if (a->list->parent) {
+		a->list = a->list->parent;
+	}
+
+	return SUCCESS;
+}
+
+HashTable *php_pq_parse_array(const char *val_str, size_t val_len TSRMLS_DC)
+{
+	HashTable *ht = NULL;
+	ArrayParserState a = {0};
+	TSRMLS_SET_CTX(a.ts);
+
+	a.ptr = val_str;
+	a.end = val_str + val_len;
+
+	if (SUCCESS != parse_array(&a)) {
+		while (a.list) {
+			HashTableList *l = a.list->parent;
+
+			zend_hash_destroy(&a.list->ht);
+			efree(a.list);
+			a.list = l;
+		}
+		return ht;
+	}
+
+	if (*a.ptr) {
+		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Trailing input: '%s'", a.ptr);
+	}
+
+	do {
+		ht = &a.list->ht;
+	} while ((a.list = a.list->parent));
+
+	return ht;
 }
 
 /*

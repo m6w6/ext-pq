@@ -1,5 +1,5 @@
-* parse arrays out of PQgetvalue
 * COPY: getAsync & putAsync
 * fetchInto/fetchCtor?
 * unlisten?
 * unregister event handler?
+* binary protocol?

@@ -127,12 +127,13 @@ zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch
 				}
 			} else {
 				zval *zv;
+				Oid typ = PQftype(res, c);
 				char *val = PQgetvalue(res, row, c);
 				int len = PQgetlength(res, row, c);
 
 				MAKE_STD_ZVAL(zv);
 
-				switch (PQftype(res, c)) {
+				switch (typ) {
 #ifdef HAVE_PHP_PQ_TYPE_H
 #	undef PHP_PQ_TYPE
 #	include "php_pq_type.h"
@@ -178,7 +179,11 @@ zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch
 					break;
 #endif
 				default:
-					ZVAL_STRINGL(zv, val, len, 1);
+					if (PHP_PQ_TYPE_IS_ARRAY(typ) && (Z_ARRVAL_P(zv) = php_pq_parse_array(val, len TSRMLS_CC))) {
+						Z_TYPE_P(zv) = IS_ARRAY;
+					} else {
+						ZVAL_STRINGL(zv, val, len, 1);
+					}
 					break;
 				}
 
