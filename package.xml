@@ -34,7 +34,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </lead>
  <date>2013-04-25</date>
  <version>
-  <release>0.2.0</release>
+  <release>0.3.0dev</release>
   <api>0.2.0</api>
  </version>
  <stability>
@@ -43,10 +43,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license>BSD, revised</license>
  <notes><![CDATA[
-* Fixed pq\Result::fetchCol()
-* Fixed type handling of boolean/double input parameters.
-* Added extented type handling of result parameters if PostgreSQL server headers are present.
-* Implemented get_properties() object handler.
+* 
 ]]></notes>
  <contents>
   <dir name="/">

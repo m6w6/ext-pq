@@ -173,7 +173,7 @@ zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch
 
 
 #else
-				case 18: /* BOOL */
+				case 16: /* BOOL */
 					ZVAL_BOOL(zv, *val == 't');
 					break;
 #endif
