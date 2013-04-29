@@ -112,6 +112,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file role="test" name="trans001.phpt" />
     <file role="test" name="trans002.phpt" />
     <file role="test" name="types001.phpt" />
+    <file role="test" name="types002.phpt" />
     <file role="test" name="unbuffered001.phpt" />
     <file role="test" name="_setup.inc" />
     <file role="test" name="_skipif.inc" />

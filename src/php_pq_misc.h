@@ -36,7 +36,8 @@ int php_pq_params_to_array(HashTable *ht, char ***params, HashTable *zdtor TSRML
 zend_class_entry *php_pqdt_class_entry;
 zval *php_pqdt_from_string(char *datetime_str, size_t datetime_len, char *fmt, zval *zv TSRMLS_DC);
 
-HashTable *php_pq_parse_array(const char *val_str, size_t val_len TSRMLS_DC);
+HashTable *php_pq_parse_array(const char *val_str, size_t val_len, Oid typ TSRMLS_DC);
+zval *php_pq_typed_zval(char *val_str, size_t val_len, Oid typ TSRMLS_DC);
 
 PHP_MINIT_FUNCTION(pq_misc);
 

@@ -126,66 +126,7 @@ zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch
 					break;
 				}
 			} else {
-				zval *zv;
-				Oid typ = PQftype(res, c);
-				char *val = PQgetvalue(res, row, c);
-				int len = PQgetlength(res, row, c);
-
-				MAKE_STD_ZVAL(zv);
-
-				switch (typ) {
-#ifdef HAVE_PHP_PQ_TYPE_H
-#	undef PHP_PQ_TYPE
-#	include "php_pq_type.h"
-				case PHP_PQ_OID_BOOL:
-					ZVAL_BOOL(zv, *val == 't');
-					break;
-#if SIZEOF_LONG >= 8
-				case PHP_PQ_OID_INT8:
-				case PHP_PQ_OID_TID:
-#endif
-				case PHP_PQ_OID_INT4:
-				case PHP_PQ_OID_INT2:
-				case PHP_PQ_OID_XID:
-				case PHP_PQ_OID_OID:
-					ZVAL_LONG(zv, zend_atol(val, len));
-					break;
-
-				case PHP_PQ_OID_FLOAT4:
-				case PHP_PQ_OID_FLOAT8:
-					ZVAL_DOUBLE(zv, zend_strtod(val, NULL));
-					break;
-
-				case PHP_PQ_OID_DATE:
-					php_pqdt_from_string(val, len, "Y-m-d", zv TSRMLS_CC);
-					break;
-
-				case PHP_PQ_OID_ABSTIME:
-					php_pqdt_from_string(val, len, "Y-m-d H:i:s", zv TSRMLS_CC);
-					break;
-
-				case PHP_PQ_OID_TIMESTAMP:
-					php_pqdt_from_string(val, len, "Y-m-d H:i:s.u", zv TSRMLS_CC);
-					break;
-
-				case PHP_PQ_OID_TIMESTAMPTZ:
-					php_pqdt_from_string(val, len, "Y-m-d H:i:s.uO", zv TSRMLS_CC);
-					break;
-
-
-#else
-				case 16: /* BOOL */
-					ZVAL_BOOL(zv, *val == 't');
-					break;
-#endif
-				default:
-					if (PHP_PQ_TYPE_IS_ARRAY(typ) && (Z_ARRVAL_P(zv) = php_pq_parse_array(val, len TSRMLS_CC))) {
-						Z_TYPE_P(zv) = IS_ARRAY;
-					} else {
-						ZVAL_STRINGL(zv, val, len, 1);
-					}
-					break;
-				}
+				zval *zv = php_pq_typed_zval(PQgetvalue(res, row, c), PQgetlength(res, row, c), PQftype(res, c) TSRMLS_CC);
 
 				switch (fetch_type) {
 				case PHP_PQRES_FETCH_OBJECT:
