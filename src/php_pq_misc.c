@@ -502,7 +502,6 @@ zval *php_pq_typed_zval(char *val, size_t len, Oid typ TSRMLS_DC)
 			ZVAL_STRINGL(zv, val, len, 1);
 		}
 		break;
-	}
 #else
 	case 16: /* BOOL */
 		ZVAL_BOOL(zv, *val == 't');
@@ -511,6 +510,7 @@ zval *php_pq_typed_zval(char *val, size_t len, Oid typ TSRMLS_DC)
 	default:
 		ZVAL_STRINGL(zv, val, len, 1);
 #endif
+	}
 
 	return zv;
 }
