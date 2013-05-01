@@ -17,7 +17,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  Documents: https://bitbucket.org/mike_php_net/ext-pq/wiki
  
  Highlights:
- * Nearly 100% support for using asynchronously:
+ * Nearly 100% support for asynchronous usage:
    https://bitbucket.org/mike_php_net/ext-pq/wiki/AsyncOperations
  * Extended type support by pg_type:
    https://bitbucket.org/mike_php_net/ext-pq/wiki/UsingTypes
@@ -32,10 +32,10 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>mike@php.net</email>
   <active>yes</active>
  </lead>
- <date>2013-04-25</date>
+ <date>2013-04-30</date>
  <version>
-  <release>0.3.0dev</release>
-  <api>0.2.0</api>
+  <release>0.3.0</release>
+  <api>0.3.0</api>
  </version>
  <stability>
   <release>beta</release>
@@ -43,7 +43,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license>BSD, revised</license>
  <notes><![CDATA[
-* 
+* Added parser for result arrays ('{{1,2},{3,4}}')
 ]]></notes>
  <contents>
   <dir name="/">

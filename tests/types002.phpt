@@ -7,6 +7,8 @@ if (!pq\Types::DEFINED) {
 	die("skip pq\\Types::DEFINED == false\n");
 }
 ?>
+--INI--
+date.timezone=UTC
 --FILE--
 <?php
 echo "Test\n";
