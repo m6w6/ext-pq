@@ -24,7 +24,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  * Fetching simple multi-dimensional array maps:
    https://bitbucket.org/mike_php_net/ext-pq/wiki/FetchingResults#markdown-header-fetching-simple-maps
  * Working Gateway implementation: 
-   https://bitbucket.org/mike_php_net/pq-gateway/src/
+   https://bitbucket.org/mike_php_net/pq-gateway
  </description>
  <lead>
   <name>Michael Wallner</name>
@@ -32,7 +32,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>mike@php.net</email>
   <active>yes</active>
  </lead>
- <date>2013-04-30</date>
+ <date>2013-05-03</date>
  <version>
   <release>0.3.0</release>
   <api>0.3.0</api>
