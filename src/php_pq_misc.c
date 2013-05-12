@@ -84,6 +84,82 @@ static int apply_to_oid(void *p, void *arg TSRMLS_DC)
 	return ZEND_HASH_APPLY_KEEP;
 }
 
+static int apply_to_param_from_array(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
+{
+	zval **zparam = p;
+	unsigned j, *i = va_arg(argv, unsigned *);
+	smart_str *s = va_arg(argv, smart_str *);
+	char *tmp;
+	size_t len;
+	int tmp_len;
+
+	if ((*i)++) {
+		smart_str_appendc(s, ',');
+	}
+
+	switch (Z_TYPE_PP(zparam)) {
+	case IS_NULL:
+		smart_str_appends(s, "NULL");
+		break;
+
+	case IS_BOOL:
+		smart_str_appends(s, Z_BVAL_PP(zparam) ? "t" : "f");
+		break;
+
+	case IS_LONG:
+		smart_str_append_long(s, Z_LVAL_PP(zparam));
+		break;
+
+	case IS_DOUBLE:
+		len = spprintf(&tmp, 0, "%F", Z_DVAL_PP(zparam));
+		smart_str_appendl(s, tmp, len);
+		efree(tmp);
+		break;
+
+	case IS_ARRAY:
+		j = 0;
+		smart_str_appendc(s, '{');
+		zend_hash_apply_with_arguments(Z_ARRVAL_PP(zparam) TSRMLS_CC, apply_to_param_from_array, 2, &j, s);
+		smart_str_appendc(s, '}');
+		break;
+
+	default:
+	{
+		SEPARATE_ZVAL(zparam);
+		if (Z_TYPE_PP(zparam) != IS_STRING) {
+			convert_to_string(*zparam);
+		}
+
+		tmp = php_addslashes(Z_STRVAL_PP(zparam), Z_STRLEN_PP(zparam), &tmp_len, 0 TSRMLS_CC);
+		smart_str_appendc(s, '"');
+		smart_str_appendl(s, tmp, tmp_len);
+		smart_str_appendc(s, '"');
+
+		if (*zparam != *((zval **) p)) {
+			zval_ptr_dtor(zparam);
+		}
+		break;
+	}
+	}
+
+	++(*i);
+	return ZEND_HASH_APPLY_KEEP;
+}
+
+static void array_param_to_string(HashTable *ht, char **str, int *len TSRMLS_DC)
+{
+	smart_str s = {0};
+	unsigned i = 0;
+
+	smart_str_appendc(&s, '{');
+	zend_hash_apply_with_arguments(ht TSRMLS_CC, apply_to_param_from_array, 2, &i, &s);
+	smart_str_appendc(&s, '}');
+
+	smart_str_0(&s);
+	*str = s.c;
+	*len = s.len;
+}
+
 static int apply_to_param(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
 {
 	char ***params;
@@ -97,33 +173,40 @@ static int apply_to_param(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_k
 	case IS_NULL:
 		**params = NULL;
 		++*params;
-		break;
+		return ZEND_HASH_APPLY_KEEP;
 
 	case IS_BOOL:
 		**params = Z_BVAL_PP(zparam) ? "t" : "f";
 		++*params;
-		break;
+		return ZEND_HASH_APPLY_KEEP;
 
 	case IS_DOUBLE:
 		SEPARATE_ZVAL(zparam);
 		Z_TYPE_PP(zparam) = IS_STRING;
 		Z_STRLEN_PP(zparam) = spprintf(&Z_STRVAL_PP(zparam), 0, "%F", Z_DVAL_PP((zval **)p));
-		/* no break */
+		break;
 
-	default:
-		convert_to_string_ex(zparam);
-		/* no break */
-
-	case IS_STRING:
-		**params = Z_STRVAL_PP(zparam);
-		++*params;
-
-		if (*zparam != *(zval **)p) {
-			zend_hash_next_index_insert(zdtor, zparam, sizeof(zval *), NULL);
-		}
+	case IS_ARRAY:
+	{
+		zval *tmp;
+		MAKE_STD_ZVAL(tmp);
+		Z_TYPE_P(tmp) = IS_STRING;
+		array_param_to_string(Z_ARRVAL_PP(zparam), &Z_STRVAL_P(tmp), &Z_STRLEN_P(tmp) TSRMLS_CC);
+		zparam = &tmp;
 		break;
 	}
 
+	default:
+		convert_to_string_ex(zparam);
+		break;
+	}
+
+	**params = Z_STRVAL_PP(zparam);
+	++*params;
+
+	if (*zparam != *(zval **)p) {
+		zend_hash_next_index_insert(zdtor, zparam, sizeof(zval *), NULL);
+	}
 	return ZEND_HASH_APPLY_KEEP;
 }
 
@@ -277,7 +360,7 @@ static STATUS add_element(ArrayParserState *a, const char *start)
 	TSRMLS_FETCH_FROM_CTX(a->ts);
 
 	if (a->quotes) {
-		int tmp_len;
+		int tmp_len = el_len;
 
 		php_stripslashes(el_str, &tmp_len TSRMLS_CC);
 		el_len = tmp_len;
