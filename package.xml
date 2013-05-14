@@ -114,6 +114,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file role="test" name="res001.phpt" />
     <file role="test" name="reset001.phpt" />
     <file role="test" name="savepoint001.phpt" />
+    <file role="test" name="stm_bound001.phpt" />
     <file role="test" name="stm_desc001.phpt" />
     <file role="test" name="stm_desc002.phpt" />
     <file role="test" name="trans001.phpt" />
