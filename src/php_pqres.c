@@ -93,6 +93,7 @@ zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch
 {
 	zval *data = NULL;
 	int c, cols;
+	php_pqres_object_t *res_obj = PQresultInstanceData(res, php_pqconn_event);
 
 	if (data_ptr) {
 		data = *data_ptr;
@@ -126,7 +127,22 @@ zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch
 					break;
 				}
 			} else {
-				zval *zv = php_pq_typed_zval(PQgetvalue(res, row, c), PQgetlength(res, row, c), PQftype(res, c) TSRMLS_CC);
+				zval *zv, **zconv;
+
+				if (res_obj && (SUCCESS == zend_hash_index_find(&res_obj->intern->converters, PQftype(res, c), (void *) &zconv))) {
+					zval *tmp = NULL;
+
+					MAKE_STD_ZVAL(zv);
+					ZVAL_STRINGL(zv, PQgetvalue(res, row, c), PQgetlength(res, row, c), 1);
+					zend_call_method_with_1_params(zconv, NULL, NULL, "convertfromstring", &tmp, zv);
+
+					if (tmp) {
+						zval_ptr_dtor(&zv);
+						zv = tmp;
+					}
+				} else {
+					zv = php_pq_typed_zval(PQgetvalue(res, row, c), PQgetlength(res, row, c), PQftype(res, c) TSRMLS_CC);
+				}
 
 				switch (fetch_type) {
 				case PHP_PQRES_FETCH_OBJECT:
@@ -248,13 +264,15 @@ STATUS php_pqres_success(PGresult *res TSRMLS_DC)
 	}
 }
 
-void php_pqres_init_instance_data(PGresult *res, php_pqres_object_t **ptr TSRMLS_DC)
+void php_pqres_init_instance_data(PGresult *res, php_pqconn_object_t *conn_obj, php_pqres_object_t **ptr TSRMLS_DC)
 {
 	php_pqres_object_t *obj;
 	php_pqres_t *r = ecalloc(1, sizeof(*r));
 
 	r->res = res;
-	ZEND_INIT_SYMTABLE(&r->bound);
+	zend_hash_init(&r->bound, 0, 0, ZVAL_PTR_DTOR, 0);
+	zend_hash_init(&r->converters, 0, 0, ZVAL_PTR_DTOR, 0);
+	zend_hash_copy(&r->converters, &conn_obj->intern->converters, (copy_ctor_func_t) zval_add_ref, NULL, sizeof(zval *));
 	php_pqres_create_object_ex(php_pqres_class_entry, r, &obj TSRMLS_CC);
 
 	PQresultSetInstanceData(res, php_pqconn_event, obj);
@@ -283,6 +301,7 @@ static void php_pqres_object_free(void *o TSRMLS_DC)
 		}
 
 		zend_hash_destroy(&obj->intern->bound);
+		zend_hash_destroy(&obj->intern->converters);
 
 		efree(obj->intern);
 		obj->intern = NULL;
@@ -874,6 +893,12 @@ static zend_function_entry php_pqres_methods[] = {
 	PHP_ME(pqres, map, ai_pqres_map, ZEND_ACC_PUBLIC)
 	{0}
 };
+
+PHP_MSHUTDOWN_FUNCTION(pqres)
+{
+	zend_hash_destroy(&php_pqres_object_prophandlers);
+	return SUCCESS;
+}
 
 PHP_MINIT_FUNCTION(pqres)
 {

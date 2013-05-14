@@ -69,9 +69,25 @@ static PHP_MINIT_FUNCTION(pq)
 	return php_persistent_handle_provide(ZEND_STRL("pq\\Connection"), php_pqconn_get_resource_factory_ops(), NULL, NULL TSRMLS_CC);
 }
 
+#define PHP_MSHUT_CALL(i) do { \
+	if (SUCCESS != PHP_MSHUTDOWN(i)(type, module_number TSRMLS_CC)) { \
+		return FAILURE; \
+	} \
+} while(0)
+
 static PHP_MSHUTDOWN_FUNCTION(pq)
 {
 	php_persistent_handle_cleanup(ZEND_STRL("pq\\Connection"), NULL, 0 TSRMLS_CC);
+
+	PHP_MSHUT_CALL(pqlob);
+	PHP_MSHUT_CALL(pqcopy);
+	PHP_MSHUT_CALL(pqtxn);
+	PHP_MSHUT_CALL(pqstm);
+	PHP_MSHUT_CALL(pqres);
+	PHP_MSHUT_CALL(pqtypes);
+	PHP_MSHUT_CALL(pqcancel);
+	PHP_MSHUT_CALL(pqconn);
+
 	return SUCCESS;
 }
 

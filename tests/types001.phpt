@@ -8,7 +8,7 @@ echo "Test\n";
 include "_setup.inc";
 
 $c = new pq\Connection(PQ_DSN);
-$t = new pq\Types($c);
+$t = new pq\Types($c, array("pg_catalog", "public"));
 var_dump($t->connection === $c);
 var_dump(isset($t["int4"]), empty($t["int4"]));
 var_dump(isset($t["whatthahell"]), empty($t["whatthahell"]));

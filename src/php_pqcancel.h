@@ -32,6 +32,7 @@ zend_class_entry *php_pqcancel_class_entry;
 zend_object_value php_pqcancel_create_object_ex(zend_class_entry *ce, php_pqcancel_t *intern, php_pqcancel_object_t **ptr TSRMLS_DC);
 
 PHP_MINIT_FUNCTION(pqcancel);
+PHP_MSHUTDOWN_FUNCTION(pqcancel);
 
 #endif
 

@@ -229,6 +229,29 @@ static PHP_METHOD(pqtypes, __construct) {
 # define PHP_PQ_OID_TEXT 25
 #endif
 
+static int apply_nsp(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
+{
+	zval **zp = p;
+	unsigned pcount, tcount;
+	php_pq_params_t *params = va_arg(argv, php_pq_params_t *);
+	smart_str *str = va_arg(argv, smart_str *);
+
+	tcount = php_pq_params_add_type_oid(params, PHP_PQ_OID_TEXT);
+	pcount = php_pq_params_add_param(params, *zp);
+
+	if (tcount != pcount) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Param/Type count mismatch");
+		return ZEND_HASH_APPLY_STOP;
+	}
+	if (pcount > 1) {
+		smart_str_appendc(str, ',');
+	}
+	smart_str_appendc(str, '$');
+	smart_str_append_unsigned(str, pcount);
+
+	return ZEND_HASH_APPLY_KEEP;
+}
+
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtypes_refresh, 0, 0, 0)
 	ZEND_ARG_ARRAY_INFO(0, namespaces, 1)
 ZEND_END_ARG_INFO();
@@ -252,33 +275,18 @@ static PHP_METHOD(pqtypes, refresh) {
 			if (!nsp || !zend_hash_num_elements(nsp)) {
 				res = PQexec(obj->intern->conn->intern->conn, PHP_PQ_TYPES_QUERY " and nspname in ('public', 'pg_catalog')");
 			} else {
-				int i, count;
-				Oid *oids;
-				char **params = NULL;
-				HashTable zdtor;
 				smart_str str = {0};
+				php_pq_params_t *params = php_pq_params_init(&obj->intern->conn->intern->converters, NULL, NULL TSRMLS_CC);
 
 				smart_str_appends(&str, PHP_PQ_TYPES_QUERY " and nspname in(");
-				zend_hash_init(&zdtor, 0, NULL, ZVAL_PTR_DTOR, 0);
-				count = php_pq_params_to_array(nsp, &params, &zdtor TSRMLS_CC);
-				oids = ecalloc(count + 1, sizeof(*oids));
-				for (i = 0; i < count; ++i) {
-					oids[i] = PHP_PQ_OID_TEXT;
-					if (i) {
-						smart_str_appendc(&str, ',');
-					}
-					smart_str_appendc(&str, '$');
-					smart_str_append_unsigned(&str, i+1);
-				}
+				zend_hash_apply_with_arguments(nsp TSRMLS_CC, apply_nsp, 2, params, &str);
 				smart_str_appendc(&str, ')');
 				smart_str_0(&str);
 
-				res = PQexecParams(obj->intern->conn->intern->conn, str.c, count, oids, (const char *const*) params, NULL, NULL, 0);
+				res = PQexecParams(obj->intern->conn->intern->conn, str.c, params->param.count, params->type.oids, (const char *const*) params->param.strings, NULL, NULL, 0);
 
 				smart_str_free(&str);
-				efree(oids);
-				efree(params);
-				zend_hash_destroy(&zdtor);
+				php_pq_params_free(&params);
 			}
 
 			if (!res) {
@@ -295,7 +303,7 @@ static PHP_METHOD(pqtypes, refresh) {
 						Z_ADDREF_P(row);
 
 						zend_hash_index_update(&obj->intern->types, oid, (void *) &row, sizeof(zval *), NULL);
-						zend_hash_add(&obj->intern->types, name, strlen(name) + 1, (void *) &row, sizeof(zval *), NULL);
+						zend_hash_update(&obj->intern->types, name, strlen(name) + 1, (void *) &row, sizeof(zval *), NULL);
 					}
 				}
 
@@ -311,6 +319,12 @@ static zend_function_entry php_pqtypes_methods[] = {
 	PHP_ME(pqtypes, refresh, ai_pqtypes_refresh, ZEND_ACC_PUBLIC)
 	{0}
 };
+
+PHP_MSHUTDOWN_FUNCTION(pqtypes)
+{
+	zend_hash_destroy(&php_pqtypes_object_prophandlers);
+	return SUCCESS;
+}
 
 PHP_MINIT_FUNCTION(pqtypes)
 {

@@ -872,6 +872,12 @@ static zend_function_entry php_pqtxn_methods[] = {
 	{0}
 };
 
+PHP_MSHUTDOWN_FUNCTION(pqtxn)
+{
+	zend_hash_destroy(&php_pqtxn_object_prophandlers);
+	return SUCCESS;
+}
+
 PHP_MINIT_FUNCTION(pqtxn)
 {
 	zend_class_entry ce = {0};

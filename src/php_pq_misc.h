@@ -30,11 +30,10 @@ int compare_index(const void *lptr, const void *rptr TSRMLS_DC);
 #define PHP_PQerrorMessage(c) rtrim(PQerrorMessage((c)))
 #define PHP_PQresultErrorMessage(r) rtrim(PQresultErrorMessage((r)))
 
-int php_pq_types_to_array(HashTable *ht, Oid **types TSRMLS_DC);
-int php_pq_params_to_array(HashTable *ht, char ***params, HashTable *zdtor TSRMLS_DC);
-
 zend_class_entry *php_pqdt_class_entry;
 zval *php_pqdt_from_string(char *datetime_str, size_t datetime_len, char *fmt, zval *zv TSRMLS_DC);
+
+zend_class_entry *php_pqconv_class_entry;
 
 HashTable *php_pq_parse_array(const char *val_str, size_t val_len, Oid typ TSRMLS_DC);
 zval *php_pq_typed_zval(char *val_str, size_t val_len, Oid typ TSRMLS_DC);

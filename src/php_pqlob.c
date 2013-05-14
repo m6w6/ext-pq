@@ -449,6 +449,12 @@ static zend_function_entry php_pqlob_methods[] = {
 	{0}
 };
 
+PHP_MSHUTDOWN_FUNCTION(pqlob)
+{
+	zend_hash_destroy(&php_pqlob_object_prophandlers);
+	return SUCCESS;
+}
+
 PHP_MINIT_FUNCTION(pqlob)
 {
 	zend_class_entry ce = {0};

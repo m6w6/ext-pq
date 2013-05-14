@@ -45,6 +45,7 @@ zend_class_entry *php_pqcopy_class_entry;
 zend_object_value php_pqcopy_create_object_ex(zend_class_entry *ce, php_pqcopy_t *intern, php_pqcopy_object_t **ptr TSRMLS_DC);
 
 PHP_MINIT_FUNCTION(pqcopy);
+PHP_MSHUTDOWN_FUNCTION(pqcopy);
 
 #endif
 

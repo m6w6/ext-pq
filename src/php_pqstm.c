@@ -58,6 +58,9 @@ static void php_pqstm_object_free(void *o TSRMLS_DC)
 		php_pq_object_delref(obj->intern->conn TSRMLS_CC);
 		efree(obj->intern->name);
 		zend_hash_destroy(&obj->intern->bound);
+		if (obj->intern->params) {
+			php_pq_params_free(&obj->intern->params);
+		}
 		efree(obj->intern);
 		obj->intern = NULL;
 	}
@@ -134,10 +137,12 @@ static PHP_METHOD(pqstm, __construct) {
 		if (!conn_obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
 		} else {
+			php_pq_params_t *params = php_pq_params_init(&conn_obj->intern->converters, ztypes ? Z_ARRVAL_P(ztypes) : NULL, NULL TSRMLS_CC);
+
 			if (async) {
-				rv = php_pqconn_prepare_async(zconn, conn_obj, name_str, query_str, ztypes ? Z_ARRVAL_P(ztypes) : NULL TSRMLS_CC);
+				rv = php_pqconn_prepare_async(zconn, conn_obj, name_str, query_str, params TSRMLS_CC);
 			} else {
-				rv = php_pqconn_prepare(zconn, conn_obj, name_str, query_str, ztypes ? Z_ARRVAL_P(ztypes) : NULL TSRMLS_CC);
+				rv = php_pqconn_prepare(zconn, conn_obj, name_str, query_str, params TSRMLS_CC);
 			}
 
 			if (SUCCESS == rv) {
@@ -146,6 +151,7 @@ static PHP_METHOD(pqstm, __construct) {
 				php_pq_object_addref(conn_obj TSRMLS_CC);
 				stm->conn = conn_obj;
 				stm->name = estrdup(name_str);
+				stm->params = params;
 				ZEND_INIT_SYMTABLE(&stm->bound);
 				obj->intern = stm;
 			}
@@ -191,25 +197,11 @@ static PHP_METHOD(pqstm, exec) {
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Statement not initialized");
 		} else {
-			int count = 0;
-			char **params = NULL;
-			HashTable zdtor;
 			PGresult *res;
 
-			ZEND_INIT_SYMTABLE(&zdtor);
-
-			if (zparams) {
-				count = php_pq_params_to_array(Z_ARRVAL_P(zparams), &params, &zdtor TSRMLS_CC);
-			} else {
-				count = php_pq_params_to_array(&obj->intern->bound, &params, &zdtor TSRMLS_CC);
-			}
-
-			res = PQexecPrepared(obj->intern->conn->intern->conn, obj->intern->name, count, (const char *const*) params, NULL, NULL, 0);
-
-			if (params) {
-				efree(params);
-			}
-			zend_hash_destroy(&zdtor);
+			php_pq_params_set_params(obj->intern->params, zparams ? Z_ARRVAL_P(zparams) : &obj->intern->bound);
+			res = PQexecPrepared(obj->intern->conn->intern->conn, obj->intern->name, obj->intern->params->param.count, (const char *const*) obj->intern->params->param.strings, NULL, NULL, 0);
+			php_pq_params_set_params(obj->intern->params, NULL);
 
 			if (!res) {
 				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to execute statement (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
@@ -241,16 +233,13 @@ static PHP_METHOD(pqstm, execAsync) {
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Statement not initialized");
 		} else {
-			int count;
-			char **params = NULL;
-			HashTable zdtor;
+			int rc;
 
-			if (zparams) {
-				ZEND_INIT_SYMTABLE(&zdtor);
-				count = php_pq_params_to_array(Z_ARRVAL_P(zparams), &params, &zdtor TSRMLS_CC);
-			}
+			php_pq_params_set_params(obj->intern->params, zparams ? Z_ARRVAL_P(zparams) : &obj->intern->bound);
+			rc = PQsendQueryPrepared(obj->intern->conn->intern->conn, obj->intern->name, obj->intern->params->param.count, (const char *const*) obj->intern->params->param.strings, NULL, NULL, 0);
+			php_pq_params_set_params(obj->intern->params, NULL);
 
-			if (!PQsendQueryPrepared(obj->intern->conn->intern->conn, obj->intern->name, count, (const char *const*) params, NULL, NULL, 0)) {
+			if (!rc) {
 				throw_exce(EX_IO TSRMLS_CC, "Failed to execute statement (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			} else if (obj->intern->conn->intern->unbuffered && !PQsetSingleRowMode(obj->intern->conn->intern->conn)) {
 				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to enable unbuffered mode (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
@@ -261,13 +250,6 @@ static PHP_METHOD(pqstm, execAsync) {
 					php_pq_callback_addref(&obj->intern->conn->intern->onevent);
 				}
 				obj->intern->conn->intern->poller = PQconsumeInput;
-			}
-
-			if (params) {
-				efree(params);
-			}
-			if (zparams) {
-				zend_hash_destroy(&zdtor);
 			}
 
 			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
@@ -344,6 +326,12 @@ static zend_function_entry php_pqstm_methods[] = {
 	PHP_ME(pqstm, descAsync, ai_pqstm_desc_async, ZEND_ACC_PUBLIC)
 	{0}
 };
+
+PHP_MSHUTDOWN_FUNCTION(pqstm)
+{
+	zend_hash_destroy(&php_pqstm_object_prophandlers);
+	return SUCCESS;
+}
 
 PHP_MINIT_FUNCTION(pqstm)
 {

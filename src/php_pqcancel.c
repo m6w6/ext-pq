@@ -144,6 +144,12 @@ static zend_function_entry php_pqcancel_methods[] = {
 	{0}
 };
 
+PHP_MSHUTDOWN_FUNCTION(pqcancel)
+{
+	zend_hash_destroy(&php_pqcancel_object_prophandlers);
+	return SUCCESS;
+}
+
 PHP_MINIT_FUNCTION(pqcancel)
 {
 	zend_class_entry ce = {0};

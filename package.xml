@@ -34,8 +34,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </lead>
  <date>2013-05-03</date>
  <version>
-  <release>0.3.0</release>
-  <api>0.3.0</api>
+  <release>0.4.0dev</release>
+  <api>0.4.0</api>
  </version>
  <stability>
   <release>beta</release>
@@ -43,7 +43,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license>BSD, revised</license>
  <notes><![CDATA[
-* Added parser for result arrays ('{{1,2},{3,4}}')
+* Added pq\ConverterInterface and pq\Connection::setConverter()
 ]]></notes>
  <contents>
   <dir name="/">
@@ -72,6 +72,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file role="src" name="php_pq_module.c" />
     <file role="src" name="php_pq_object.c" />
     <file role="src" name="php_pq_object.h" />
+    <file role="src" name="php_pq_params.c" />
+    <file role="src" name="php_pq_params.h" />
     <file role="src" name="php_pqres.c" />
     <file role="src" name="php_pqres.h" />
     <file role="src" name="php_pqstm.c" />
@@ -93,6 +95,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file role="test" name="bound001.phpt" />
     <file role="test" name="bound002.phpt" />
     <file role="test" name="cancel001.phpt" />
+    <file role="test" name="conv001.phpt" />
     <file role="test" name="copy001.phpt" />
     <file role="test" name="encoding001.phpt" />
     <file role="test" name="exceptions001.phpt" />

@@ -44,6 +44,7 @@ zend_class_entry *php_pqtxn_class_entry;
 zend_object_value php_pqtxn_create_object_ex(zend_class_entry *ce, php_pqtxn_t *intern, php_pqtxn_object_t **ptr TSRMLS_DC);
 
 PHP_MINIT_FUNCTION(pqtxn);
+PHP_MSHUTDOWN_FUNCTION(pqtxn);
 
 #endif
 

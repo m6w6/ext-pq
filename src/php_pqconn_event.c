@@ -69,7 +69,7 @@ static void php_pqconn_event_resultcreate(PGEventResultCreate *event)
 		HashTable *evhs;
 		TSRMLS_DF(data);
 
-		php_pqres_init_instance_data(event->result, &obj TSRMLS_CC);
+		php_pqres_init_instance_data(event->result, data->obj, &obj TSRMLS_CC);
 
 		/* event listener */
 		if (SUCCESS == zend_hash_find(&data->obj->intern->eventhandlers, ZEND_STRS("result"), (void *) &evhs)) {

@@ -66,204 +66,6 @@ int compare_index(const void *lptr, const void *rptr TSRMLS_DC)
 	return 0;
 }
 
-static int apply_to_oid(void *p, void *arg TSRMLS_DC)
-{
-	Oid **types = arg;
-	zval **ztype = p;
-
-	if (Z_TYPE_PP(ztype) != IS_LONG) {
-		convert_to_long_ex(ztype);
-	}
-
-	**types = Z_LVAL_PP(ztype);
-	++*types;
-
-	if (*ztype != *(zval **)p) {
-		zval_ptr_dtor(ztype);
-	}
-	return ZEND_HASH_APPLY_KEEP;
-}
-
-static int apply_to_param_from_array(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
-{
-	zval **zparam = p;
-	unsigned j, *i = va_arg(argv, unsigned *);
-	smart_str *s = va_arg(argv, smart_str *);
-	char *tmp;
-	size_t len;
-	int tmp_len;
-
-	if ((*i)++) {
-		smart_str_appendc(s, ',');
-	}
-
-	switch (Z_TYPE_PP(zparam)) {
-	case IS_NULL:
-		smart_str_appends(s, "NULL");
-		break;
-
-	case IS_BOOL:
-		smart_str_appends(s, Z_BVAL_PP(zparam) ? "t" : "f");
-		break;
-
-	case IS_LONG:
-		smart_str_append_long(s, Z_LVAL_PP(zparam));
-		break;
-
-	case IS_DOUBLE:
-		len = spprintf(&tmp, 0, "%F", Z_DVAL_PP(zparam));
-		smart_str_appendl(s, tmp, len);
-		efree(tmp);
-		break;
-
-	case IS_ARRAY:
-		j = 0;
-		smart_str_appendc(s, '{');
-		zend_hash_apply_with_arguments(Z_ARRVAL_PP(zparam) TSRMLS_CC, apply_to_param_from_array, 2, &j, s);
-		smart_str_appendc(s, '}');
-		break;
-
-	default:
-	{
-		SEPARATE_ZVAL(zparam);
-		if (Z_TYPE_PP(zparam) != IS_STRING) {
-			convert_to_string(*zparam);
-		}
-
-		tmp = php_addslashes(Z_STRVAL_PP(zparam), Z_STRLEN_PP(zparam), &tmp_len, 0 TSRMLS_CC);
-		smart_str_appendc(s, '"');
-		smart_str_appendl(s, tmp, tmp_len);
-		smart_str_appendc(s, '"');
-
-		if (*zparam != *((zval **) p)) {
-			zval_ptr_dtor(zparam);
-		}
-		break;
-	}
-	}
-
-	++(*i);
-	return ZEND_HASH_APPLY_KEEP;
-}
-
-static void array_param_to_string(HashTable *ht, char **str, int *len TSRMLS_DC)
-{
-	smart_str s = {0};
-	unsigned i = 0;
-
-	smart_str_appendc(&s, '{');
-	zend_hash_apply_with_arguments(ht TSRMLS_CC, apply_to_param_from_array, 2, &i, &s);
-	smart_str_appendc(&s, '}');
-
-	smart_str_0(&s);
-	*str = s.c;
-	*len = s.len;
-}
-
-static int apply_to_param(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
-{
-	char ***params;
-	HashTable *zdtor;
-	zval **zparam = p;
-
-	params = (char ***) va_arg(argv, char ***);
-	zdtor = (HashTable *) va_arg(argv, HashTable *);
-
-	switch (Z_TYPE_PP(zparam)) {
-	case IS_NULL:
-		**params = NULL;
-		++*params;
-		return ZEND_HASH_APPLY_KEEP;
-
-	case IS_BOOL:
-		**params = Z_BVAL_PP(zparam) ? "t" : "f";
-		++*params;
-		return ZEND_HASH_APPLY_KEEP;
-
-	case IS_DOUBLE:
-		SEPARATE_ZVAL(zparam);
-		Z_TYPE_PP(zparam) = IS_STRING;
-		Z_STRLEN_PP(zparam) = spprintf(&Z_STRVAL_PP(zparam), 0, "%F", Z_DVAL_PP((zval **)p));
-		break;
-
-	case IS_ARRAY:
-	{
-		zval *tmp;
-		MAKE_STD_ZVAL(tmp);
-		Z_TYPE_P(tmp) = IS_STRING;
-		array_param_to_string(Z_ARRVAL_PP(zparam), &Z_STRVAL_P(tmp), &Z_STRLEN_P(tmp) TSRMLS_CC);
-		zparam = &tmp;
-		break;
-	}
-
-	default:
-		convert_to_string_ex(zparam);
-		break;
-	}
-
-	**params = Z_STRVAL_PP(zparam);
-	++*params;
-
-	if (*zparam != *(zval **)p) {
-		zend_hash_next_index_insert(zdtor, zparam, sizeof(zval *), NULL);
-	}
-	return ZEND_HASH_APPLY_KEEP;
-}
-
-int php_pq_types_to_array(HashTable *ht, Oid **types TSRMLS_DC)
-{
-	int count = zend_hash_num_elements(ht);
-
-	*types = NULL;
-
-	if (count) {
-		Oid *tmp;
-
-		/* +1 for when less types than params are specified */
-		*types = tmp = ecalloc(count + 1, sizeof(**types));
-		zend_hash_apply_with_argument(ht, apply_to_oid, &tmp TSRMLS_CC);
-	}
-
-	return count;
-}
-
-int php_pq_params_to_array(HashTable *ht, char ***params, HashTable *zdtor TSRMLS_DC)
-{
-	int count = zend_hash_num_elements(ht);
-
-	*params = NULL;
-
-	if (count) {
-		char **tmp;
-
-		*params = tmp = ecalloc(count, sizeof(char *));
-		zend_hash_apply_with_arguments(ht TSRMLS_CC, apply_to_param, 2, &tmp, zdtor);
-	}
-
-	return count;
-}
-
-/*
-Oid *php_pq_ntypes_to_array(zend_bool fill, int argc, ...)
-{
-	int i;
-	Oid *oids = ecalloc(argc + 1, sizeof(*oids));
-	va_list argv;
-
-	va_start(argv, argc);
-	for (i = 0; i < argc; ++i) {
-		if (!fill || !i) {
-			oids[i] = va_arg(argv, Oid);
-		} else {
-			oids[i] = oids[0];
-		}
-	}
-	va_end(argv);
-
-	return oids;
-}
-*/
-
 zend_class_entry *php_pqdt_class_entry;
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqdt_to_string, 0, 0, 0)
@@ -303,10 +105,35 @@ zval *php_pqdt_from_string(char *dt_str, size_t dt_len, char *fmt, zval *zv TSRM
 	return zv;
 }
 
+zend_class_entry *php_pqconv_class_entry;
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqconv_convert_types, 0, 0, 0)
+ZEND_END_ARG_INFO();
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqconv_convert_from_string, 0, 0, 1)
+	ZEND_ARG_INFO(0, data)
+ZEND_END_ARG_INFO();
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqconv_convert_to_string, 0, 0, 1)
+	ZEND_ARG_INFO(0, data)
+ZEND_END_ARG_INFO();
+
+zend_function_entry php_pqconv_methods[] = {
+	PHP_ABSTRACT_ME(pqconv, convertTypes, ai_pqconv_convert_types)
+	PHP_ABSTRACT_ME(pqconv, convertFromString, ai_pqconv_convert_from_string)
+	PHP_ABSTRACT_ME(pqconv, convertToString, ai_pqconv_convert_to_string)
+	{0}
+};
+
+
 PHP_MINIT_FUNCTION(pq_misc)
 {
 	zend_class_entry **json, ce = {0};
 
+	INIT_NS_CLASS_ENTRY(ce, "pq", "ConverterInterface", php_pqconv_methods);
+	php_pqconv_class_entry = zend_register_internal_interface(&ce TSRMLS_CC);
+
+	memset(&ce, 0, sizeof(ce));
 	INIT_NS_CLASS_ENTRY(ce ,"pq", "DateTime", php_pqdt_methods);
 	php_pqdt_class_entry = zend_register_internal_class_ex(&ce, php_date_get_date_ce(), "DateTime" TSRMLS_CC);
 

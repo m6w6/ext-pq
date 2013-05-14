@@ -19,12 +19,14 @@
 
 #include <ext/raphf/php_raphf.h>
 #include "php_pq_callback.h"
+#include "php_pq_params.h"
 
 typedef struct php_pqconn {
 	PGconn *conn;
 	int (*poller)(PGconn *);
 	php_resource_factory_t factory;
 	HashTable listeners;
+	HashTable converters;
 	HashTable eventhandlers;
 	php_pq_callback_t onevent;
 	unsigned unbuffered:1;
@@ -47,12 +49,13 @@ php_resource_factory_ops_t *php_pqconn_get_resource_factory_ops(void);
 zend_class_entry *php_pqconn_class_entry;
 zend_object_value php_pqconn_create_object_ex(zend_class_entry *ce, php_pqconn_t *intern, php_pqconn_object_t **ptr TSRMLS_DC);
 void php_pqconn_notify_listeners(php_pqconn_object_t *obj TSRMLS_DC);
-STATUS php_pqconn_prepare(zval *object, php_pqconn_object_t *obj, const char *name, const char *query, HashTable *typest TSRMLS_DC);
-STATUS php_pqconn_prepare_async(zval *object, php_pqconn_object_t *obj, const char *name, const char *query, HashTable *typest TSRMLS_DC);
+STATUS php_pqconn_prepare(zval *object, php_pqconn_object_t *obj, const char *name, const char *query, php_pq_params_t *params TSRMLS_DC);
+STATUS php_pqconn_prepare_async(zval *object, php_pqconn_object_t *obj, const char *name, const char *query, php_pq_params_t *params TSRMLS_DC);
 STATUS php_pqconn_start_transaction(zval *zconn, php_pqconn_object_t *conn_obj, long isolation, zend_bool readonly, zend_bool deferrable TSRMLS_DC);
 STATUS php_pqconn_start_transaction_async(zval *zconn, php_pqconn_object_t *conn_obj, long isolation, zend_bool readonly, zend_bool deferrable TSRMLS_DC);
 
 PHP_MINIT_FUNCTION(pqconn);
+PHP_MSHUTDOWN_FUNCTION(pqconn);
 
 #endif
 

@@ -16,12 +16,14 @@ $c->execAsync("SELECT pg_sleep(2)");
 
 $x->cancel();
 
+var_dump($c === $x->connection);
 var_dump($c->getResult());
 printf("%s\n", $c->errorMessage);
 ?>
 DONE
 --EXPECTF--
 Test
+bool(true)
 object(pq\Result)#%d (7) {
   ["status"]=>
   int(7)

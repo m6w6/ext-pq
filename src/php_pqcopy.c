@@ -308,6 +308,12 @@ static zend_function_entry php_pqcopy_methods[] = {
 	{0}
 };
 
+PHP_MSHUTDOWN_FUNCTION(pqcopy)
+{
+	zend_hash_destroy(&php_pqcopy_object_prophandlers);
+	return SUCCESS;
+}
+
 PHP_MINIT_FUNCTION(pqcopy)
 {
 	zend_class_entry ce = {0};

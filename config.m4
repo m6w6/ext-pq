@@ -39,6 +39,7 @@ if test "$PHP_PQ" != "no"; then
 		src/php_pq_misc.c\
 		src/php_pq_callback.c\
 		src/php_pq_object.c\
+		src/php_pq_params.c\
 		src/php_pqcancel.c\
 		src/php_pqconn.c\
 		src/php_pqconn_event.c\
