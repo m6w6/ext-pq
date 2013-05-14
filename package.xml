@@ -90,6 +90,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file role="test" name="async004.phpt" />
     <file role="test" name="async005.phpt" />
     <file role="test" name="async006.phpt" />
+    <file role="test" name="async007.phpt" />
     <file role="test" name="basic001.phpt" />
     <file role="test" name="basic002.phpt" />
     <file role="test" name="bound001.phpt" />
@@ -114,6 +115,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file role="test" name="reset001.phpt" />
     <file role="test" name="savepoint001.phpt" />
     <file role="test" name="stm_desc001.phpt" />
+    <file role="test" name="stm_desc002.phpt" />
     <file role="test" name="trans001.phpt" />
     <file role="test" name="trans002.phpt" />
     <file role="test" name="types001.phpt" />

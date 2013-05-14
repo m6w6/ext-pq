@@ -883,6 +883,25 @@ static PHP_METHOD(pqres, count) {
 	}
 }
 
+ZEND_BEGIN_ARG_INFO_EX(ai_pqres_desc, 0, 0, 0)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqres, desc) {
+	if (SUCCESS == zend_parse_parameters_none()) {
+		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
+		if (!obj->intern) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Result not initialized");
+		} else {
+			int p, params;
+
+			array_init(return_value);
+			for (p = 0, params = PQnparams(obj->intern->res); p < params; ++p) {
+				add_next_index_long(return_value, PQparamtype(obj->intern->res, p));
+			}
+		}
+	}
+}
+
 static zend_function_entry php_pqres_methods[] = {
 	PHP_ME(pqres, bind, ai_pqres_bind, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, fetchBound, ai_pqres_fetch_bound, ZEND_ACC_PUBLIC)
@@ -891,6 +910,7 @@ static zend_function_entry php_pqres_methods[] = {
 	PHP_ME(pqres, fetchAll, ai_pqres_fetch_all, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, count, ai_pqres_count, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, map, ai_pqres_map, ZEND_ACC_PUBLIC)
+	PHP_ME(pqres, desc, ai_pqres_desc, ZEND_ACC_PUBLIC)
 	{0}
 };
 

@@ -113,7 +113,7 @@ static void php_pqstm_object_read_connection(zval *object, void *o, zval *return
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_construct, 0, 0, 3)
 	ZEND_ARG_OBJ_INFO(0, Connection, pq\\Connection, 0)
-	ZEND_ARG_INFO(0, type)
+	ZEND_ARG_INFO(0, name)
 	ZEND_ARG_INFO(0, query)
 	ZEND_ARG_ARRAY_INFO(0, types, 1)
 	ZEND_ARG_INFO(0, async)
@@ -293,14 +293,16 @@ static PHP_METHOD(pqstm, desc) {
 	}
 }
 
-ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_desc_async, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_desc_async, 0, 0, 1)
+	ZEND_ARG_INFO(0, callable)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqstm, descAsync) {
 	zend_error_handling zeh;
+	php_pq_callback_t resolver = {{0}};
 	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters_none();
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "f", &resolver.fci, &resolver.fcc);
 	zend_restore_error_handling(&zeh TSRMLS_CC);
 
 	if (SUCCESS == rv) {
@@ -311,6 +313,11 @@ static PHP_METHOD(pqstm, descAsync) {
 		} else if (!PQsendDescribePrepared(obj->intern->conn->intern->conn, obj->intern->name)) {
 			throw_exce(EX_IO TSRMLS_CC, "Failed to describe statement: %s", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 		} else {
+			php_pq_callback_dtor(&obj->intern->conn->intern->onevent);
+			if (resolver.fci.size > 0) {
+				obj->intern->conn->intern->onevent = resolver;
+				php_pq_callback_addref(&obj->intern->conn->intern->onevent);
+			}
 			obj->intern->conn->intern->poller = PQconsumeInput;
 			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
 		}
