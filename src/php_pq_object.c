@@ -115,18 +115,18 @@ zval *php_pq_object_read_prop(zval *object, zval *member, int type, const zend_l
 
 	if (!obj->intern) {
 		zend_error(E_WARNING, "%s not initialized", ancestor(obj->zo.ce)->name);
-	} else if ((SUCCESS == zend_hash_find(obj->prophandler, Z_STRVAL_P(member), Z_STRLEN_P(member)+1, (void *) &handler)) && handler->read) {
-		if (type == BP_VAR_R) {
-			ALLOC_ZVAL(return_value);
-			Z_SET_REFCOUNT_P(return_value, 0);
-			Z_UNSET_ISREF_P(return_value);
-
-			handler->read(object, obj, return_value TSRMLS_CC);
-		} else {
-			zend_error(E_ERROR, "Cannot access %s properties by reference or array key/index", ancestor(obj->zo.ce)->name);
-		}
-	} else {
 		return_value = zend_get_std_object_handlers()->read_property(object, member, type, key TSRMLS_CC);
+	} else if ((SUCCESS != zend_hash_find(obj->prophandler, Z_STRVAL_P(member), Z_STRLEN_P(member)+1, (void *) &handler)) || !handler->read) {
+		return_value = zend_get_std_object_handlers()->read_property(object, member, type, key TSRMLS_CC);
+	} else if (type != BP_VAR_R) {
+		zend_error(E_ERROR, "Cannot access %s properties by reference or array key/index", ancestor(obj->zo.ce)->name);
+		return_value = zend_get_std_object_handlers()->read_property(object, member, type, key TSRMLS_CC);
+	} else {
+		ALLOC_ZVAL(return_value);
+		Z_SET_REFCOUNT_P(return_value, 0);
+		Z_UNSET_ISREF_P(return_value);
+
+		handler->read(object, obj, return_value TSRMLS_CC);
 	}
 
 	return return_value;
