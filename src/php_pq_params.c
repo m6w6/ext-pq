@@ -187,7 +187,7 @@ static void php_pq_params_set_param(php_pq_params_t *p, unsigned index, zval **z
 		case IS_DOUBLE:
 			SEPARATE_ZVAL(zp);
 			Z_TYPE_PP(zp) = IS_STRING;
-			Z_STRLEN_PP(zp) = spprintf(&Z_STRVAL_PP(zp), 0, "%F", Z_DVAL_PP((zval **)p));
+			Z_STRLEN_PP(zp) = spprintf(&Z_STRVAL_PP(zp), 0, "%F", Z_DVAL_PP(zpp));
 			break;
 
 		case IS_ARRAY:
