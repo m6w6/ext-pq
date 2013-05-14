@@ -102,6 +102,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file role="test" name="exceptions002.phpt" />
     <file role="test" name="fetch001.phpt" />
     <file role="test" name="info001.phpt" />
+    <file role="test" name="info002.phpt" />
     <file role="test" name="lob001.phpt" />
     <file role="test" name="lob002.phpt" />
     <file role="test" name="lob003.phpt" />
@@ -109,6 +110,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file role="test" name="map001.phpt" />
     <file role="test" name="notify001.phpt" />
     <file role="test" name="persistent001.phpt" />
+    <file role="test" name="res001.phpt" />
     <file role="test" name="reset001.phpt" />
     <file role="test" name="savepoint001.phpt" />
     <file role="test" name="stm_desc001.phpt" />

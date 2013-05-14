@@ -137,6 +137,7 @@ static int apply_to_param_from_array(void *p TSRMLS_DC, int argc, va_list argv, 
 			if (*zparam != *((zval **) p)) {
 				zval_ptr_dtor(zparam);
 			}
+			efree(tmp);
 			break;
 		}
 	}

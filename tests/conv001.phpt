@@ -83,7 +83,7 @@ $c->setConverter(new HStoreConverter($t));
 $c->setConverter(new IntVectorConverter($t));
 $c->setConverter(new JSONConverter($t));
 
-$r = $c->execParams("SELECT \$1 as hs, \$2 as iv, \$3 as oids, \$4 as js",
+$r = $c->execParams("SELECT \$1 as hs, \$2 as iv, \$3 as oids, \$4 as js, \$5 as ia, \$6 as ta, \$7 as ba, \$8 as da",
 	array(
 		// hstore
 		array(
@@ -107,13 +107,22 @@ $r = $c->execParams("SELECT \$1 as hs, \$2 as iv, \$3 as oids, \$4 as js",
 				"c" => 3,
 			),
 			"str" => "äüö"
-		)
+		),
+		// arrays
+		array(array(array(1,2,3))),
+		array(array("a\"","b}",null)),
+		array(true,false),
+		array(1.1,2.2)
 	),
 	array(
 		$t["hstore"]->oid,
 		$t["int2vector"]->oid,
 		$t["oidvector"]->oid,
-		$t["json"]->oid
+		$t["json"]->oid,
+		$t["_int4"]->oid,
+		$t["_text"]->oid,
+		$t["_bool"]->oid,
+		$t["_float8"]->oid
 	)
 );
 
@@ -125,7 +134,7 @@ Done
 Test
 array(1) {
   [0]=>
-  array(4) {
+  array(%d) {
     [0]=>
     array(3) {
       ["k1"]=>
@@ -174,6 +183,47 @@ array(1) {
       }
       ["str"]=>
       string(6) "äüö"
+    }
+    [4]=>
+    array(1) {
+      [0]=>
+      array(1) {
+        [0]=>
+        array(3) {
+          [0]=>
+          int(1)
+          [1]=>
+          int(2)
+          [2]=>
+          int(3)
+        }
+      }
+    }
+    [5]=>
+    array(1) {
+      [0]=>
+      array(3) {
+        [0]=>
+        string(2) "a""
+        [1]=>
+        string(2) "b}"
+        [2]=>
+        NULL
+      }
+    }
+    [6]=>
+    array(2) {
+      [0]=>
+      bool(true)
+      [1]=>
+      bool(false)
+    }
+    [7]=>
+    array(2) {
+      [0]=>
+      float(1.1)
+      [1]=>
+      float(2.2)
     }
   }
 }

@@ -12,6 +12,9 @@ $c = new pq\Connection(PQ_DSN);
 $t = $c->startTransaction();
 
 $lob = $t->createLOB();
+
+var_dump($lob->transaction === $t);
+
 $lob->write(file_get_contents(__FILE__));
 var_dump($lob->tell());
 
@@ -31,7 +34,8 @@ $t->unlinkLOB($lob->oid);
 DONE
 --EXPECTF--
 Test
-int(451)
+bool(true)
+int(489)
 bool(true)
 string(5) "%c?php"
 DONE
