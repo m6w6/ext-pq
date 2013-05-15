@@ -32,9 +32,9 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>mike@php.net</email>
   <active>yes</active>
  </lead>
- <date>2013-05-03</date>
+ <date>2013-05-15</date>
  <version>
-  <release>0.4.0dev</release>
+  <release>0.4.0</release>
   <api>0.4.0</api>
  </version>
  <stability>
@@ -44,6 +44,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <license>BSD, revised</license>
  <notes><![CDATA[
 * Added pq\ConverterInterface and pq\Connection::setConverter()
+* Added pq\Result::desc() and fixed pq\Statement::descAsync()
+* Added serializer for input array params
 ]]></notes>
  <contents>
   <dir name="/">
