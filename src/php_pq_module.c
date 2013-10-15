@@ -100,7 +100,7 @@ static PHP_MINFO_FUNCTION(pq)
 
 	php_info_print_table_start();
 	php_info_print_table_header(2, "PQ Support", "enabled");
-	php_info_print_table_row(2, "Extension Version", PHP_PQ_EXT_VERSION);
+	php_info_print_table_row(2, "Extension Version", PHP_PQ_VERSION);
 	php_info_print_table_end();
 
 	php_info_print_table_start();
@@ -134,7 +134,7 @@ zend_module_entry pq_module_entry = {
 	NULL,/*PHP_RINIT(pq),*/
 	NULL,/*PHP_RSHUTDOWN(pq),*/
 	PHP_MINFO(pq),
-	PHP_PQ_EXT_VERSION,
+	PHP_PQ_VERSION,
 	STANDARD_MODULE_PROPERTIES
 };
 
