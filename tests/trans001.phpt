@@ -11,7 +11,9 @@ include "_setup.inc";
 $c = new pq\Connection(PQ_DSN);
 $c->exec("DROP TABLE IF EXISTS test");
 $c->on(pq\Connection::EVENT_NOTICE, function($c, $notice) {
-	echo "Got notice: $notice\n";
+	if ($notice !== 'CREATE TABLE will create implicit sequence "test_id_seq" for serial column "test.id"') {
+		echo "Got notice: $notice\n";
+	}
 });
 var_dump($c->transactionStatus == pq\Connection::TRANS_IDLE);
 $t = new pq\Transaction($c);
@@ -35,7 +37,6 @@ Test
 bool(true)
 bool(true)
 Got notice: NOTICE:  table "test" does not exist, skipping
-Got notice: NOTICE:  CREATE TABLE will create implicit sequence "test_id_seq" for serial column "test.id"
 1 => a
 2 => b
 3 => c
