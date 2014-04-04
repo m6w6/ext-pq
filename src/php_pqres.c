@@ -670,7 +670,7 @@ static PHP_METHOD(pqres, fetchCol) {
 						RETVAL_FALSE;
 					} else {
 						zval_dtor(zref);
-						ZVAL_ZVAL(zref, *zres, 1, 1);
+						ZVAL_ZVAL(zref, *zres, 1, 0);
 						RETVAL_TRUE;
 					}
 				}

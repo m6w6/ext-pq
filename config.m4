@@ -50,6 +50,7 @@ if test "$PHP_PQ" != "no"; then
 		src/php_pqstm.c\
 		src/php_pqtxn.c\
 		src/php_pqtypes.c\
+		src/php_pqcur.c\
 	"
 	PHP_NEW_EXTENSION(pq, $PQ_SRC, $ext_shared)
 	PHP_ADD_BUILD_DIR($ext_builddir/src)

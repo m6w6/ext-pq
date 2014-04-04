@@ -53,6 +53,8 @@ STATUS php_pqconn_prepare(zval *object, php_pqconn_object_t *obj, const char *na
 STATUS php_pqconn_prepare_async(zval *object, php_pqconn_object_t *obj, const char *name, const char *query, php_pq_params_t *params TSRMLS_DC);
 STATUS php_pqconn_start_transaction(zval *zconn, php_pqconn_object_t *conn_obj, long isolation, zend_bool readonly, zend_bool deferrable TSRMLS_DC);
 STATUS php_pqconn_start_transaction_async(zval *zconn, php_pqconn_object_t *conn_obj, long isolation, zend_bool readonly, zend_bool deferrable TSRMLS_DC);
+STATUS php_pqconn_declare(zval *object, php_pqconn_object_t *obj, const char *decl TSRMLS_DC);
+STATUS php_pqconn_declare_async(zval *object, php_pqconn_object_t *obj, const char *decl TSRMLS_DC);
 
 PHP_MINIT_FUNCTION(pqconn);
 PHP_MSHUTDOWN_FUNCTION(pqconn);

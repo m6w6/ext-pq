@@ -10,22 +10,37 @@
     +--------------------------------------------------------------------+
 */
 
-#ifndef PHP_PQ_CALLBACK_H
-#define PHP_PQ_CALLBACK_H
+#ifndef PHP_PQCUR_H
+#define PHP_PQCUR_H
 
-#include <Zend/zend_interfaces.h>
+#include "php_pqconn.h"
 
-typedef struct php_pq_callback {
-	zend_fcall_info fci;
-	zend_fcall_info_cache fcc;
-	struct php_pq_callback *recursion;
-} php_pq_callback_t;
+#define PHP_PQ_DECLARE_BINARY       0x01
+#define PHP_PQ_DECLARE_INSENSITIVE  0x02
+#define PHP_PQ_DECLARE_WITH_HOLD    0x04
 
-void php_pq_callback_dtor(php_pq_callback_t *cb);
-void php_pq_callback_addref(php_pq_callback_t *cb);
-zval *php_pq_callback_to_zval(php_pq_callback_t *cb);
-zend_bool php_pq_callback_is_locked(php_pq_callback_t *cb);
-void php_pq_callback_recurse(php_pq_callback_t *old, php_pq_callback_t *new TSRMLS_DC);
+#define PHP_PQ_DECLARE_SCROLL       0x10
+#define PHP_PQ_DECLARE_NO_SCROLL    0x20
+
+typedef struct php_pqcur {
+	php_pqconn_object_t *conn;
+	char *name;
+	char *decl;
+	unsigned open:1;
+} php_pqcur_t;
+
+typedef struct php_pqcur_object {
+	zend_object zo;
+	zend_object_value zv;
+	HashTable *prophandler;
+	php_pqcur_t *intern;
+} php_pqcur_object_t;
+
+zend_class_entry *php_pqcur_class_entry;
+zend_object_value php_pqcur_create_object_ex(zend_class_entry *ce, php_pqcur_t *intern, php_pqcur_object_t **ptr TSRMLS_DC);
+
+PHP_MINIT_FUNCTION(pqcur);
+PHP_MSHUTDOWN_FUNCTION(pqcur);
 
 #endif
 

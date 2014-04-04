@@ -23,9 +23,9 @@ zend_module_entry pq_module_entry;
 #ifdef PHP_WIN32
 #	define PHP_PQ_API __declspec(dllexport)
 #elif defined(__GNUC__) && __GNUC__ >= 4
-#	define PHP_PQ_API __attribute__ ((visibility("default")))
+#	define PHP_PQ_API extern __attribute__ ((visibility("default")))
 #else
-#	define PHP_PQ_API
+#	define PHP_PQ_API extern
 #endif
 
 #ifdef ZTS

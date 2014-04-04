@@ -62,6 +62,7 @@ static PHP_MINIT_FUNCTION(pq)
 	PHP_MINIT_CALL(pqres);
 	PHP_MINIT_CALL(pqstm);
 	PHP_MINIT_CALL(pqtxn);
+	PHP_MINIT_CALL(pqcur);
 
 	PHP_MINIT_CALL(pqcopy);
 	PHP_MINIT_CALL(pqlob);

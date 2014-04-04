@@ -1,4 +1,5 @@
 * COPY: getAsync & putAsync
+* CURSOR: *Async()
 * fetchInto/fetchCtor?
 * unlisten?
 * unregister event handler?
