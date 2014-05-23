@@ -238,7 +238,7 @@ static void php_pqconn_object_write_unbuffered(zval *object, void *o, zval *valu
 {
 	php_pqconn_object_t *obj = o;
 
-	obj->intern->unbuffered = zend_is_true(value);
+	obj->intern->unbuffered = z_is_true(value);
 }
 
 static void php_pqconn_object_read_db(zval *object, void *o, zval *return_value TSRMLS_DC)

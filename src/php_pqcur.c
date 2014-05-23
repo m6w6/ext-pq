@@ -82,7 +82,7 @@ static void cur_fetch_or_move(INTERNAL_FUNCTION_PARAMETERS, const char *action, 
 				} else if (obj->intern->conn->intern->unbuffered && !PQsetSingleRowMode(obj->intern->conn->intern->conn)) {
 					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to enable unbuffered mode (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				} else {
-					php_pq_callback_recurse(&obj->intern->conn->intern->onevent, &resolver);
+					php_pq_callback_recurse(&obj->intern->conn->intern->onevent, &resolver TSRMLS_CC);
 					obj->intern->conn->intern->poller = PQconsumeInput;
 				}
 			} else {
@@ -176,9 +176,9 @@ static PHP_METHOD(pqcur, open)
 		php_pqcur_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED, "pq\\Cursor not initialized");
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Cursor not initialized");
 		} else if (!obj->intern->open) {
-			if (SUCCESS == php_pqconn_declare(NULL, obj->intern->conn, obj->intern->decl)) {
+			if (SUCCESS == php_pqconn_declare(NULL, obj->intern->conn, obj->intern->decl TSRMLS_CC)) {
 				obj->intern->open = 1;
 			}
 		}
@@ -200,7 +200,7 @@ static PHP_METHOD(pqcur, close)
 		php_pqcur_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED, "pq\\Cursor not initialized");
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Cursor not initialized");
 		} else {
 			cur_close(obj TSRMLS_CC);
 		}

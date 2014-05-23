@@ -18,6 +18,13 @@
 
 typedef int STATUS; /* SUCCESS/FAILURE */
 
+/* TSRM morony */
+#if PHP_VERSION_ID >= 50700
+#	define z_is_true(z) zend_is_true(z TSRMLS_CC)
+#else
+#	define z_is_true zend_is_true
+#endif
+
 /* trim LF from EOL */
 char *rtrim(char *e);
 

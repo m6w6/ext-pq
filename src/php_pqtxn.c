@@ -175,7 +175,7 @@ static void php_pqtxn_object_write_readonly(zval *object, void *o, zval *value T
 	php_pqtxn_object_t *obj = o;
 	PGresult *res;
 
-	if ((obj->intern->readonly = zend_is_true(value))) {
+	if ((obj->intern->readonly = z_is_true(value))) {
 		res = PQexec(obj->intern->conn->intern->conn, "SET TRANSACTION READ ONLY");
 	} else {
 		res = PQexec(obj->intern->conn->intern->conn, "SET TRANSACTION READ WRITE");
@@ -192,7 +192,7 @@ static void php_pqtxn_object_write_deferrable(zval *object, void *o, zval *value
 	php_pqtxn_object_t *obj = o;
 	PGresult *res;
 
-	if ((obj->intern->deferrable = zend_is_true(value))) {
+	if ((obj->intern->deferrable = z_is_true(value))) {
 		res = PQexec(obj->intern->conn->intern->conn, "SET TRANSACTION DEFERRABLE");
 	} else {
 		res = PQexec(obj->intern->conn->intern->conn, "SET TRANSACTION NOT DEFERRABLE");
