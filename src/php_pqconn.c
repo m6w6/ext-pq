@@ -428,7 +428,7 @@ static void php_pqconn_wakeup(php_persistent_handle_factory_t *f, void **handle 
 	// FIXME: ping server
 }
 
-static inline PGresult *unlisten(php_pqconn_t *conn, const char *channel_str, size_t channel_len TSRMLS_DC)
+static inline PGresult *unlisten(PGconn *conn, const char *channel_str, size_t channel_len TSRMLS_DC)
 {
 	char *quoted_channel = PQescapeIdentifier(conn, channel_str, channel_len);
 	PGresult *res = NULL;
@@ -440,7 +440,7 @@ static inline PGresult *unlisten(php_pqconn_t *conn, const char *channel_str, si
 		smart_str_appends(&cmd, quoted_channel);
 		smart_str_0(&cmd);
 
-		res = PQexec(conn, cmd);
+		res = PQexec(conn, cmd.c);
 
 		smart_str_free(&cmd);
 		PQfreemem(quoted_channel);
@@ -1655,6 +1655,30 @@ static PHP_METHOD(pqconn, trace) {
 	}
 }
 
+ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_off, 0, 0, 1)
+	ZEND_ARG_INFO(0, type)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqconn, off) {
+	zend_error_handling zeh;
+	char *type_str;
+	int type_len;
+	STATUS rv;
+
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &type_str, &type_len);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
+		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
+		if (!obj->intern) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
+			RETURN_BOOL(SUCCESS == zend_hash_del(&obj->intern->eventhandlers, type_str, type_len + 1));
+		}
+	}
+}
+
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_on, 0, 0, 2)
 	ZEND_ARG_INFO(0, type)
 	ZEND_ARG_INFO(0, callable)
@@ -1758,6 +1782,7 @@ static zend_function_entry php_pqconn_methods[] = {
 	PHP_ME(pqconn, startTransaction, ai_pqconn_start_transaction, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, startTransactionAsync, ai_pqconn_start_transaction_async, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, trace, ai_pqconn_trace, ZEND_ACC_PUBLIC)
+	PHP_ME(pqconn, off, ai_pqconn_off, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, on, ai_pqconn_on, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, setConverter, ai_pqconn_set_converter, ZEND_ACC_PUBLIC)
 	{0}

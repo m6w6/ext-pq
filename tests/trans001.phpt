@@ -11,14 +11,13 @@ include "_setup.inc";
 $c = new pq\Connection(PQ_DSN);
 $c->exec("DROP TABLE IF EXISTS test");
 $c->on(pq\Connection::EVENT_NOTICE, function($c, $notice) {
-	if ($notice !== 'CREATE TABLE will create implicit sequence "test_id_seq" for serial column "test.id"') {
-		echo "Got notice: $notice\n";
-	}
+	echo "Got notice: $notice\n";
 });
 var_dump($c->transactionStatus == pq\Connection::TRANS_IDLE);
 $t = new pq\Transaction($c);
 var_dump($t->connection->transactionStatus == pq\Connection::TRANS_INTRANS);
 $c->exec("DROP TABLE IF EXISTS test");
+$c->off(pq\Connection::EVENT_NOTICE);
 $c->exec("CREATE TABLE test (id serial, data text)");
 $s = $c->prepare("test_insert", "INSERT INTO test (data) VALUES (\$1)", array((new pq\Types($c))["text"]->oid));
 $s->exec(array("a"));
