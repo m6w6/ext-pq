@@ -244,11 +244,7 @@ static PHP_METHOD(pqstm, execAsync) {
 			} else if (obj->intern->conn->intern->unbuffered && !PQsetSingleRowMode(obj->intern->conn->intern->conn)) {
 				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to enable unbuffered mode (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			} else {
-				php_pq_callback_dtor(&obj->intern->conn->intern->onevent);
-				if (resolver.fci.size > 0) {
-					obj->intern->conn->intern->onevent = resolver;
-					php_pq_callback_addref(&obj->intern->conn->intern->onevent);
-				}
+				php_pq_callback_recurse(&obj->intern->conn->intern->onevent, &resolver TSRMLS_CC);
 				obj->intern->conn->intern->poller = PQconsumeInput;
 			}
 
@@ -313,11 +309,7 @@ static PHP_METHOD(pqstm, descAsync) {
 		} else if (!PQsendDescribePrepared(obj->intern->conn->intern->conn, obj->intern->name)) {
 			throw_exce(EX_IO TSRMLS_CC, "Failed to describe statement: %s", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 		} else {
-			php_pq_callback_dtor(&obj->intern->conn->intern->onevent);
-			if (resolver.fci.size > 0) {
-				obj->intern->conn->intern->onevent = resolver;
-				php_pq_callback_addref(&obj->intern->conn->intern->onevent);
-			}
+			php_pq_callback_recurse(&obj->intern->conn->intern->onevent, &resolver TSRMLS_CC);
 			obj->intern->conn->intern->poller = PQconsumeInput;
 			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
 		}
