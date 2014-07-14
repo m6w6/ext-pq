@@ -55,7 +55,7 @@ array(12) {
     ["format"]=>
     string(5) "Y-m-d"
     ["date"]=>
-    string(19) "2013-01-01 00:00:00"
+    string(%d) "2013-01-01 00:00:00%r(\.000000)?%r"
     ["timezone_type"]=>
     int(3)
     ["timezone"]=>
@@ -66,7 +66,7 @@ array(12) {
     ["format"]=>
     string(11) "Y-m-d H:i:s"
     ["date"]=>
-    string(19) "1970-01-01 00:00:01"
+    string(%d) "1970-01-01 00:00:01%r(\.000000)?%r"
     ["timezone_type"]=>
     int(1)
     ["timezone"]=>
@@ -77,7 +77,7 @@ array(12) {
     ["format"]=>
     string(13) "Y-m-d H:i:s.u"
     ["date"]=>
-    string(19) "2013-01-01 01:01:01"
+    string(%d) "2013-01-01 01:01:01%r(\.000000)?%r"
     ["timezone_type"]=>
     int(3)
     ["timezone"]=>
@@ -88,7 +88,7 @@ array(12) {
     ["format"]=>
     string(14) "Y-m-d H:i:s.uO"
     ["date"]=>
-    string(19) "2013-01-01 01:01:01"
+    string(%d) "2013-01-01 01:01:01%r(\.000000)?%r"
     ["timezone_type"]=>
     int(1)
     ["timezone"]=>
