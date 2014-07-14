@@ -428,22 +428,34 @@ static void php_pqconn_wakeup(php_persistent_handle_factory_t *f, void **handle 
 	// FIXME: ping server
 }
 
+static inline PGresult *unlisten(php_pqconn_t *conn, const char *channel_str, size_t channel_len TSRMLS_DC)
+{
+	char *quoted_channel = PQescapeIdentifier(conn, channel_str, channel_len);
+	PGresult *res = NULL;
+
+	if (quoted_channel) {
+		smart_str cmd = {0};
+
+		smart_str_appends(&cmd, "UNLISTEN ");
+		smart_str_appends(&cmd, quoted_channel);
+		smart_str_0(&cmd);
+
+		res = PQexec(conn, cmd);
+
+		smart_str_free(&cmd);
+		PQfreemem(quoted_channel);
+	}
+
+	return res;
+}
+
 static int apply_unlisten(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
 {
 	php_pqconn_object_t *obj = va_arg(argv, php_pqconn_object_t *);
-	char *quoted_channel = PQescapeIdentifier(obj->intern->conn, key->arKey, key->nKeyLength - 1);
+	PGresult *res = unlisten(obj->intern->conn, key->arKey, key->nKeyLength - 1);
 
-	if (quoted_channel) {
-		PGresult *res;
-		char *cmd;
-
-		spprintf(&cmd, 0, "UNLISTEN %s", quoted_channel);
-		if ((res = PQexec(obj->intern->conn, cmd))) {
-			PHP_PQclear(res);
-		}
-
-		efree(cmd);
-		PQfreemem(quoted_channel);
+	if (res) {
+		PHP_PQclear(res);
 	}
 
 	return ZEND_HASH_APPLY_REMOVE;
@@ -604,6 +616,81 @@ static PHP_METHOD(pqconn, resetAsync) {
 	}
 }
 
+ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_unlisten, 0, 0, 1)
+	ZEND_ARG_INFO(0, channel)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqconn, unlisten)
+{
+	zend_error_handling zeh;
+	char *channel_str;
+	int channel_len;
+	STATUS rv;
+
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &channel_str, &channel_len);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
+		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
+		if (!obj->intern) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
+		} else if (SUCCESS == zend_hash_del(&obj->intern->listeners, channel_str, channel_len + 1)) {
+			PGresult *res = unlisten(obj->intern->conn, channel_str, channel_len);
+
+			if (res) {
+				php_pqres_success(res TSRMLS_CC);
+				PHP_PQclear(res);
+			}
+		}
+	}
+}
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_unlisten_async, 0, 0, 1)
+	ZEND_ARG_INFO(0, channel)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqconn, unlistenAsync) {
+	zend_error_handling zeh;
+	char *channel_str;
+	int channel_len;
+	STATUS rv;
+
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &channel_str, &channel_len);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
+		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
+		if (!obj->intern) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
+			char *quoted_channel = PQescapeIdentifier(obj->intern->conn, channel_str, channel_len);
+
+			if (!quoted_channel) {
+				throw_exce(EX_ESCAPE TSRMLS_CC, "Failed to escape channel identifier (%s)", PHP_PQerrorMessage(obj->intern->conn));
+			} else {
+				smart_str cmd = {0};
+
+				smart_str_appends(&cmd, "UNLISTEN ");
+				smart_str_appends(&cmd, quoted_channel);
+				smart_str_0(&cmd);
+
+				if (!PQsendQuery(obj->intern->conn, cmd.c)) {
+					throw_exce(EX_IO TSRMLS_CC, "Failed to uninstall listener (%s)", PHP_PQerrorMessage(obj->intern->conn));
+				} else {
+					obj->intern->poller = PQconsumeInput;
+					zend_hash_del(&obj->intern->listeners, channel_str, channel_len + 1);
+				}
+
+				smart_str_free(&cmd);
+				PQfreemem(quoted_channel);
+				php_pqconn_notify_listeners(obj TSRMLS_CC);
+			}
+		}
+	}
+}
+
 static void php_pqconn_add_listener(php_pqconn_object_t *obj, const char *channel_str, size_t channel_len, php_pq_callback_t *listener TSRMLS_DC)
 {
 	HashTable ht, *existing_listeners;
@@ -619,7 +706,7 @@ static void php_pqconn_add_listener(php_pqconn_object_t *obj, const char *channe
 	}
 }
 
-ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_listen, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_listen, 0, 0, 2)
 	ZEND_ARG_INFO(0, channel)
 	ZEND_ARG_INFO(0, callable)
 ZEND_END_ARG_INFO();
@@ -1657,6 +1744,8 @@ static zend_function_entry php_pqconn_methods[] = {
 	PHP_ME(pqconn, prepareAsync, ai_pqconn_prepare_async, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, declare, ai_pqconn_declare, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, declareAsync, ai_pqconn_declare_async, ZEND_ACC_PUBLIC)
+	PHP_ME(pqconn, unlisten, ai_pqconn_unlisten, ZEND_ACC_PUBLIC)
+	PHP_ME(pqconn, unlistenAsync, ai_pqconn_unlisten_async, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, listen, ai_pqconn_listen, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, listenAsync, ai_pqconn_listen_async, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, notify, ai_pqconn_notify, ZEND_ACC_PUBLIC)

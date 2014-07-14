@@ -1,7 +1,6 @@
 * COPY: getAsync & putAsync
 * CURSOR: *Async()
 * fetchInto/fetchCtor?
-* unlisten?
 * unregister event handler?
 * binary protocol?
 * parse explicit array dimension information in front of arrays
