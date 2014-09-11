@@ -11,20 +11,19 @@ http://pear.php.net/dtd/package-2.0
 http://pear.php.net/dtd/package-2.0.xsd">
  <name>pq</name>
  <channel>pecl.php.net</channel>
- <summary>libpq binding</summary>
+ <summary>PostgreSQL client library (libpq) binding</summary>
  <description>
- Binding for libpq (PostgreSQL client library)
- Documents: https://bitbucket.org/mike_php_net/ext-pq/wiki
+ Documents: https://bitbucket.org/m6w6/ext-pq/wiki
  
  Highlights:
  * Nearly 100% support for asynchronous usage:
-   https://bitbucket.org/mike_php_net/ext-pq/wiki/AsyncOperations
+   https://bitbucket.org/m6w6/ext-pq/wiki/AsyncOperations
  * Extended type support by pg_type:
-   https://bitbucket.org/mike_php_net/ext-pq/wiki/UsingTypes
+   https://bitbucket.org/m6w6/ext-pq/wiki/UsingTypes
  * Fetching simple multi-dimensional array maps:
-   https://bitbucket.org/mike_php_net/ext-pq/wiki/FetchingResults#markdown-header-fetching-simple-maps
+   https://bitbucket.org/m6w6/ext-pq/wiki/FetchingResults#markdown-header-fetching-simple-maps
  * Working Gateway implementation: 
-   https://bitbucket.org/mike_php_net/pq-gateway
+   https://bitbucket.org/m6w6/pq-gateway
  </description>
  <lead>
   <name>Michael Wallner</name>
@@ -32,9 +31,9 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>mike@php.net</email>
   <active>yes</active>
  </lead>
- <date>2013-05-15</date>
+ <date>2014-09-11</date>
  <version>
-  <release>0.4.0</release>
+  <release>0.5.0dev</release>
   <api>0.4.0</api>
  </version>
  <stability>
@@ -43,9 +42,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license>BSD, revised</license>
  <notes><![CDATA[
-* Added pq\ConverterInterface and pq\Connection::setConverter()
-* Added pq\Result::desc() and fixed pq\Statement::descAsync()
-* Added serializer for input array params
+*
 ]]></notes>
  <contents>
   <dir name="/">
@@ -65,6 +62,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file role="src" name="php_pqconn.h" />
     <file role="src" name="php_pqcopy.c" />
     <file role="src" name="php_pqcopy.h" />
+    <file role="src" name="php_pqcur.c" />
+    <file role="src" name="php_pqcur.h" />
     <file role="src" name="php_pqexc.c" />
     <file role="src" name="php_pqexc.h" />
     <file role="src" name="php_pqlob.c" />
@@ -93,6 +92,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file role="test" name="async005.phpt" />
     <file role="test" name="async006.phpt" />
     <file role="test" name="async007.phpt" />
+    <file role="test" name="async008.phpt" />
     <file role="test" name="basic001.phpt" />
     <file role="test" name="basic002.phpt" />
     <file role="test" name="bound001.phpt" />
@@ -100,6 +100,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file role="test" name="cancel001.phpt" />
     <file role="test" name="conv001.phpt" />
     <file role="test" name="copy001.phpt" />
+    <file role="test" name="cursor001.phpt" />
     <file role="test" name="encoding001.phpt" />
     <file role="test" name="exceptions001.phpt" />
     <file role="test" name="exceptions002.phpt" />
@@ -148,6 +149,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <providesextension>pq</providesextension>
  <extsrcrelease>
   <configureoption default="yes" name="with-pq" prompt="whether to enable libpq support" />
+  <configureoption default="/usr" name="with-pq-postgresql" prompt="where to find postgresql server headers" />
  </extsrcrelease>
 </package>
 
