@@ -1,7 +1,7 @@
 PHP_ARG_WITH(pq, [whether to enable libpq (PostgreSQL) support],
 [  --with-pq[=DIR]           Include libpq support])
 PHP_ARG_WITH(pq-postgresql, [where to find PostgreSQL server headers],
-[  --with-pq-postgresql[=DIR]  PQ: Define some standard type OIDs from catalog/pg_type.h], $PHP_PQ)
+[  --with-pq-postgresql[=DIR]  PQ: Define some standard type OIDs from catalog/pg_type.h], $PHP_PQ, no)
 
 if test "$PHP_PQ" != "no"; then
 	SEARCH_PATH="/usr/local /usr /opt"
