@@ -61,8 +61,12 @@ if test "$PHP_PQ" != "no"; then
 		if test "$PHP_PQ_POSTGRESQL" != "yes"; then
 			SEARCH_PATH="$PHP_PQ_POSTGRESQL $SEARCH_PATH"
 		fi
+		CATALOG_PATH=""
 		for i in $SEARCH_PATH; do
-			CATALOG="$i/include/postgresql/server/catalog/pg_type.h"
+			CATALOG_PATH="$i/include/server/catalog/pg_type.h $CATALOG_PATH"
+			CATALOG_PATH="$i/include/postgresql/server/catalog/pg_type.h $CATALOG_PATH"
+		done
+		for CATALOG in $CATALOG_PATH; do
 			AC_MSG_CHECKING(for $CATALOG)
 			if test -f "$CATALOG"; then
 				AC_MSG_RESULT(yep)
