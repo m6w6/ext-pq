@@ -1713,12 +1713,11 @@ static int apply_set_converter(void *p TSRMLS_DC, int argc, va_list argv, zend_h
 	HashTable *converters = va_arg(argv, HashTable *);
 
 	tmp = *zoid;
+	Z_ADDREF_P(tmp);
 	convert_to_long_ex(&tmp);
 	Z_ADDREF_PP(zcnv);
 	zend_hash_index_update(converters, Z_LVAL_P(tmp), zcnv, sizeof(zval *), NULL);
-	if (tmp != *zoid) {
-		zval_ptr_dtor(&tmp);
-	}
+	zval_ptr_dtor(&tmp);
 
 	return ZEND_HASH_APPLY_KEEP;
 }
@@ -1745,11 +1744,10 @@ static PHP_METHOD(pqconn, setConverter) {
 
 			zend_call_method_with_0_params(&zcnv, NULL, NULL, "converttypes", &zoids);
 			tmp = zoids;
-			convert_to_array_ex(&zoids);
-			zend_hash_apply_with_arguments(Z_ARRVAL_P(zoids) TSRMLS_CC, apply_set_converter, 2, &zcnv, &obj->intern->converters);
-			if (tmp != zoids) {
-				zval_ptr_dtor(&tmp);
-			}
+			Z_ADDREF_P(tmp);
+			convert_to_array_ex(&tmp);
+			zend_hash_apply_with_arguments(Z_ARRVAL_P(tmp) TSRMLS_CC, apply_set_converter, 2, &zcnv, &obj->intern->converters);
+			zval_ptr_dtor(&tmp);
 			zval_ptr_dtor(&zoids);
 		}
 	}

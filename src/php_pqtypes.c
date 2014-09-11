@@ -136,6 +136,7 @@ static int php_pqtypes_object_has_dimension(zval *object, zval *member, int chec
 					return Z_TYPE_PP(data) != IS_NULL;
 				}
 				efree(key_str);
+				key_str = NULL;
 			} else {
 				if (SUCCESS == zend_hash_index_find(&obj->intern->types, index, (void *) &data)) {
 					return Z_TYPE_PP(data) != IS_NULL;
@@ -172,9 +173,10 @@ static zval *php_pqtypes_object_read_dimension(zval *object, zval *member, int t
 				return *data;
 			}
 		}
-		if (key_str) {
-			efree(key_str);
-		}
+	}
+
+	if (key_str) {
+		efree(key_str);
 	}
 
 	return NULL;
