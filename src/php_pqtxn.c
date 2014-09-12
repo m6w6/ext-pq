@@ -229,6 +229,20 @@ static PHP_METHOD(pqtxn, __construct) {
 		if (!conn_obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
 		} else {
+
+			switch (ZEND_NUM_ARGS()) {
+			case 1:
+			case 2:
+				isolation = conn_obj->intern->default_txn_isolation;
+				/* no break */
+			case 3:
+				readonly = conn_obj->intern->default_txn_readonly;
+				/* no break */
+			case 4:
+				deferrable = conn_obj->intern->default_txn_deferrable;
+				break;
+			}
+
 			if (async) {
 				rv = php_pqconn_start_transaction_async(zconn, conn_obj, isolation, readonly, deferrable TSRMLS_CC);
 			} else {

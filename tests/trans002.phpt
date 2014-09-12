@@ -29,7 +29,7 @@ var_dump(
 DONE
 --EXPECTF--
 Test
-object(pq\Connection)#%d (14) {
+object(pq\Connection)#%d (18) {
   ["status"]=>
   int(0)
   ["transactionStatus"]=>
@@ -59,11 +59,19 @@ object(pq\Connection)#%d (14) {
   ["eventHandlers"]=>
   array(0) {
   }
+  ["defaultFetchType"]=>
+  int(0)
+  ["defaultTransactionIsolation"]=>
+  int(0)
+  ["defaultTransactionReadonly"]=>
+  bool(false)
+  ["defaultTransactionDeferrable"]=>
+  bool(false)
 }
 int(0)
 bool(false)
 bool(false)
-object(pq\Connection)#%d (14) {
+object(pq\Connection)#%d (18) {
   ["status"]=>
   int(0)
   ["transactionStatus"]=>
@@ -93,6 +101,14 @@ object(pq\Connection)#%d (14) {
   ["eventHandlers"]=>
   array(0) {
   }
+  ["defaultFetchType"]=>
+  int(0)
+  ["defaultTransactionIsolation"]=>
+  int(0)
+  ["defaultTransactionReadonly"]=>
+  bool(false)
+  ["defaultTransactionDeferrable"]=>
+  bool(false)
 }
 int(2)
 bool(true)

@@ -33,6 +33,7 @@ typedef struct php_pqres {
 	php_pqres_iterator_t *iter;
 	HashTable bound;
 	HashTable converters;
+	unsigned default_fetch_type:2;
 } php_pqres_t;
 
 typedef struct php_pqres_object {

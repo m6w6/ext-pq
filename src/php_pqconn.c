@@ -349,6 +349,92 @@ static void php_pqconn_object_read_event_handlers(zval *object, void *o, zval *r
 	zend_hash_apply_with_arguments(&obj->intern->eventhandlers TSRMLS_CC, apply_read_event_handlers, 1, Z_ARRVAL_P(return_value) TSRMLS_CC);
 }
 
+static void php_pqconn_object_read_def_fetch_type(zval *object, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+
+	RETVAL_LONG(obj->intern->default_fetch_type);
+}
+static void php_pqconn_object_write_def_fetch_type(zval *object, void *o, zval *value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+	zval *zft = value;
+
+	if (Z_TYPE_P(zft) != IS_LONG) {
+		if (Z_REFCOUNT_P(zft) > 1) {
+			zval *tmp;
+			MAKE_STD_ZVAL(tmp);
+			ZVAL_ZVAL(tmp, zft, 1, 0);
+			convert_to_long(tmp);
+			zft = tmp;
+		} else {
+			convert_to_long_ex(&zft);
+		}
+	}
+
+	obj->intern->default_fetch_type = Z_LVAL_P(zft) & 0x2; /* two bits only */
+
+	if (zft != value) {
+		zval_ptr_dtor(&zft);
+	}
+}
+
+static void php_pqconn_object_read_def_txn_isolation(zval *object, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+
+	RETVAL_LONG(obj->intern->default_txn_isolation);
+}
+static void php_pqconn_object_write_def_txn_isolation(zval *object, void *o, zval *value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+	zval *zti = value;
+
+	if (Z_TYPE_P(zti) != IS_LONG) {
+		if (Z_REFCOUNT_P(zti) > 1) {
+			zval *tmp;
+			MAKE_STD_ZVAL(tmp);
+			ZVAL_ZVAL(tmp, zti, 1, 0);
+			convert_to_long(tmp);
+			zti = tmp;
+		} else {
+			convert_to_long_ex(&zti);
+		}
+	}
+
+	obj->intern->default_txn_isolation = Z_LVAL_P(zti) & 0x2; /* two bits only */
+
+	if (zti != value) {
+		zval_ptr_dtor(&zti);
+	}
+}
+
+static void php_pqconn_object_read_def_txn_readonly(zval *object, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+
+	RETVAL_BOOL(obj->intern->default_txn_readonly);
+}
+static void php_pqconn_object_write_def_txn_readonly(zval *object, void *o, zval *value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+
+	obj->intern->default_txn_readonly = zend_is_true(value);
+}
+
+static void php_pqconn_object_read_def_txn_deferrable(zval *object, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+
+	RETVAL_BOOL(obj->intern->default_txn_deferrable);
+}
+static void php_pqconn_object_write_def_txn_deferrable(zval *object, void *o, zval *value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+
+	obj->intern->default_txn_deferrable = zend_is_true(value);
+}
+
 static STATUS php_pqconn_update_socket(zval *this_ptr, php_pqconn_object_t *obj TSRMLS_DC)
 {
 	zval *zsocket, zmember;
@@ -1559,8 +1645,10 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_start_transaction, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, startTransaction) {
 	zend_error_handling zeh;
-	long isolation = PHP_PQTXN_READ_COMMITTED;
-	zend_bool readonly = 0, deferrable = 0;
+	php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+	long isolation = obj->intern ? obj->intern->default_txn_isolation : PHP_PQTXN_READ_COMMITTED;
+	zend_bool readonly = obj->intern ? obj->intern->default_txn_readonly : 0;
+	zend_bool deferrable = obj->intern ? obj->intern->default_txn_deferrable : 0;
 	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
@@ -1568,8 +1656,6 @@ static PHP_METHOD(pqconn, startTransaction) {
 	zend_restore_error_handling(&zeh TSRMLS_CC);
 
 	if (SUCCESS == rv) {
-		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
-
 		rv = php_pqconn_start_transaction(getThis(), obj, isolation, readonly, deferrable TSRMLS_CC);
 
 		if (SUCCESS == rv) {
@@ -1595,16 +1681,17 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_start_transaction_async, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, startTransactionAsync) {
 	zend_error_handling zeh;
-	long isolation = PHP_PQTXN_READ_COMMITTED;
-	zend_bool readonly = 0, deferrable = 0;
+	php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+	long isolation = obj->intern ? obj->intern->default_txn_isolation : PHP_PQTXN_READ_COMMITTED;
+	zend_bool readonly = obj->intern ? obj->intern->default_txn_readonly : 0;
+	zend_bool deferrable = obj->intern ? obj->intern->default_txn_deferrable : 0;
 	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|lbb", &isolation, &readonly, &deferrable);
 	zend_restore_error_handling(&zeh TSRMLS_CC);
-	if (SUCCESS == rv) {
-		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
+	if (SUCCESS == rv) {
 		rv = php_pqconn_start_transaction_async(getThis(), obj, isolation, readonly, deferrable TSRMLS_CC);
 
 		if (SUCCESS == rv) {
@@ -1871,6 +1958,30 @@ PHP_MINIT_FUNCTION(pqconn)
 	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("eventHandlers"), ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqconn_object_read_event_handlers;
 	zend_hash_add(&php_pqconn_object_prophandlers, "eventHandlers", sizeof("eventHandlers"), (void *) &ph, sizeof(ph), NULL);
+
+	zend_declare_property_long(php_pqconn_class_entry, ZEND_STRL("defaultFetchType"), 0, ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqconn_object_read_def_fetch_type;
+	ph.write = php_pqconn_object_write_def_fetch_type;
+	zend_hash_add(&php_pqconn_object_prophandlers, "defaultFetchType", sizeof("defaultFetchType"), (void *) &ph, sizeof(ph), NULL);
+	ph.write = NULL;
+
+	zend_declare_property_long(php_pqconn_class_entry, ZEND_STRL("defaultTransactionIsolation"), 0, ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqconn_object_read_def_txn_isolation;
+	ph.write = php_pqconn_object_write_def_txn_isolation;
+	zend_hash_add(&php_pqconn_object_prophandlers, "defaultTransactionIsolation", sizeof("defaultTransactionIsolation"), (void *) &ph, sizeof(ph), NULL);
+	ph.write = NULL;
+
+	zend_declare_property_bool(php_pqconn_class_entry, ZEND_STRL("defaultTransactionReadonly"), 0, ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqconn_object_read_def_txn_readonly;
+	ph.write = php_pqconn_object_write_def_txn_readonly;
+	zend_hash_add(&php_pqconn_object_prophandlers, "defaultTransactionReadonly", sizeof("defaultTransactionReadonly"), (void *) &ph, sizeof(ph), NULL);
+	ph.write = NULL;
+
+	zend_declare_property_bool(php_pqconn_class_entry, ZEND_STRL("defaultTransactionDeferrable"), 0, ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqconn_object_read_def_txn_deferrable;
+	ph.write = php_pqconn_object_write_def_txn_deferrable;
+	zend_hash_add(&php_pqconn_object_prophandlers, "defaultTransactionDeferrable", sizeof("defaultTransactionDeferrable"), (void *) &ph, sizeof(ph), NULL);
+	ph.write = NULL;
 
 	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("OK"), CONNECTION_OK TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("BAD"), CONNECTION_BAD TSRMLS_CC);

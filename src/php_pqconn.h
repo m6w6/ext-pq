@@ -30,6 +30,10 @@ typedef struct php_pqconn {
 	HashTable eventhandlers;
 	php_pq_callback_t onevent;
 	unsigned unbuffered:1;
+	unsigned default_fetch_type:2;
+	unsigned default_txn_isolation:2;
+	unsigned default_txn_readonly:1;
+	unsigned default_txn_deferrable:1;
 } php_pqconn_t;
 
 typedef struct php_pqconn_object {

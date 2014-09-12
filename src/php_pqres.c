@@ -272,8 +272,10 @@ void php_pqres_init_instance_data(PGresult *res, php_pqconn_object_t *conn_obj, 
 	zend_hash_init(&r->bound, 0, 0, ZVAL_PTR_DTOR, 0);
 	zend_hash_init(&r->converters, 0, 0, ZVAL_PTR_DTOR, 0);
 	zend_hash_copy(&r->converters, &conn_obj->intern->converters, (copy_ctor_func_t) zval_add_ref, NULL, sizeof(zval *));
-	php_pqres_create_object_ex(php_pqres_class_entry, r, &obj TSRMLS_CC);
 
+	r->default_fetch_type = conn_obj->intern->default_fetch_type;
+
+	php_pqres_create_object_ex(php_pqres_class_entry, r, &obj TSRMLS_CC);
 	PQresultSetInstanceData(res, php_pqconn_event, obj);
 
 	if (ptr) {
@@ -391,7 +393,7 @@ static void php_pqres_object_read_fetch_type(zval *object, void *o, zval *return
 	if (obj->intern->iter) {
 		RETVAL_LONG(obj->intern->iter->fetch_type);
 	} else {
-		RETVAL_LONG(PHP_PQRES_FETCH_ARRAY);
+		RETVAL_LONG(obj->intern->default_fetch_type);
 	}
 }
 
@@ -600,7 +602,7 @@ static PHP_METHOD(pqres, fetchRow) {
 			zval **row = NULL;
 
 			if (fetch_type == -1) {
-				 fetch_type = obj->intern->iter ? obj->intern->iter->fetch_type : PHP_PQRES_FETCH_ARRAY;
+				 fetch_type = obj->intern->iter ? obj->intern->iter->fetch_type : obj->intern->default_fetch_type;
 			}
 
 			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh TSRMLS_CC);
@@ -760,7 +762,7 @@ static PHP_METHOD(pqres, map) {
 			}
 
 			if (fetch_type == -1) {
-				fetch_type = obj->intern->iter ? obj->intern->iter->fetch_type : PHP_PQRES_FETCH_ARRAY;
+				fetch_type = obj->intern->iter ? obj->intern->iter->fetch_type : obj->intern->default_fetch_type;
 			}
 
 			if (keys) {
@@ -857,7 +859,7 @@ static PHP_METHOD(pqres, fetchAll) {
 			int r, rows = PQntuples(obj->intern->res);
 
 			if (fetch_type == -1) {
-				 fetch_type = obj->intern->iter ? obj->intern->iter->fetch_type : PHP_PQRES_FETCH_ARRAY;
+				 fetch_type = obj->intern->iter ? obj->intern->iter->fetch_type : obj->intern->default_fetch_type;
 			}
 
 			array_init(return_value);
