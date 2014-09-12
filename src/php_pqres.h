@@ -21,6 +21,12 @@ typedef enum php_pqres_fetch {
 	PHP_PQRES_FETCH_OBJECT
 } php_pqres_fetch_t;
 
+#define PHP_PQRES_CONV_BOOL		0x01
+#define PHP_PQRES_CONV_INT		0x02
+#define PHP_PQRES_CONV_FLOAT	0x04
+#define PHP_PQRES_CONV_ARRAY	0x08
+#define PHP_PQRES_CONV_DATETIME	0x10
+
 typedef struct php_pqres_iterator {
 	zend_object_iterator zi;
 	zval *current_val;
@@ -34,6 +40,7 @@ typedef struct php_pqres {
 	HashTable bound;
 	HashTable converters;
 	unsigned default_fetch_type:2;
+	unsigned auto_convert:6;
 } php_pqres_t;
 
 typedef struct php_pqres_object {
@@ -46,6 +53,7 @@ typedef struct php_pqres_object {
 STATUS php_pqres_success(PGresult *res TSRMLS_DC);
 void php_pqres_init_instance_data(PGresult *res, php_pqconn_object_t *obj, php_pqres_object_t **ptr TSRMLS_DC);
 zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch_type, zval **data_ptr TSRMLS_DC);
+zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRMLS_DC);
 
 #include "php_pq_object.h"
 #include "php_pqconn_event.h"

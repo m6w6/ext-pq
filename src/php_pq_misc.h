@@ -15,6 +15,7 @@
 #define PHP_PQ_ERROR_H
 
 #include <libpq-fe.h>
+#include "php_pqres.h"
 
 typedef int STATUS; /* SUCCESS/FAILURE */
 
@@ -42,8 +43,7 @@ zval *php_pqdt_from_string(char *datetime_str, size_t datetime_len, char *fmt, z
 
 zend_class_entry *php_pqconv_class_entry;
 
-HashTable *php_pq_parse_array(const char *val_str, size_t val_len, Oid typ TSRMLS_DC);
-zval *php_pq_typed_zval(char *val_str, size_t val_len, Oid typ TSRMLS_DC);
+HashTable *php_pq_parse_array(php_pqres_t *res, const char *val_str, size_t val_len, Oid typ TSRMLS_DC);
 
 PHP_MINIT_FUNCTION(pq_misc);
 

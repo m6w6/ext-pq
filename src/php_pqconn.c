@@ -1798,12 +1798,17 @@ static int apply_set_converter(void *p TSRMLS_DC, int argc, va_list argv, zend_h
 {
 	zval *tmp, **zoid = p, **zcnv = va_arg(argv, zval **);
 	HashTable *converters = va_arg(argv, HashTable *);
+	int add = va_arg(argv, int);
 
 	tmp = *zoid;
 	Z_ADDREF_P(tmp);
 	convert_to_long_ex(&tmp);
-	Z_ADDREF_PP(zcnv);
-	zend_hash_index_update(converters, Z_LVAL_P(tmp), zcnv, sizeof(zval *), NULL);
+	if (add) {
+		Z_ADDREF_PP(zcnv);
+		zend_hash_index_update(converters, Z_LVAL_P(tmp), zcnv, sizeof(zval *), NULL);
+	} else {
+		zend_hash_index_del(converters, Z_LVAL_P(tmp));
+	}
 	zval_ptr_dtor(&tmp);
 
 	return ZEND_HASH_APPLY_KEEP;
@@ -1833,7 +1838,38 @@ static PHP_METHOD(pqconn, setConverter) {
 			tmp = zoids;
 			Z_ADDREF_P(tmp);
 			convert_to_array_ex(&tmp);
-			zend_hash_apply_with_arguments(Z_ARRVAL_P(tmp) TSRMLS_CC, apply_set_converter, 2, &zcnv, &obj->intern->converters);
+			zend_hash_apply_with_arguments(Z_ARRVAL_P(tmp) TSRMLS_CC, apply_set_converter, 3, &zcnv, &obj->intern->converters, 1);
+			zval_ptr_dtor(&tmp);
+			zval_ptr_dtor(&zoids);
+		}
+	}
+}
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_unset_converter, 0, 0, 1)
+	ZEND_ARG_OBJ_INFO(0, converter, pq\\ConverterInterface, 0)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqconn, unsetConverter) {
+	STATUS rv;
+	zend_error_handling zeh;
+	zval *zcnv;
+
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &zcnv, php_pqconv_class_entry);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
+		php_pqconn_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
+		if (!obj->intern) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
+			zval *tmp, *zoids = NULL;
+
+			zend_call_method_with_0_params(&zcnv, NULL, NULL, "converttypes", &zoids);
+			tmp = zoids;
+			Z_ADDREF_P(tmp);
+			convert_to_array_ex(&tmp);
+			zend_hash_apply_with_arguments(Z_ARRVAL_P(tmp) TSRMLS_CC, apply_set_converter, 3, &zcnv, &obj->intern->converters, 0);
 			zval_ptr_dtor(&tmp);
 			zval_ptr_dtor(&zoids);
 		}
@@ -1870,6 +1906,7 @@ static zend_function_entry php_pqconn_methods[] = {
 	PHP_ME(pqconn, off, ai_pqconn_off, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, on, ai_pqconn_on, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, setConverter, ai_pqconn_set_converter, ZEND_ACC_PUBLIC)
+	PHP_ME(pqconn, unsetConverter, ai_pqconn_unset_converter, ZEND_ACC_PUBLIC)
 	{0}
 };
 

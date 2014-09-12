@@ -155,6 +155,7 @@ typedef struct _HashTableList {
 typedef struct _ArrayParserState {
 	const char *ptr, *end;
 	HashTableList *list;
+	php_pqres_t *res;
 #ifdef ZTS
 	void ***ts;
 #endif
@@ -201,7 +202,7 @@ static STATUS add_element(ArrayParserState *a, const char *start)
 		MAKE_STD_ZVAL(zelem);
 		ZVAL_NULL(zelem);
 	} else {
-		zelem = php_pq_typed_zval(el_str, el_len, a->typ TSRMLS_CC);
+		zelem = php_pqres_typed_zval(a->res, el_str, el_len, a->typ TSRMLS_CC);
 
 		efree(el_str);
 	}
@@ -328,7 +329,7 @@ static STATUS parse_array(ArrayParserState *a)
 	return SUCCESS;
 }
 
-HashTable *php_pq_parse_array(const char *val_str, size_t val_len, Oid typ TSRMLS_DC)
+HashTable *php_pq_parse_array(php_pqres_t *res, const char *val_str, size_t val_len, Oid typ TSRMLS_DC)
 {
 	HashTable *ht = NULL;
 	ArrayParserState a = {0};
@@ -337,6 +338,7 @@ HashTable *php_pq_parse_array(const char *val_str, size_t val_len, Oid typ TSRML
 	a.typ = typ;
 	a.ptr = val_str;
 	a.end = val_str + val_len;
+	a.res = res;
 
 	if (SUCCESS != parse_array(&a)) {
 		while (a.list) {
@@ -360,70 +362,6 @@ HashTable *php_pq_parse_array(const char *val_str, size_t val_len, Oid typ TSRML
 	return ht;
 }
 
-zval *php_pq_typed_zval(char *val, size_t len, Oid typ TSRMLS_DC)
-{
-	zval *zv;
-
-	MAKE_STD_ZVAL(zv);
-
-	switch (typ) {
-#ifdef HAVE_PHP_PQ_TYPE_H
-#	undef PHP_PQ_TYPE
-#	include "php_pq_type.h"
-	case PHP_PQ_OID_BOOL:
-		ZVAL_BOOL(zv, *val == 't');
-		break;
-#if SIZEOF_LONG >= 8
-	case PHP_PQ_OID_INT8:
-	case PHP_PQ_OID_TID:
-#endif
-	case PHP_PQ_OID_INT4:
-	case PHP_PQ_OID_INT2:
-	case PHP_PQ_OID_XID:
-	case PHP_PQ_OID_OID:
-		ZVAL_LONG(zv, zend_atol(val, len));
-		break;
-
-	case PHP_PQ_OID_FLOAT4:
-	case PHP_PQ_OID_FLOAT8:
-		ZVAL_DOUBLE(zv, zend_strtod(val, NULL));
-		break;
-
-	case PHP_PQ_OID_DATE:
-		php_pqdt_from_string(val, len, "Y-m-d", zv TSRMLS_CC);
-		break;
-
-	case PHP_PQ_OID_ABSTIME:
-		php_pqdt_from_string(val, len, "Y-m-d H:i:s", zv TSRMLS_CC);
-		break;
-
-	case PHP_PQ_OID_TIMESTAMP:
-		php_pqdt_from_string(val, len, "Y-m-d H:i:s.u", zv TSRMLS_CC);
-		break;
-
-	case PHP_PQ_OID_TIMESTAMPTZ:
-		php_pqdt_from_string(val, len, "Y-m-d H:i:s.uO", zv TSRMLS_CC);
-		break;
-
-	default:
-		if (PHP_PQ_TYPE_IS_ARRAY(typ) && (Z_ARRVAL_P(zv) = php_pq_parse_array(val, len, PHP_PQ_TYPE_OF_ARRAY(typ) TSRMLS_CC))) {
-			Z_TYPE_P(zv) = IS_ARRAY;
-		} else {
-			ZVAL_STRINGL(zv, val, len, 1);
-		}
-		break;
-#else
-	case 16: /* BOOL */
-		ZVAL_BOOL(zv, *val == 't');
-		break;
-
-	default:
-		ZVAL_STRINGL(zv, val, len, 1);
-#endif
-	}
-
-	return zv;
-}
 
 /*
  * Local variables:
