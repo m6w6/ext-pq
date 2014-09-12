@@ -38,7 +38,7 @@ static zend_object_iterator *php_pqres_iterator_init(zend_class_entry *ce, zval 
 	iter = ecalloc(1, sizeof(*iter));
 	iter->zi.funcs = &php_pqres_iterator_funcs;
 	iter->zi.data = object;
-	Z_ADDREF_P(object);
+	/* do not addref, because the iterator lives inside this object anyway */
 
 	zfetch_type = prop = zend_read_property(ce, object, ZEND_STRL("fetchType"), 0 TSRMLS_CC);
 	if (Z_TYPE_P(zfetch_type) != IS_LONG) {
@@ -66,7 +66,6 @@ static void php_pqres_iterator_dtor(zend_object_iterator *i TSRMLS_DC)
 		zval_ptr_dtor(&iter->current_val);
 		iter->current_val = NULL;
 	}
-	zval_ptr_dtor((zval **) &iter->zi.data);
 	efree(iter);
 }
 
