@@ -435,6 +435,36 @@ static void php_pqconn_object_write_def_txn_deferrable(zval *object, void *o, zv
 	obj->intern->default_txn_deferrable = zend_is_true(value);
 }
 
+static void php_pqconn_object_read_def_auto_conv(zval *object, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+
+	RETVAL_LONG(obj->intern->default_auto_convert);
+}
+static void php_pqconn_object_write_def_auto_conv(zval*object, void *o, zval *value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+	zval *zac = value;
+
+	if (Z_TYPE_P(zac) != IS_LONG) {
+		if (Z_REFCOUNT_P(zac) > 1) {
+			zval *tmp;
+			MAKE_STD_ZVAL(tmp);
+			ZVAL_ZVAL(tmp, zac, 1, 0);
+			convert_to_long(tmp);
+			zac = tmp;
+		} else {
+			convert_to_long_ex(&zac);
+		}
+	}
+
+	obj->intern->default_auto_convert = Z_LVAL_P(zac) & 0xff;
+
+	if (zac != value) {
+		zval_ptr_dtor(&zac);
+	}
+}
+
 static STATUS php_pqconn_update_socket(zval *this_ptr, php_pqconn_object_t *obj TSRMLS_DC)
 {
 	zval *zsocket, zmember;
@@ -590,7 +620,6 @@ static void php_pqconn_retire(php_persistent_handle_factory_t *f, void **handle 
 		zend_hash_apply_with_arguments(&evdata->obj->intern->listeners TSRMLS_CC, apply_unlisten, 1, evdata->obj);
 
 		/* release instance data */
-		//memset(evdata, 0, sizeof(*evdata));
 		efree(evdata);
 	}
 }
@@ -620,6 +649,8 @@ static PHP_METHOD(pqconn, __construct) {
 			php_pqconn_resource_factory_data_t rfdata = {dsn_str, flags};
 
 			obj->intern = ecalloc(1, sizeof(*obj->intern));
+
+			obj->intern->default_auto_convert = PHP_PQRES_CONV_ALL;
 
 			zend_hash_init(&obj->intern->listeners, 0, NULL, (dtor_func_t) zend_hash_destroy, 0);
 			zend_hash_init(&obj->intern->converters, 0, NULL, ZVAL_PTR_DTOR, 0);
@@ -2018,6 +2049,12 @@ PHP_MINIT_FUNCTION(pqconn)
 	ph.read = php_pqconn_object_read_def_txn_deferrable;
 	ph.write = php_pqconn_object_write_def_txn_deferrable;
 	zend_hash_add(&php_pqconn_object_prophandlers, "defaultTransactionDeferrable", sizeof("defaultTransactionDeferrable"), (void *) &ph, sizeof(ph), NULL);
+	ph.write = NULL;
+
+	zend_declare_property_long(php_pqconn_class_entry, ZEND_STRL("defaultAutoConvert"), PHP_PQRES_CONV_ALL, ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqconn_object_read_def_auto_conv;
+	ph.write = php_pqconn_object_write_def_auto_conv;
+	zend_hash_add(&php_pqconn_object_prophandlers, "defaultAutoConvert", sizeof("defaultAutoConvert"), (void *) &ph, sizeof(ph), NULL);
 	ph.write = NULL;
 
 	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("OK"), CONNECTION_OK TSRMLS_CC);

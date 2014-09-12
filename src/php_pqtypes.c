@@ -356,14 +356,9 @@ PHP_MINIT_FUNCTION(pqtypes)
 	ph.read = php_pqtypes_object_read_connection;
 	zend_hash_add(&php_pqtypes_object_prophandlers, "connection", sizeof("connection"), (void *) &ph, sizeof(ph), NULL);
 
-#ifdef HAVE_PHP_PQ_TYPE_H
 #	undef PHP_PQ_TYPE
 #	define PHP_PQ_TYPE(name, oid) zend_declare_class_constant_long(php_pqtypes_class_entry, ZEND_STRL(name), oid TSRMLS_CC);
 #	include "php_pq_type.h"
-	zend_declare_class_constant_bool(php_pqtypes_class_entry, ZEND_STRL("DEFINED"), 1 TSRMLS_CC);
-#else
-	zend_declare_class_constant_bool(php_pqtypes_class_entry, ZEND_STRL("DEFINED"), 0 TSRMLS_CC);
-#endif
 
 	return SUCCESS;
 }

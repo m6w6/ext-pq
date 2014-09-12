@@ -24,6 +24,8 @@
 #include "php_pq_object.h"
 #include "php_pqexc.h"
 #include "php_pqres.h"
+#undef PHP_PQ_TYPE
+#include "php_pq_type.h"
 
 zend_class_entry *php_pqres_class_entry;
 static zend_object_handlers php_pqres_object_handlers;
@@ -109,9 +111,6 @@ zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRM
 	}
 
 	switch (typ) {
-#ifdef HAVE_PHP_PQ_TYPE_H
-#	undef PHP_PQ_TYPE
-#	include "php_pq_type.h"
 	case PHP_PQ_OID_BOOL:
 		if (!(res->auto_convert & PHP_PQRES_CONV_BOOL)) {
 			goto noconversion;
@@ -179,15 +178,6 @@ zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRM
 			ZVAL_STRINGL(zv, val, len, 1);
 		}
 		break;
-#else
-	case 16: /* BOOL */
-		if (res->auto_convert & PHP_PQRES_CONV_BOOL) {
-			ZVAL_BOOL(zv, *val == 't');
-			break;
-		}
-	default:
-		ZVAL_STRINGL(zv, val, len, 1);
-#endif
 	}
 
 	return zv;
@@ -233,7 +223,7 @@ zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch
 			} else {
 				zval *zv;
 
-				zv = php_pq_typed_zval(&res_obj->intern->converters, PQgetvalue(res, row, c), PQgetlength(res, row, c), PQftype(res, c) TSRMLS_CC);
+				zv = php_pqres_typed_zval(res_obj->intern, PQgetvalue(res, row, c), PQgetlength(res, row, c), PQftype(res, c) TSRMLS_CC);
 
 				switch (fetch_type) {
 				case PHP_PQRES_FETCH_OBJECT:
@@ -365,6 +355,7 @@ void php_pqres_init_instance_data(PGresult *res, php_pqconn_object_t *conn_obj, 
 	zend_hash_init(&r->converters, 0, 0, ZVAL_PTR_DTOR, 0);
 	zend_hash_copy(&r->converters, &conn_obj->intern->converters, (copy_ctor_func_t) zval_add_ref, NULL, sizeof(zval *));
 
+	r->auto_convert = conn_obj->intern->default_auto_convert;
 	r->default_fetch_type = conn_obj->intern->default_fetch_type;
 
 	php_pqres_create_object_ex(php_pqres_class_entry, r, &obj TSRMLS_CC);
@@ -514,6 +505,37 @@ static void php_pqres_object_write_fetch_type(zval *object, void *o, zval *value
 
 	if (zfetch_type != value) {
 		zval_ptr_dtor(&zfetch_type);
+	}
+}
+
+static void php_pqres_object_read_auto_conv(zval *object, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqres_object_t *obj = o;
+
+	RETVAL_LONG(obj->intern->auto_convert);
+}
+
+static void php_pqres_object_write_auto_conv(zval *object, void *o, zval *value TSRMLS_DC)
+{
+	php_pqres_object_t *obj = o;
+	zval *zauto_conv = value;
+
+	if (Z_TYPE_P(value) != IS_LONG) {
+		if (Z_REFCOUNT_P(value) > 1) {
+			zval *tmp;
+			MAKE_STD_ZVAL(tmp);
+			ZVAL_ZVAL(tmp, zauto_conv, 1, 0);
+			convert_to_long(tmp);
+			zauto_conv = tmp;
+		} else {
+			convert_to_long_ex(&zauto_conv);
+		}
+	}
+
+	obj->intern->auto_convert = Z_LVAL_P(zauto_conv);
+
+	if (zauto_conv != value) {
+		zval_ptr_dtor(&zauto_conv);
 	}
 }
 
@@ -1067,6 +1089,12 @@ PHP_MINIT_FUNCTION(pqres)
 	zend_hash_add(&php_pqres_object_prophandlers, "fetchType", sizeof("fetchType"), (void *) &ph, sizeof(ph), NULL);
 	ph.write = NULL;
 
+	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("autoConvert"), PHP_PQRES_FETCH_ARRAY, ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqres_object_read_auto_conv;
+	ph.write = php_pqres_object_write_auto_conv;
+	zend_hash_add(&php_pqres_object_prophandlers, "autoConvert", sizeof("autoConvert"), (void *) &ph, sizeof(ph), NULL);
+	ph.write = NULL;
+
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("EMPTY_QUERY"), PGRES_EMPTY_QUERY TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("COMMAND_OK"), PGRES_COMMAND_OK TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("TUPLES_OK"), PGRES_TUPLES_OK TSRMLS_CC);
@@ -1081,6 +1109,14 @@ PHP_MINIT_FUNCTION(pqres)
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("FETCH_ARRAY"), PHP_PQRES_FETCH_ARRAY TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("FETCH_ASSOC"), PHP_PQRES_FETCH_ASSOC TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("FETCH_OBJECT"), PHP_PQRES_FETCH_OBJECT TSRMLS_CC);
+
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_BOOL"), PHP_PQRES_CONV_BOOL TSRMLS_CC);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_INT"), PHP_PQRES_CONV_INT TSRMLS_CC);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_FLOAT"), PHP_PQRES_CONV_FLOAT TSRMLS_CC);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_SCALAR"), PHP_PQRES_CONV_SCALAR TSRMLS_CC);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_ARRAY"), PHP_PQRES_CONV_ARRAY TSRMLS_CC);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_DATETIME"), PHP_PQRES_CONV_DATETIME TSRMLS_CC);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_ALL"), PHP_PQRES_CONV_ALL TSRMLS_CC);
 
 	return SUCCESS;
 }

@@ -52,6 +52,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <file role="src" name="php_pq.h" />
    <file role="src" name="php_pq_type.awk" />
    <dir name="src">
+    <file role="src" name="php_pq_type.h" />
     <file role="src" name="php_pq_callback.c" />
     <file role="src" name="php_pq_callback.h" />
     <file role="src" name="php_pqcancel.c" />

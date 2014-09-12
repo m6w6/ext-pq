@@ -34,6 +34,7 @@ typedef struct php_pqconn {
 	unsigned default_txn_isolation:2;
 	unsigned default_txn_readonly:1;
 	unsigned default_txn_deferrable:1;
+	unsigned default_auto_convert:16;
 } php_pqconn_t;
 
 typedef struct php_pqconn_object {

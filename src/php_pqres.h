@@ -15,6 +15,7 @@
 #define PHP_PQRES_H
 
 #include "php_pqconn.h"
+
 typedef enum php_pqres_fetch {
 	PHP_PQRES_FETCH_ARRAY,
 	PHP_PQRES_FETCH_ASSOC,
@@ -24,8 +25,10 @@ typedef enum php_pqres_fetch {
 #define PHP_PQRES_CONV_BOOL		0x01
 #define PHP_PQRES_CONV_INT		0x02
 #define PHP_PQRES_CONV_FLOAT	0x04
-#define PHP_PQRES_CONV_ARRAY	0x08
-#define PHP_PQRES_CONV_DATETIME	0x10
+#define PHP_PQRES_CONV_SCALAR	0x0f
+#define PHP_PQRES_CONV_ARRAY	0x10
+#define PHP_PQRES_CONV_DATETIME	0x20
+#define PHP_PQRES_CONV_ALL		0xff
 
 typedef struct php_pqres_iterator {
 	zend_object_iterator zi;
@@ -39,8 +42,8 @@ typedef struct php_pqres {
 	php_pqres_iterator_t *iter;
 	HashTable bound;
 	HashTable converters;
-	unsigned default_fetch_type:2;
-	unsigned auto_convert:6;
+	unsigned auto_convert;
+	php_pqres_fetch_t default_fetch_type;
 } php_pqres_t;
 
 typedef struct php_pqres_object {

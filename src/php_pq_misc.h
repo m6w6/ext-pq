@@ -15,9 +15,10 @@
 #define PHP_PQ_ERROR_H
 
 #include <libpq-fe.h>
-#include "php_pqres.h"
 
 typedef int STATUS; /* SUCCESS/FAILURE */
+
+#include "php_pqres.h"
 
 /* TSRM morony */
 #if PHP_VERSION_ID >= 50700

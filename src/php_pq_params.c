@@ -24,6 +24,8 @@
 
 #include "php_pq.h"
 #include "php_pq_params.h"
+#undef PHP_PQ_TYPE
+#include "php_pq_type.h"
 
 void php_pq_params_set_type_conv(php_pq_params_t *p, HashTable *conv)
 {
@@ -192,14 +194,6 @@ static void php_pq_params_set_param(php_pq_params_t *p, unsigned index, zval **z
 
 		case IS_ARRAY:
 		{
-
-#if HAVE_PHP_PQ_TYPE_H
-#	undef PHP_PQ_TYPE
-#	include "php_pq_type.h"
-#else
-#	define PHP_PQ_TYPE_OF_ARRAY(oid) 0
-#endif
-
 			zval *tmp;
 			MAKE_STD_ZVAL(tmp);
 			Z_TYPE_P(tmp) = IS_STRING;
