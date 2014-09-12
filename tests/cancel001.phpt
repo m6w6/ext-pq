@@ -24,7 +24,7 @@ DONE
 --EXPECTF--
 Test
 bool(true)
-object(pq\Result)#%d (7) {
+object(pq\Result)#%d (8) {
   ["status"]=>
   int(7)
   ["statusMessage"]=>
@@ -39,6 +39,8 @@ object(pq\Result)#%d (7) {
   int(0)
   ["fetchType"]=>
   int(0)
+  ["autoConvert"]=>
+  int(255)
 }
 ERROR:  canceling statement due to user request
 DONE

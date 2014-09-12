@@ -3,9 +3,6 @@ extended type support
 --SKIPIF--
 <?php
 include "_skipif.inc";
-if (!pq\Types::DEFINED) {
-	die("skip pq\\Types::DEFINED == false\n");
-}
 ?>
 --INI--
 date.timezone=UTC

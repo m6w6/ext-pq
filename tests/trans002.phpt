@@ -29,7 +29,7 @@ var_dump(
 DONE
 --EXPECTF--
 Test
-object(pq\Connection)#%d (18) {
+object(pq\Connection)#%d (19) {
   ["status"]=>
   int(0)
   ["transactionStatus"]=>
@@ -67,11 +67,13 @@ object(pq\Connection)#%d (18) {
   bool(false)
   ["defaultTransactionDeferrable"]=>
   bool(false)
+  ["defaultAutoConvert"]=>
+  int(255)
 }
 int(0)
 bool(false)
 bool(false)
-object(pq\Connection)#%d (18) {
+object(pq\Connection)#%d (19) {
   ["status"]=>
   int(0)
   ["transactionStatus"]=>
@@ -109,6 +111,8 @@ object(pq\Connection)#%d (18) {
   bool(false)
   ["defaultTransactionDeferrable"]=>
   bool(false)
+  ["defaultAutoConvert"]=>
+  int(255)
 }
 int(2)
 bool(true)

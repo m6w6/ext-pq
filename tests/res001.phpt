@@ -49,7 +49,11 @@ Warning: pq\Result not initialized in %s on line %d
 Warning: pq\Result not initialized in %s on line %d
 
 Warning: pq\Result not initialized in %s on line %d
-object(pq\Result)#%d (7) {
+
+Warning: pq\Result not initialized in %s on line %d
+
+Warning: pq\Result not initialized in %s on line %d
+object(pq\Result)#%d (8) {
   ["status"]=>
   NULL
   ["statusMessage"]=>
@@ -64,8 +68,10 @@ object(pq\Result)#%d (7) {
   int(0)
   ["fetchType"]=>
   int(0)
+  ["autoConvert"]=>
+  int(0)
 }
-array(8) {
+array(9) {
   ["dummy"]=>
   int(2)
   ["status"]=>
@@ -81,6 +87,8 @@ array(8) {
   ["affectedRows"]=>
   int(0)
   ["fetchType"]=>
+  int(0)
+  ["autoConvert"]=>
   int(0)
 }
 Done

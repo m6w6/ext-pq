@@ -3,9 +3,6 @@ converter
 --SKIPIF--
 <?php
 include "_skipif.inc";
-if (!pq\Types::DEFINED) {
-	die("skip pq\\Types::DEFINED == false\n");
-}
 ?>
 --FILE--
 <?php

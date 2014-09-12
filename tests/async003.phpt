@@ -26,7 +26,7 @@ do {
 DONE
 --EXPECTF--
 Test
-object(pq\Result)#%d (7) {
+object(pq\Result)#%d (8) {
   ["status"]=>
   int(2)
   ["statusMessage"]=>
@@ -41,8 +41,10 @@ object(pq\Result)#%d (7) {
   int(1)
   ["fetchType"]=>
   int(0)
+  ["autoConvert"]=>
+  int(255)
 }
-object(pq\Result)#%d (7) {
+object(pq\Result)#%d (8) {
   ["status"]=>
   int(2)
   ["statusMessage"]=>
@@ -57,5 +59,7 @@ object(pq\Result)#%d (7) {
   int(1)
   ["fetchType"]=>
   int(0)
+  ["autoConvert"]=>
+  int(255)
 }
 DONE

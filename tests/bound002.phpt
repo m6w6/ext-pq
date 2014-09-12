@@ -3,9 +3,6 @@ fetch bound
 --SKIPIF--
 <?php 
 include "_skipif.inc";
-if (!pq\Types::DEFINED) {
-	die("skip pq\Types::DEFINED == false");
-} 
 ?>
 --FILE--
 <?php
