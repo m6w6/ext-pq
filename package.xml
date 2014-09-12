@@ -96,7 +96,6 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file role="test" name="async008.phpt" />
     <file role="test" name="basic001.phpt" />
     <file role="test" name="basic002.phpt" />
-    <file role="test" name="bound001.phpt" />
     <file role="test" name="bound002.phpt" />
     <file role="test" name="cancel001.phpt" />
     <file role="test" name="conv001.phpt" />
@@ -150,7 +149,6 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <providesextension>pq</providesextension>
  <extsrcrelease>
   <configureoption default="yes" name="with-pq" prompt="whether to enable libpq support" />
-  <configureoption default="/usr" name="with-pq-postgresql" prompt="where to find postgresql server headers" />
  </extsrcrelease>
 </package>
 
