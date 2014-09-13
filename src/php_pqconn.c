@@ -541,7 +541,12 @@ php_resource_factory_ops_t *php_pqconn_get_resource_factory_ops(void)
 
 static void php_pqconn_wakeup(php_persistent_handle_factory_t *f, void **handle TSRMLS_DC)
 {
-	// FIXME: ping server
+	PGresult *res = PQexec(*handle, "");
+	PHP_PQclear(res);
+
+	if (CONNECTION_OK != PQstatus(*handle)) {
+		PQreset(*handle);
+	}
 }
 
 static inline PGresult *unlisten(PGconn *conn, const char *channel_str, size_t channel_len TSRMLS_DC)
