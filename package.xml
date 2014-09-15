@@ -141,7 +141,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
    <package>
     <name>raphf</name>
     <channel>pecl.php.net</channel>
-    <min>0.1.0</min>
+    <min>1.0.4</min>
     <providesextension>raphf</providesextension>
    </package>
   </required>
