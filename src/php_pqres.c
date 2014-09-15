@@ -593,20 +593,28 @@ static STATUS column_nn(php_pqres_object_t *obj, zval *zcol, php_pqres_col_t *co
 	long index = -1;
 	char *name = NULL;
 
-	switch (Z_TYPE_P(zcol)) {
-	case IS_LONG:
-		index = Z_LVAL_P(zcol);
-		break;
+	if (!zcol) {
+		index = 0;
+	} else {
+		switch (Z_TYPE_P(zcol)) {
+		case IS_NULL:
+			index = 0;
+			break;
 
-	default:
-		convert_to_string(zcol);
-		/* no break */
+		case IS_LONG:
+			index = Z_LVAL_P(zcol);
+			break;
 
-	case IS_STRING:
-		if (!is_numeric_string(Z_STRVAL_P(zcol), Z_STRLEN_P(zcol), &index, NULL, 0)) {
-			name = Z_STRVAL_P(zcol);
+		default:
+			convert_to_string(zcol);
+			/* no break */
+
+		case IS_STRING:
+			if (!is_numeric_string(Z_STRVAL_P(zcol), Z_STRLEN_P(zcol), &index, NULL, 0)) {
+				name = Z_STRVAL_P(zcol);
+			}
+			break;
 		}
-		break;
 	}
 
 	if (name) {
@@ -814,16 +822,16 @@ static PHP_METHOD(pqres, fetchCol) {
 	}
 }
 
-ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_all_cols, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_all_cols, 0, 0, 0)
 	ZEND_ARG_INFO(0, col)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, fetchAllCols) {
 	zend_error_handling zeh;
-	zval *zcol;
+	zval *zcol = NULL;
 	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &zcol);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|z!", &zcol);
 	zend_restore_error_handling(&zeh TSRMLS_CC);
 
 	if (SUCCESS == rv) {
