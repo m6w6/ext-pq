@@ -183,6 +183,58 @@ zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRM
 	return zv;
 }
 
+static inline zval *php_pqres_get_col(php_pqres_t *r, unsigned row, unsigned col TSRMLS_DC)
+{
+	zval *zv;
+
+	if (PQgetisnull(r->res, row, col)) {
+		MAKE_STD_ZVAL(zv);
+		ZVAL_NULL(zv);
+	} else {
+		zv = php_pqres_typed_zval(r, PQgetvalue(r->res, row, col), PQgetlength(r->res, row, col), PQftype(r->res, col) TSRMLS_CC);
+	}
+
+	return zv;
+}
+
+static inline void php_pqres_add_col_to_zval(php_pqres_t *r, unsigned row, unsigned col, php_pqres_fetch_t fetch_type, zval *data TSRMLS_DC)
+{
+	if (PQgetisnull(r->res, row, col)) {
+		switch (fetch_type) {
+		case PHP_PQRES_FETCH_OBJECT:
+			add_property_null(data, PQfname(r->res, col));
+			break;
+
+		case PHP_PQRES_FETCH_ASSOC:
+			add_assoc_null(data, PQfname(r->res, col));
+			break;
+
+		case PHP_PQRES_FETCH_ARRAY:
+			add_index_null(data, col);
+			break;
+		}
+	} else {
+		zval *zv;
+
+		zv = php_pqres_typed_zval(r, PQgetvalue(r->res, row, col), PQgetlength(r->res, row, col), PQftype(r->res, col) TSRMLS_CC);
+
+		switch (fetch_type) {
+		case PHP_PQRES_FETCH_OBJECT:
+			add_property_zval(data, PQfname(r->res, col), zv);
+			zval_ptr_dtor(&zv);
+			break;
+
+		case PHP_PQRES_FETCH_ASSOC:
+			add_assoc_zval(data, PQfname(r->res, col), zv);
+			break;
+
+		case PHP_PQRES_FETCH_ARRAY:
+			add_index_zval(data, col, zv);
+			break;
+		}
+	}
+}
+
 zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch_type, zval **data_ptr TSRMLS_DC)
 {
 	zval *data = NULL;
@@ -206,40 +258,7 @@ zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch
 
 	if (PQntuples(res) > row) {
 		for (c = 0, cols = PQnfields(res); c < cols; ++c) {
-			if (PQgetisnull(res, row, c)) {
-				switch (fetch_type) {
-				case PHP_PQRES_FETCH_OBJECT:
-					add_property_null(data, PQfname(res, c));
-					break;
-
-				case PHP_PQRES_FETCH_ASSOC:
-					add_assoc_null(data, PQfname(res, c));
-					break;
-
-				case PHP_PQRES_FETCH_ARRAY:
-					add_index_null(data, c);
-					break;
-				}
-			} else {
-				zval *zv;
-
-				zv = php_pqres_typed_zval(res_obj->intern, PQgetvalue(res, row, c), PQgetlength(res, row, c), PQftype(res, c) TSRMLS_CC);
-
-				switch (fetch_type) {
-				case PHP_PQRES_FETCH_OBJECT:
-					add_property_zval(data, PQfname(res, c), zv);
-					zval_ptr_dtor(&zv);
-					break;
-
-				case PHP_PQRES_FETCH_ASSOC:
-					add_assoc_zval(data, PQfname(res, c), zv);
-					break;
-
-				case PHP_PQRES_FETCH_ARRAY:
-					add_index_zval(data, c, zv);
-					break;
-				}
-			}
+			php_pqres_add_col_to_zval(res_obj->intern, row, c, fetch_type, data TSRMLS_CC);
 		}
 	}
 
@@ -795,6 +814,42 @@ static PHP_METHOD(pqres, fetchCol) {
 	}
 }
 
+ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_all_cols, 0, 0, 1)
+	ZEND_ARG_INFO(0, col)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqres, fetchAllCols) {
+	zend_error_handling zeh;
+	zval *zcol;
+	STATUS rv;
+
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &zcol);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
+		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
+		if (!obj->intern) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Result not initialized");
+		} else {
+			php_pqres_col_t col;
+
+			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh TSRMLS_CC);
+
+			if (SUCCESS == column_nn(obj, zcol, &col TSRMLS_CC)) {
+				int r, rows = PQntuples(obj->intern->res);
+
+				array_init(return_value);
+				for (r = 0; r < rows; ++r) {
+					add_next_index_zval(return_value, php_pqres_get_col(obj->intern, r, col.num TSRMLS_CC));
+				}
+			}
+
+			zend_restore_error_handling(&zeh TSRMLS_CC);
+		}
+	}
+}
+
 static int apply_to_col(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
 {
 	zval **c = p;
@@ -1023,6 +1078,7 @@ static zend_function_entry php_pqres_methods[] = {
 	PHP_ME(pqres, fetchRow, ai_pqres_fetch_row, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, fetchCol, ai_pqres_fetch_col, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, fetchAll, ai_pqres_fetch_all, ZEND_ACC_PUBLIC)
+	PHP_ME(pqres, fetchAllCols, ai_pqres_fetch_all_cols, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, count, ai_pqres_count, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, map, ai_pqres_map, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, desc, ai_pqres_desc, ZEND_ACC_PUBLIC)
