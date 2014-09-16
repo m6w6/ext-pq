@@ -372,7 +372,7 @@ static void php_pqconn_object_write_def_fetch_type(zval *object, void *o, zval *
 		}
 	}
 
-	obj->intern->default_fetch_type = Z_LVAL_P(zft) & 0x2; /* two bits only */
+	obj->intern->default_fetch_type = Z_LVAL_P(zft) & 0x3; /* two bits only */
 
 	if (zft != value) {
 		zval_ptr_dtor(&zft);
@@ -402,7 +402,7 @@ static void php_pqconn_object_write_def_txn_isolation(zval *object, void *o, zva
 		}
 	}
 
-	obj->intern->default_txn_isolation = Z_LVAL_P(zti) & 0x2; /* two bits only */
+	obj->intern->default_txn_isolation = Z_LVAL_P(zti) & 0x3; /* two bits only */
 
 	if (zti != value) {
 		zval_ptr_dtor(&zti);
