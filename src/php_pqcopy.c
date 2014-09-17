@@ -105,7 +105,7 @@ static void php_pqcopy_object_read_options(zval *object, void *o, zval *return_v
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqcopy_construct, 0, 0, 3)
-	ZEND_ARG_OBJ_INFO(0, "connection", pq\\Connection, 0)
+	ZEND_ARG_OBJ_INFO(0, connection, pq\\Connection, 0)
 	ZEND_ARG_INFO(0, expression)
 	ZEND_ARG_INFO(0, direction)
 	ZEND_ARG_INFO(0, options)
