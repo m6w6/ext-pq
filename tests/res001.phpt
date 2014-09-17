@@ -10,6 +10,11 @@ echo "Test\n";
 
 include "_setup.inc";
 
+set_error_handler(function($code, $error, $file, $line) {
+	printf("\nWarning: %s in %s on line %d\n", $error, $file, $line);
+	return true;
+}, E_RECOVERABLE_ERROR);
+
 class r extends pq\Result {
 	public $dummy = 2;
 }
