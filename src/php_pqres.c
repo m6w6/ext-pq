@@ -775,17 +775,17 @@ static zval **column_at(zval *row, int col TSRMLS_DC)
 	return data;
 }
 
-ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_col, 0, 0, 2)
-	ZEND_ARG_INFO(0, col)
+ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_col, 0, 0, 1)
 	ZEND_ARG_INFO(1, ref)
+	ZEND_ARG_INFO(0, col)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, fetchCol) {
 	zend_error_handling zeh;
-	zval *zcol, *zref;
+	zval *zcol = NULL, *zref;
 	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z/z", &zcol, &zref);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z|z/!", &zref, &zcol);
 	zend_restore_error_handling(&zeh TSRMLS_CC);
 
 	if (SUCCESS == rv) {

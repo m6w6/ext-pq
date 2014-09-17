@@ -11,7 +11,7 @@ $c = new pq\Connection(PQ_DSN);
 var_dump($c->encoding);
 $c->encoding = "utf8";
 var_dump($c->encoding);
-$c->exec("SELECT 'ßüpä…'")->fetchCol(0, $val);
+$c->exec("SELECT 'ßüpä…'")->fetchCol($val);
 var_dump($val);
 $tmp = 12345;
 $c->encoding = $tmp;
