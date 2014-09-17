@@ -219,7 +219,7 @@ static void php_pqconn_object_write_encoding(zval *object, void *o, zval *value 
 	}
 
 	if (0 > PQsetClientEncoding(obj->intern->conn, Z_STRVAL_P(zenc))) {
-		zend_error(E_NOTICE, "Unrecognized encoding '%s'", Z_STRVAL_P(zenc));
+		php_error(E_NOTICE, "Unrecognized encoding '%s'", Z_STRVAL_P(zenc));
 	}
 
 	if (zenc != value) {
