@@ -41,6 +41,7 @@ int compare_index(const void *lptr, const void *rptr TSRMLS_DC);
 
 zend_class_entry *php_pqdt_class_entry;
 zval *php_pqdt_from_string(char *datetime_str, size_t datetime_len, char *fmt, zval *zv TSRMLS_DC);
+void php_pqdt_to_string(zval *zdt, const char *format, char **str_buf, size_t *str_len TSRMLS_DC);
 
 zend_class_entry *php_pqconv_class_entry;
 

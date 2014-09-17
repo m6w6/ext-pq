@@ -22,13 +22,14 @@ typedef enum php_pqres_fetch {
 	PHP_PQRES_FETCH_OBJECT
 } php_pqres_fetch_t;
 
-#define PHP_PQRES_CONV_BOOL		0x01
-#define PHP_PQRES_CONV_INT		0x02
-#define PHP_PQRES_CONV_FLOAT	0x04
-#define PHP_PQRES_CONV_SCALAR	0x0f
-#define PHP_PQRES_CONV_ARRAY	0x10
-#define PHP_PQRES_CONV_DATETIME	0x20
-#define PHP_PQRES_CONV_ALL		0xff
+#define PHP_PQRES_CONV_BOOL		0x0001
+#define PHP_PQRES_CONV_INT		0x0002
+#define PHP_PQRES_CONV_FLOAT	0x0004
+#define PHP_PQRES_CONV_SCALAR	0x000f
+#define PHP_PQRES_CONV_ARRAY	0x0010
+#define PHP_PQRES_CONV_DATETIME	0x0020
+#define PHP_PQRES_CONV_JSON		0x0100
+#define PHP_PQRES_CONV_ALL		0xffff
 
 typedef struct php_pqres_iterator {
 	zend_object_iterator zi;

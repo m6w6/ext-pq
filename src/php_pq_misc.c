@@ -72,11 +72,13 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqdt_to_string, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqdt, __toString)
 {
-	zval *rv;
+	zval *rv = NULL;
 
 	zend_call_method_with_1_params(&getThis(), php_pqdt_class_entry, NULL, "format", &rv,
 			zend_read_property(php_pqdt_class_entry, getThis(), ZEND_STRL("format"), 0 TSRMLS_CC));
-	RETVAL_ZVAL(rv, 1, 1);
+	if (rv) {
+		RETVAL_ZVAL(rv, 1, 1);
+	}
 }
 
 static zend_function_entry php_pqdt_methods[] = {
@@ -103,6 +105,36 @@ zval *php_pqdt_from_string(char *dt_str, size_t dt_len, char *fmt, zval *zv TSRM
 	}
 
 	return zv;
+}
+
+void php_pqdt_to_string(zval *zdt, const char *format, char **str_buf, size_t *str_len TSRMLS_DC)
+{
+	zval rv;
+
+	INIT_PZVAL(&rv);
+	ZVAL_NULL(&rv);
+
+	if (Z_OBJ_HT_P(zdt)->cast_object
+	&&	SUCCESS == Z_OBJ_HT_P(zdt)->cast_object(zdt, &rv, IS_STRING TSRMLS_CC)
+	) {
+		*str_len = Z_STRLEN(rv);
+		*str_buf = Z_STRVAL(rv);
+	} else if (instanceof_function(Z_OBJCE_P(zdt), php_date_get_date_ce() TSRMLS_CC)) {
+		zval *rv = NULL, *zfmt;
+
+		MAKE_STD_ZVAL(zfmt);
+		ZVAL_STRING(zfmt, format, 1);
+		zend_call_method_with_1_params(&zdt, Z_OBJCE_P(zdt), NULL, "format", &rv, zfmt);
+		zval_ptr_dtor(&zfmt);
+
+		if (rv) {
+			if (Z_TYPE_P(rv) == IS_STRING) {
+				*str_len = Z_STRLEN_P(rv);
+				*str_buf = estrndup(Z_STRVAL_P(rv), *str_len);
+			}
+			zval_ptr_dtor(&rv);
+		}
+	}
 }
 
 zend_class_entry *php_pqconv_class_entry;
@@ -137,7 +169,7 @@ PHP_MINIT_FUNCTION(pq_misc)
 	INIT_NS_CLASS_ENTRY(ce ,"pq", "DateTime", php_pqdt_methods);
 	php_pqdt_class_entry = zend_register_internal_class_ex(&ce, php_date_get_date_ce(), "DateTime" TSRMLS_CC);
 
-	zend_declare_property_stringl(php_pqdt_class_entry, ZEND_STRL("format"), ZEND_STRL("Y-m-d H:i:s.u"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_stringl(php_pqdt_class_entry, ZEND_STRL("format"), ZEND_STRL("Y-m-d H:i:s.uO"), ZEND_ACC_PUBLIC TSRMLS_CC);
 
 	/* stop reading this file right here! */
 	if (SUCCESS == zend_hash_find(CG(class_table), ZEND_STRS("jsonserializable"), (void *) &json)) {

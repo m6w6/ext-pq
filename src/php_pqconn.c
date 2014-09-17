@@ -458,7 +458,7 @@ static void php_pqconn_object_write_def_auto_conv(zval*object, void *o, zval *va
 		}
 	}
 
-	obj->intern->default_auto_convert = Z_LVAL_P(zac) & 0xff;
+	obj->intern->default_auto_convert = Z_LVAL_P(zac) & PHP_PQRES_CONV_ALL;
 
 	if (zac != value) {
 		zval_ptr_dtor(&zac);

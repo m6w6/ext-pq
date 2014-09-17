@@ -74,7 +74,7 @@ object(pq\Result)#%d (8) {
   ["fetchType"]=>
   int(0)
   ["autoConvert"]=>
-  int(0)
+  int(65535)
 }
 array(9) {
   ["dummy"]=>
@@ -94,6 +94,6 @@ array(9) {
   ["fetchType"]=>
   int(0)
   ["autoConvert"]=>
-  int(0)
+  int(65535)
 }
 Done

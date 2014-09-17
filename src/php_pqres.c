@@ -17,6 +17,7 @@
 #include <php.h>
 
 #include <ext/spl/spl_iterators.h>
+#include <ext/json/php_json.h>
 #include <libpq-events.h>
 
 #include "php_pq.h"
@@ -166,6 +167,18 @@ zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRM
 		}
 		php_pqdt_from_string(val, len, "Y-m-d H:i:s.uO", zv TSRMLS_CC);
 		break;
+
+#ifdef PHP_PQ_OID_JSON
+#	ifdef PHP_PQ_OID_JSONB
+	case PHP_PQ_OID_JSONB:
+#	endif
+	case PHP_PQ_OID_JSON:
+		if (!(res->auto_convert & PHP_PQRES_CONV_JSON)) {
+			goto noconversion;
+		}
+		php_json_decode_ex(zv, val, len, 0, 512 /* PHP_JSON_DEFAULT_DEPTH */ TSRMLS_CC);
+		break;
+#endif
 
 	default:
 		if (!(res->auto_convert & PHP_PQRES_CONV_ARRAY)) {
@@ -1153,7 +1166,7 @@ PHP_MINIT_FUNCTION(pqres)
 	zend_hash_add(&php_pqres_object_prophandlers, "fetchType", sizeof("fetchType"), (void *) &ph, sizeof(ph), NULL);
 	ph.write = NULL;
 
-	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("autoConvert"), PHP_PQRES_FETCH_ARRAY, ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("autoConvert"), PHP_PQRES_CONV_ALL, ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqres_object_read_auto_conv;
 	ph.write = php_pqres_object_write_auto_conv;
 	zend_hash_add(&php_pqres_object_prophandlers, "autoConvert", sizeof("autoConvert"), (void *) &ph, sizeof(ph), NULL);

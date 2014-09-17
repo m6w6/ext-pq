@@ -68,7 +68,7 @@ object(pq\Connection)#%d (19) {
   ["defaultTransactionDeferrable"]=>
   bool(false)
   ["defaultAutoConvert"]=>
-  int(255)
+  int(65535)
 }
 int(0)
 bool(false)
@@ -112,7 +112,7 @@ object(pq\Connection)#%d (19) {
   ["defaultTransactionDeferrable"]=>
   bool(false)
   ["defaultAutoConvert"]=>
-  int(255)
+  int(65535)
 }
 int(2)
 bool(true)

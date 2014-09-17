@@ -4,6 +4,8 @@ converter
 <?php
 include "_skipif.inc";
 ?>
+--INI--
+date.timezone=UTC
 --FILE--
 <?php
 echo "Test\n";
@@ -75,15 +77,27 @@ class JSONConverter extends Converter
 	}
 }
 
+class Text {
+	private $data;
+	function __construct($data) {
+		$this->data = $data;
+	}
+	function __toString() {
+		return (string) $this->data;
+	}
+}
+
 $c = new pq\Connection(PQ_DSN);
 $c->exec("CREATE EXTENSION IF NOT EXISTS hstore");
 $t = new pq\Types($c);
 
 $c->setConverter(new HStoreConverter($t));
 $c->setConverter(new IntVectorConverter($t));
-$c->setConverter(new JSONConverter($t));
-
-$r = $c->execParams("SELECT \$1 as hs, \$2 as iv, \$3 as oids, \$4 as js, \$5 as ia, \$6 as ta, \$7 as ba, \$8 as da",
+if (!defined("pq\\Types::JSON")) {
+	$c->setConverter(new JSONConverter($t));
+}
+$r = $c->execParams("SELECT \$1 as hs, \$2 as iv, \$3 as oids, \$4 as js, \$5 as ia, \$6 as ta, \$7 as ba, \$8 as da, \$9 as dbl, \$10 as bln, ".
+		"\$11 as dt1, \$12 as dt2, \$13 as dt3, \$14 as dt4, \$15 as dt5, \$16 as dt6, \$17 as dt7, \$18 as dt8, \$19 as txta ",
 	array(
 		// hstore
 		array(
@@ -112,7 +126,21 @@ $r = $c->execParams("SELECT \$1 as hs, \$2 as iv, \$3 as oids, \$4 as js, \$5 as
 		array(array(array(1,2,3))),
 		array(array("a\"","b}",null)),
 		array(true,false),
-		array(1.1,2.2)
+		array(1.1,2.2),
+		// double
+		123.456,
+		// bool
+		true,
+		// datetimes
+		new pq\Datetime,
+		new pq\Datetime,
+		new pq\Datetime,
+		new pq\Datetime,
+		new pq\Datetime,
+		new pq\Datetime,
+		new pq\Datetime,
+		new pq\Datetime,
+		[new Text(0), new Text(" or "), new Text(true)],
 	),
 	array(
 		$t["hstore"]->oid,
@@ -122,7 +150,18 @@ $r = $c->execParams("SELECT \$1 as hs, \$2 as iv, \$3 as oids, \$4 as js, \$5 as
 		$t["_int4"]->oid,
 		$t["_text"]->oid,
 		$t["_bool"]->oid,
-		$t["_float8"]->oid
+		$t["_float8"]->oid,
+		$t["float4"]->oid,
+		$t["bool"]->oid,
+		$t["date"]->oid,
+		$t["abstime"]->oid,
+		$t["timestamp"]->oid,
+		$t["timestamptz"]->oid,
+		$t["date"]->oid,
+		$t["abstime"]->oid,
+		$t["timestamp"]->oid,
+		$t["timestamptz"]->oid,
+		$t["_text"]->oid
 	)
 );
 
@@ -224,6 +263,107 @@ array(1) {
       float(1.1)
       [1]=>
       float(2.2)
+    }
+    [8]=>
+    float(123.456)
+    [9]=>
+    bool(true)
+    [10]=>
+    object(pq\DateTime)#%d (4) {
+      ["format"]=>
+      string(5) "Y-m-d"
+      ["date"]=>
+      string(26) "%d-%d-%d 00:00:00.000000"
+      ["timezone_type"]=>
+      int(3)
+      ["timezone"]=>
+      string(3) "UTC"
+    }
+    [11]=>
+    object(pq\DateTime)#%d (4) {
+      ["format"]=>
+      string(11) "Y-m-d H:i:s"
+      ["date"]=>
+      string(26) "%d-%d-%d %d:%d:%d.000000"
+      ["timezone_type"]=>
+      int(1)
+      ["timezone"]=>
+      string(%d) "%s"
+    }
+    [12]=>
+    object(pq\DateTime)#%d (4) {
+      ["format"]=>
+      string(13) "Y-m-d H:i:s.u"
+      ["date"]=>
+      string(26) "%d-%d-%d %d:%d:%d.000000"
+      ["timezone_type"]=>
+      int(3)
+      ["timezone"]=>
+      string(3) "UTC"
+    }
+    [13]=>
+    object(pq\DateTime)#%d (4) {
+      ["format"]=>
+      string(14) "Y-m-d H:i:s.uO"
+      ["date"]=>
+      string(26) "%d-%d-%d %d:%d:%d.000000"
+      ["timezone_type"]=>
+      int(1)
+      ["timezone"]=>
+      string(%d) "%s"
+    }
+    [14]=>
+    object(pq\DateTime)#%d (4) {
+      ["format"]=>
+      string(5) "Y-m-d"
+      ["date"]=>
+      string(26) "%d-%d-%d 00:00:00.000000"
+      ["timezone_type"]=>
+      int(3)
+      ["timezone"]=>
+      string(3) "UTC"
+    }
+    [15]=>
+    object(pq\DateTime)#%d (4) {
+      ["format"]=>
+      string(11) "Y-m-d H:i:s"
+      ["date"]=>
+      string(26) "%d-%d-%d %d:%d:%d.000000"
+      ["timezone_type"]=>
+      int(1)
+      ["timezone"]=>
+      string(%d) "%s"
+    }
+    [16]=>
+    object(pq\DateTime)#%d (4) {
+      ["format"]=>
+      string(13) "Y-m-d H:i:s.u"
+      ["date"]=>
+      string(26) "%d-%d-%d %d:%d:%d.000000"
+      ["timezone_type"]=>
+      int(3)
+      ["timezone"]=>
+      string(3) "UTC"
+    }
+    [17]=>
+    object(pq\DateTime)#159 (4) {
+      ["format"]=>
+      string(14) "Y-m-d H:i:s.uO"
+      ["date"]=>
+      string(26) "%d-%d-%d %d:%d:%d.000000"
+      ["timezone_type"]=>
+      int(1)
+      ["timezone"]=>
+      string(%d) "%s"
+    }
+    [18]=>
+    array(3) {
+      [0]=>
+      string(1) "0"
+      [1]=>
+      string(4) " or "
+      [2]=>
+      string(1) "1"
     }
   }
 }

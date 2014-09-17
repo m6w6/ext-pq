@@ -42,7 +42,7 @@ object(pq\Result)#%d (8) {
   ["fetchType"]=>
   int(0)
   ["autoConvert"]=>
-  int(255)
+  int(65535)
 }
 object(pq\Result)#%d (8) {
   ["status"]=>
@@ -60,6 +60,6 @@ object(pq\Result)#%d (8) {
   ["fetchType"]=>
   int(0)
   ["autoConvert"]=>
-  int(255)
+  int(65535)
 }
 DONE
