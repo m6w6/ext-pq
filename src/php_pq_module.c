@@ -20,18 +20,6 @@
 
 #include <libpq-fe.h>
 
-/*
-#include <Zend/zend_interfaces.h>
-#include <Zend/zend_exceptions.h>
-#include <ext/spl/spl_array.h>
-#include <ext/spl/spl_exceptions.h>
-#include <ext/raphf/php_raphf.h>
-
-#include <libpq-events.h>
-#include <libpq/libpq-fs.h>
-#include <fnmatch.h>
-*/
-
 #include "php_pq.h"
 #include "php_pq_misc.h"
 #include "php_pqcancel.h"
@@ -114,13 +102,14 @@ static PHP_MINFO_FUNCTION(pq)
 	php_info_print_table_end();
 }
 
-const zend_function_entry pq_functions[] = {
+static const zend_function_entry pq_functions[] = {
 	{0}
 };
 
 static zend_module_dep pq_module_deps[] = {
 	ZEND_MOD_REQUIRED("raphf")
 	ZEND_MOD_REQUIRED("spl")
+	ZEND_MOD_OPTIONAL("json")
 	ZEND_MOD_END
 };
 

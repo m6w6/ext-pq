@@ -108,8 +108,8 @@ static void php_pqcur_object_free(void *o TSRMLS_DC)
 	fprintf(stderr, "FREE cur(#%d) %p (conn: %p)\n", obj->zv.handle, obj, obj->intern->conn);
 #endif
 	if (obj->intern) {
-		//cur_close(obj TSRMLS_CC);
-		//php_pq_object_delref(obj->intern->conn TSRMLS_CC);
+		cur_close(obj TSRMLS_CC);
+		php_pq_object_delref(obj->intern->conn TSRMLS_CC);
 		efree(obj->intern->decl);
 		efree(obj->intern->name);
 		efree(obj->intern);

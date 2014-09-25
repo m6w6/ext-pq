@@ -1851,7 +1851,7 @@ static int apply_set_converter(void *p TSRMLS_DC, int argc, va_list argv, zend_h
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_set_converter, 0, 0, 1)
-	ZEND_ARG_OBJ_INFO(0, converter, pq\\ConverterInterface, 0)
+	ZEND_ARG_OBJ_INFO(0, converter, pq\\Converter, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, setConverter) {
 	STATUS rv;
@@ -1882,7 +1882,7 @@ static PHP_METHOD(pqconn, setConverter) {
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_unset_converter, 0, 0, 1)
-	ZEND_ARG_OBJ_INFO(0, converter, pq\\ConverterInterface, 0)
+	ZEND_ARG_OBJ_INFO(0, converter, pq\\Converter, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, unsetConverter) {
 	STATUS rv;

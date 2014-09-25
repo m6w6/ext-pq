@@ -162,7 +162,7 @@ PHP_MINIT_FUNCTION(pq_misc)
 {
 	zend_class_entry **json, ce = {0};
 
-	INIT_NS_CLASS_ENTRY(ce, "pq", "ConverterInterface", php_pqconv_methods);
+	INIT_NS_CLASS_ENTRY(ce, "pq", "Converter", php_pqconv_methods);
 	php_pqconv_class_entry = zend_register_internal_interface(&ce TSRMLS_CC);
 
 	memset(&ce, 0, sizeof(ce));

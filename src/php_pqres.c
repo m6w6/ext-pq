@@ -655,8 +655,14 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqres_bind, 0, 0, 2)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, bind) {
 	zval *zcol, *zref;
+	zend_error_handling zeh;
+	STATUS rv;
 
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z/z", &zcol, &zref)) {
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z/z", &zcol, &zref);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
 		if (!obj->intern) {
@@ -811,9 +817,7 @@ static PHP_METHOD(pqres, fetchCol) {
 
 			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh TSRMLS_CC);
 			php_pqres_iteration(getThis(), obj, obj->intern->iter ? obj->intern->iter->fetch_type : 0, &row TSRMLS_CC);
-			if (!row) {
-				RETVAL_FALSE;
-			} else {
+			if (row) {
 				php_pqres_col_t col;
 
 				if (SUCCESS != column_nn(obj, zcol, &col TSRMLS_CC)) {
@@ -856,7 +860,6 @@ static PHP_METHOD(pqres, fetchAllCols) {
 			php_pqres_col_t col;
 
 			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh TSRMLS_CC);
-
 			if (SUCCESS == column_nn(obj, zcol, &col TSRMLS_CC)) {
 				int r, rows = PQntuples(obj->intern->res);
 
@@ -865,7 +868,6 @@ static PHP_METHOD(pqres, fetchAllCols) {
 					add_next_index_zval(return_value, php_pqres_get_col(obj->intern, r, col.num TSRMLS_CC));
 				}
 			}
-
 			zend_restore_error_handling(&zeh TSRMLS_CC);
 		}
 	}
@@ -1193,6 +1195,7 @@ PHP_MINIT_FUNCTION(pqres)
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_SCALAR"), PHP_PQRES_CONV_SCALAR TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_ARRAY"), PHP_PQRES_CONV_ARRAY TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_DATETIME"), PHP_PQRES_CONV_DATETIME TSRMLS_CC);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_JSON"), PHP_PQRES_CONV_JSON TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_ALL"), PHP_PQRES_CONV_ALL TSRMLS_CC);
 
 	return SUCCESS;

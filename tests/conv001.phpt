@@ -12,7 +12,7 @@ echo "Test\n";
 
 include "_setup.inc";
 
-abstract class Converter implements pq\ConverterInterface
+abstract class Converter implements pq\Converter
 {
 	protected $types;
 	
