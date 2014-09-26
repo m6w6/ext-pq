@@ -127,57 +127,63 @@ static zval *object_param_to_string(php_pq_params_t *p, zval *zobj, Oid type TSR
 	return return_value;
 }
 
-static int apply_to_param_from_array(void *ptr TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
+struct apply_to_param_from_array_arg {
+	php_pq_params_t *params;
+	unsigned index;
+	smart_str *buffer;
+	Oid type;
+	zval **zconv;
+};
+
+static int apply_to_param_from_array(void *ptr, void *arg_ptr TSRMLS_DC)
 {
-	php_pq_params_t *p = va_arg(argv, php_pq_params_t *);
-	unsigned j, *i = va_arg(argv, unsigned *);
-	smart_str *s = va_arg(argv, smart_str *);
-	Oid type = va_arg(argv, Oid);
-	zval *ztmp, **zparam = ptr, *zcopy = *zparam, **zconv = va_arg(argv, zval **);
+	struct apply_to_param_from_array_arg subarg, *arg = arg_ptr;
+	zval *ztmp, **zparam = ptr, *zcopy = *zparam;
 	char *tmp;
 	size_t len;
 	int tmp_len;
 
-	if ((*i)++) {
-		smart_str_appendc(s, ',');
+	if (arg->index++) {
+		smart_str_appendc(arg->buffer, ',');
 	}
 
-	if (zconv) {
+	if (arg->zconv) {
 		zval *rv = NULL;
 
-		zend_call_method_with_1_params(zconv, NULL, NULL, "converttostring", &rv, zcopy);
+		zend_call_method_with_1_params(arg->zconv, NULL, NULL, "converttostring", &rv, zcopy);
 		convert_to_string(rv);
 		zcopy = rv;
 		goto append_string;
 	} else {
 		switch (Z_TYPE_P(zcopy)) {
 		case IS_NULL:
-			smart_str_appends(s, "NULL");
+			smart_str_appends(arg->buffer, "NULL");
 			break;
 
 		case IS_BOOL:
-			smart_str_appends(s, Z_BVAL_P(zcopy) ? "t" : "f");
+			smart_str_appends(arg->buffer, Z_BVAL_P(zcopy) ? "t" : "f");
 			break;
 
 		case IS_LONG:
-			smart_str_append_long(s, Z_LVAL_P(zcopy));
+			smart_str_append_long(arg->buffer, Z_LVAL_P(zcopy));
 			break;
 
 		case IS_DOUBLE:
 			len = spprintf(&tmp, 0, "%F", Z_DVAL_P(zcopy));
-			smart_str_appendl(s, tmp, len);
+			smart_str_appendl(arg->buffer, tmp, len);
 			efree(tmp);
 			break;
 
 		case IS_ARRAY:
-			j = 0;
-			smart_str_appendc(s, '{');
-			zend_hash_apply_with_arguments(Z_ARRVAL_P(zcopy) TSRMLS_CC, apply_to_param_from_array, 5, p, &j, s, type, zconv);
-			smart_str_appendc(s, '}');
+			subarg = *arg;
+			subarg.index = 0;
+			smart_str_appendc(arg->buffer, '{');
+			zend_hash_apply_with_argument(Z_ARRVAL_P(zcopy), apply_to_param_from_array, &subarg TSRMLS_CC);
+			smart_str_appendc(arg->buffer, '}');
 			break;
 
 		case IS_OBJECT:
-			if ((ztmp = object_param_to_string(p, zcopy, type TSRMLS_CC))) {
+			if ((ztmp = object_param_to_string(arg->params, zcopy, arg->type TSRMLS_CC))) {
 				zcopy = ztmp;
 			}
 			/* no break */
@@ -187,9 +193,9 @@ static int apply_to_param_from_array(void *ptr TSRMLS_DC, int argc, va_list argv
 
 			append_string:
 			tmp = php_addslashes(Z_STRVAL_P(zcopy), Z_STRLEN_P(zcopy), &tmp_len, 0 TSRMLS_CC);
-			smart_str_appendc(s, '"');
-			smart_str_appendl(s, tmp, tmp_len);
-			smart_str_appendc(s, '"');
+			smart_str_appendc(arg->buffer, '"');
+			smart_str_appendl(arg->buffer, tmp, tmp_len);
+			smart_str_appendc(arg->buffer, '"');
 
 			if (zcopy != *zparam) {
 				zval_ptr_dtor(&zcopy);
@@ -198,15 +204,15 @@ static int apply_to_param_from_array(void *ptr TSRMLS_DC, int argc, va_list argv
 			break;
 		}
 	}
-	++(*i);
+	++arg->index;
 	return ZEND_HASH_APPLY_KEEP;
 }
 
 static zval *array_param_to_string(php_pq_params_t *p, zval *zarr, Oid type TSRMLS_DC)
 {
-	zval *return_value, **zconv = NULL;
+	zval *return_value;
 	smart_str s = {0};
-	unsigned i = 0;
+	struct apply_to_param_from_array_arg arg = {NULL};
 
 	switch (type) {
 #ifdef PHP_PQ_OID_JSON
@@ -220,11 +226,13 @@ static zval *array_param_to_string(php_pq_params_t *p, zval *zarr, Oid type TSRM
 #endif
 
 	default:
-		zend_hash_index_find(&p->type.conv, PHP_PQ_TYPE_OF_ARRAY(type), (void *) &zconv);
-
-		smart_str_appendc(&s, '{');
-		zend_hash_apply_with_arguments(Z_ARRVAL_P(zarr) TSRMLS_CC, apply_to_param_from_array, 5, p, &i, &s, (Oid) PHP_PQ_TYPE_OF_ARRAY(type), zconv);
-		smart_str_appendc(&s, '}');
+		arg.params = p;
+		arg.buffer = &s;
+		arg.type = PHP_PQ_TYPE_OF_ARRAY(type);
+		zend_hash_index_find(&p->type.conv, PHP_PQ_TYPE_OF_ARRAY(type), (void *) &arg.zconv);
+		smart_str_appendc(arg.buffer, '{');
+		zend_hash_apply_with_argument(Z_ARRVAL_P(zarr), apply_to_param_from_array, &arg TSRMLS_CC);
+		smart_str_appendc(arg.buffer, '}');
 		smart_str_0(&s);
 		break;
 	}

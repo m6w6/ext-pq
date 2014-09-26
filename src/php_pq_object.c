@@ -58,45 +58,56 @@ void php_pq_object_delref(void *o TSRMLS_DC)
 	zend_objects_store_del_ref_by_handle_ex(obj->zv.handle, obj->zv.handlers TSRMLS_CC);
 }
 
-static int apply_pi_to_ht(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
+struct apply_pi_to_ht_arg {
+	HashTable *ht;
+	zval *object;
+	php_pq_object_t *pq_obj;
+	unsigned addref:1;
+};
+
+static int apply_pi_to_ht(void *p, void *a TSRMLS_DC)
 {
 	zend_property_info *pi = p;
-	HashTable *ht = va_arg(argv, HashTable *);
-	zval *object = va_arg(argv, zval *);
-	php_pq_object_t *obj = va_arg(argv, php_pq_object_t *);
-	int addref = va_arg(argv, int);
-	zval *property = zend_read_property(obj->zo.ce, object, pi->name, pi->name_length, 0 TSRMLS_CC);
+	struct apply_pi_to_ht_arg *arg = a;
+	zval *property = zend_read_property(arg->pq_obj->zo.ce, arg->object, pi->name, pi->name_length, 0 TSRMLS_CC);
 
-	if (addref) {
+	if (arg->addref) {
 		Z_ADDREF_P(property);
 	}
-	zend_hash_update(ht, pi->name, pi->name_length + 1, (void *) &property, sizeof(zval *), NULL);
+	zend_hash_update(arg->ht, pi->name, pi->name_length + 1, (void *) &property, sizeof(zval *), NULL);
 
 	return ZEND_HASH_APPLY_KEEP;
 }
 
 HashTable *php_pq_object_debug_info(zval *object, int *temp TSRMLS_DC)
 {
-	HashTable *ht;
-	php_pq_object_t *obj = zend_object_store_get_object(object TSRMLS_CC);
+	struct apply_pi_to_ht_arg arg = {NULL};
 
 	*temp = 1;
-	ALLOC_HASHTABLE(ht);
-	ZEND_INIT_SYMTABLE(ht);
+	ALLOC_HASHTABLE(arg.ht);
+	ZEND_INIT_SYMTABLE(arg.ht);
 
-	zend_hash_apply_with_arguments(&obj->zo.ce->properties_info TSRMLS_CC, apply_pi_to_ht, 4, ht, object, obj, 1);
+	arg.object = object;
+	arg.pq_obj = zend_object_store_get_object(object TSRMLS_CC);
+	arg.addref = 1;
 
-	return ht;
+	zend_hash_apply_with_argument(&arg.pq_obj->zo.ce->properties_info, apply_pi_to_ht, &arg TSRMLS_CC);
+
+	return arg.ht;
 }
 
 HashTable *php_pq_object_properties(zval *object TSRMLS_DC)
 {
-	HashTable *ht = zend_get_std_object_handlers()->get_properties(object TSRMLS_CC);
-	php_pq_object_t *obj = zend_object_store_get_object(object TSRMLS_CC);
+	struct apply_pi_to_ht_arg arg = {NULL};
 
-	zend_hash_apply_with_arguments(&obj->zo.ce->properties_info TSRMLS_CC, apply_pi_to_ht, 4, ht, object, obj, 1);
+	arg.ht = zend_get_std_object_handlers()->get_properties(object TSRMLS_CC);
+	arg.object = object;
+	arg.pq_obj = zend_object_store_get_object(object TSRMLS_CC);
+	arg.addref = 1;
 
-	return ht;
+	zend_hash_apply_with_argument(&arg.pq_obj->zo.ce->properties_info, apply_pi_to_ht, &arg TSRMLS_CC);
+
+	return arg.ht;
 }
 
 zend_class_entry *ancestor(zend_class_entry *ce)

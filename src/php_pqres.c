@@ -873,37 +873,41 @@ static PHP_METHOD(pqres, fetchAllCols) {
 	}
 }
 
-static int apply_to_col(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
+struct apply_to_col_arg {
+	php_pqres_object_t *obj;
+	php_pqres_col_t *cols;
+	STATUS status;
+};
+
+static int apply_to_col(void *p, void *a TSRMLS_DC)
 {
 	zval **c = p;
-	php_pqres_object_t *obj = va_arg(argv, php_pqres_object_t *);
-	php_pqres_col_t *col, **cols = va_arg(argv, php_pqres_col_t **);
-	STATUS *rv = va_arg(argv, STATUS *);
+	struct apply_to_col_arg *arg = a;
 
-	col = *cols;
-
-	if (SUCCESS != column_nn(obj, *c, col TSRMLS_CC)) {
-		*rv = FAILURE;
+	if (SUCCESS != column_nn(arg->obj, *c, arg->cols TSRMLS_CC)) {
+		arg->status = FAILURE;
 		return ZEND_HASH_APPLY_STOP;
 	} else {
-		*rv = SUCCESS;
-		++*cols;
+		arg->status = SUCCESS;
+		++arg->cols;
 		return ZEND_HASH_APPLY_KEEP;
 	}
 }
 
 static php_pqres_col_t *php_pqres_convert_to_cols(php_pqres_object_t *obj, HashTable *ht TSRMLS_DC)
 {
-	php_pqres_col_t *tmp, *cols = ecalloc(zend_hash_num_elements(ht), sizeof(*cols));
-	STATUS rv = SUCCESS;
+	struct apply_to_col_arg arg = {NULL};
+	php_pqres_col_t *tmp;
 
-	tmp = cols;
-	zend_hash_apply_with_arguments(ht TSRMLS_CC, apply_to_col, 2, obj, &tmp, &rv);
+	arg.obj = obj;
+	arg.cols = ecalloc(zend_hash_num_elements(ht), sizeof(*tmp));
+	tmp = arg.cols;
+	zend_hash_apply_with_argument(ht, apply_to_col, &arg TSRMLS_CC);
 
-	if (SUCCESS == rv) {
-		return cols;
+	if (SUCCESS == arg.status) {
+		return tmp;
 	} else {
-		efree(cols);
+		efree(tmp);
 		return NULL;
 	}
 }

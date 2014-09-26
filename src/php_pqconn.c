@@ -1830,20 +1830,25 @@ static PHP_METHOD(pqconn, on) {
 	}
 }
 
-static int apply_set_converter(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
+struct apply_set_converter_arg {
+	HashTable *ht;
+	zval **zconv;
+	unsigned add:1;
+};
+
+static int apply_set_converter(void *p, void *a TSRMLS_DC)
 {
-	zval *tmp, **zoid = p, **zcnv = va_arg(argv, zval **);
-	HashTable *converters = va_arg(argv, HashTable *);
-	int add = va_arg(argv, int);
+	zval *tmp, **zoid = p;
+	struct apply_set_converter_arg *arg = a;
 
 	tmp = *zoid;
 	Z_ADDREF_P(tmp);
 	convert_to_long_ex(&tmp);
-	if (add) {
-		Z_ADDREF_PP(zcnv);
-		zend_hash_index_update(converters, Z_LVAL_P(tmp), zcnv, sizeof(zval *), NULL);
+	if (arg->add) {
+		Z_ADDREF_PP(arg->zconv);
+		zend_hash_index_update(arg->ht, Z_LVAL_P(tmp), arg->zconv, sizeof(zval *), NULL);
 	} else {
-		zend_hash_index_del(converters, Z_LVAL_P(tmp));
+		zend_hash_index_del(arg->ht, Z_LVAL_P(tmp));
 	}
 	zval_ptr_dtor(&tmp);
 
@@ -1869,12 +1874,19 @@ static PHP_METHOD(pqconn, setConverter) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
 		} else {
 			zval *tmp, *zoids = NULL;
+			struct apply_set_converter_arg arg = {NULL};
 
 			zend_call_method_with_0_params(&zcnv, NULL, NULL, "converttypes", &zoids);
 			tmp = zoids;
 			Z_ADDREF_P(tmp);
 			convert_to_array_ex(&tmp);
-			zend_hash_apply_with_arguments(Z_ARRVAL_P(tmp) TSRMLS_CC, apply_set_converter, 3, &zcnv, &obj->intern->converters, 1);
+
+			arg.ht = &obj->intern->converters;
+			arg.zconv = &zcnv;
+			arg.add = 1;
+
+			zend_hash_apply_with_argument(Z_ARRVAL_P(tmp), apply_set_converter, &arg TSRMLS_CC);
+
 			zval_ptr_dtor(&tmp);
 			zval_ptr_dtor(&zoids);
 		}
@@ -1900,12 +1912,19 @@ static PHP_METHOD(pqconn, unsetConverter) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
 		} else {
 			zval *tmp, *zoids = NULL;
+			struct apply_set_converter_arg arg = {NULL};
 
 			zend_call_method_with_0_params(&zcnv, NULL, NULL, "converttypes", &zoids);
 			tmp = zoids;
 			Z_ADDREF_P(tmp);
 			convert_to_array_ex(&tmp);
-			zend_hash_apply_with_arguments(Z_ARRVAL_P(tmp) TSRMLS_CC, apply_set_converter, 3, &zcnv, &obj->intern->converters, 0);
+
+			arg.ht = &obj->intern->converters;
+			arg.zconv = &zcnv;
+			arg.add = 0;
+
+			zend_hash_apply_with_argument(Z_ARRVAL_P(tmp), apply_set_converter, &arg TSRMLS_CC);
+
 			zval_ptr_dtor(&tmp);
 			zval_ptr_dtor(&zoids);
 		}
