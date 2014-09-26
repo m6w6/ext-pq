@@ -165,8 +165,14 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqstm, bind) {
 	long param_no;
 	zval *param_ref;
+	zend_error_handling zeh;
+	STATUS rv;
 
-	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lz", &param_no, &param_ref)) {
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lz", &param_no, &param_ref);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqstm_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
 		if (!obj->intern) {

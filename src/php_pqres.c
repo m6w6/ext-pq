@@ -1136,7 +1136,7 @@ PHP_MINIT_FUNCTION(pqres)
 	php_pqres_object_handlers.get_properties = php_pq_object_properties;
 	php_pqres_object_handlers.count_elements = php_pqres_count_elements;
 
-	zend_hash_init(&php_pqres_object_prophandlers, 6, NULL, NULL, 1);
+	zend_hash_init(&php_pqres_object_prophandlers, 8, NULL, NULL, 1);
 
 	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("status"), ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqres_object_read_status;

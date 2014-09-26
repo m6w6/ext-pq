@@ -355,7 +355,7 @@ static PHP_METHOD(pqtxn, commit) {
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Transacation not initialized");
 		} else if (!obj->intern->open) {
-			throw_exce(EX_RUNTIME TSRMLS_CC, "pq\\Transacation already closed");
+			throw_exce(EX_RUNTIME TSRMLS_CC, "pq\\Transaction already closed");
 		} else {
 			PGresult *res;
 			smart_str cmd = {0};

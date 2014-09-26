@@ -207,7 +207,7 @@ static PHP_METHOD(pqtypes, __construct) {
 			obj->intern = ecalloc(1, sizeof(*obj->intern));
 			obj->intern->conn = conn_obj;
 			php_pq_object_addref(conn_obj TSRMLS_CC);
-			zend_hash_init(&obj->intern->types, 300, NULL, ZVAL_PTR_DTOR, 0);
+			zend_hash_init(&obj->intern->types, 512, NULL, ZVAL_PTR_DTOR, 0);
 
 			if (znsp) {
 				zend_call_method_with_1_params(&getThis(), Z_OBJCE_P(getThis()), NULL, "refresh", &retval, znsp);
@@ -336,6 +336,10 @@ PHP_MINIT_FUNCTION(pqtypes)
 	INIT_NS_CLASS_ENTRY(ce, "pq", "Types", php_pqtypes_methods);
 	php_pqtypes_class_entry = zend_register_internal_class_ex(&ce, NULL, NULL TSRMLS_CC);
 	php_pqtypes_class_entry->create_object = php_pqtypes_create_object;
+
+	/*
+	zend_class_implements(php_pqtypes_class_entry TSRMLS_CC, 1, zend_ce_arrayaccess);
+	*/
 
 	memcpy(&php_pqtypes_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 	php_pqtypes_object_handlers.read_property = php_pq_object_read_prop;

@@ -1970,7 +1970,7 @@ PHP_MINIT_FUNCTION(pqconn)
 	php_pqconn_object_handlers.get_properties = php_pq_object_properties;
 	php_pqconn_object_handlers.get_debug_info = php_pq_object_debug_info;
 
-	zend_hash_init(&php_pqconn_object_prophandlers, 14, NULL, NULL, 1);
+	zend_hash_init(&php_pqconn_object_prophandlers, 19, NULL, NULL, 1);
 
 	zend_declare_property_long(php_pqconn_class_entry, ZEND_STRL("status"), CONNECTION_BAD, ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqconn_object_read_status;
