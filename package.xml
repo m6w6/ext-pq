@@ -17,11 +17,11 @@ http://pear.php.net/dtd/package-2.0.xsd">
  
  Highlights:
  * Nearly 100% support for asynchronous usage:
-   https://bitbucket.org/m6w6/ext-pq/wiki/AsyncOperations
+   http://devel-m6w6.rhcloud.com/mdref/pq/Connection/%3A%20Asynchronous%20Usage
  * Extended type support by pg_type:
-   https://bitbucket.org/m6w6/ext-pq/wiki/UsingTypes
+   http:/devel-m6w6.rhcloud.com/mdref/pq/Types/%3A%20Overview
  * Fetching simple multi-dimensional array maps:
-   https://bitbucket.org/m6w6/ext-pq/wiki/FetchingResults#markdown-header-fetching-simple-maps
+   http:/devel-m6w6.rhcloud.com/mdref/pq/Result/map
  * Working Gateway implementation: 
    https://bitbucket.org/m6w6/pq-gateway
  </description>
@@ -31,10 +31,10 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>mike@php.net</email>
   <active>yes</active>
  </lead>
- <date>2014-09-11</date>
+ <date>2014-09-30</date>
  <version>
-  <release>0.5.0dev</release>
-  <api>0.4.0</api>
+  <release>0.6.0dev</release>
+  <api>0.6.0</api>
  </version>
  <stability>
   <release>beta</release>
