@@ -573,7 +573,7 @@ static inline PGresult *unlisten(PGconn *conn, const char *channel_str, size_t c
 static int apply_unlisten(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
 {
 	php_pqconn_object_t *obj = va_arg(argv, php_pqconn_object_t *);
-	PGresult *res = unlisten(obj->intern->conn, key->arKey, key->nKeyLength - 1);
+	PGresult *res = unlisten(obj->intern->conn, key->arKey, key->nKeyLength - 1 TSRMLS_CC);
 
 	if (res) {
 		PHP_PQclear(res);
@@ -758,7 +758,7 @@ static PHP_METHOD(pqconn, unlisten)
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
 		} else if (SUCCESS == zend_hash_del(&obj->intern->listeners, channel_str, channel_len + 1)) {
-			PGresult *res = unlisten(obj->intern->conn, channel_str, channel_len);
+			PGresult *res = unlisten(obj->intern->conn, channel_str, channel_len TSRMLS_CC);
 
 			if (res) {
 				php_pqres_success(res TSRMLS_CC);
