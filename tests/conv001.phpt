@@ -27,11 +27,11 @@ class HStoreConverter extends Converter
 		return [ $this->types["hstore"]->oid ];
 	}
 	
-	function convertFromString($string) {
+	function convertFromString($string, $type) {
 		return eval("return [$string];");
 	}
 	
-	function convertToString($data) {
+	function convertToString($data, $type) {
 		$string = "";
 		foreach ($data as $k => $v) {
 			if (isset($v)) {
@@ -53,11 +53,11 @@ class IntVectorConverter extends Converter
 		];
 	}
 	
-	function convertFromString($string) {
+	function convertFromString($string, $type) {
 		return array_map("intval", explode(" ", $string));
 	}
 	
-	function convertToString($data) {
+	function convertToString($data, $type) {
 		return implode(" ", $data);
 	}
 }
@@ -68,11 +68,11 @@ class JSONConverter extends Converter
 		return [ $this->types["json"]->oid ];
 	}
 	
-	function convertFromString($string) {
+	function convertFromString($string, $type) {
 		return json_decode($string);
 	}
 	
-	function convertToString($data) {
+	function convertToString($data, $type) {
 		return json_encode($data);
 	}
 }

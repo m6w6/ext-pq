@@ -148,9 +148,12 @@ static int apply_to_param_from_array(void *ptr, void *arg_ptr TSRMLS_DC)
 	}
 
 	if (arg->zconv) {
-		zval *rv = NULL;
+		zval *ztype, *rv = NULL;
 
-		zend_call_method_with_1_params(arg->zconv, NULL, NULL, "converttostring", &rv, zcopy);
+		MAKE_STD_ZVAL(ztype);
+		ZVAL_LONG(ztype, arg->type);
+		zend_call_method_with_2_params(arg->zconv, NULL, NULL, "converttostring", &rv, zcopy, ztype);
+		zval_ptr_dtor(&ztype);
 		convert_to_string(rv);
 		zcopy = rv;
 		goto append_string;
@@ -256,9 +259,12 @@ static void php_pq_params_set_param(php_pq_params_t *p, unsigned index, zval **z
 	TSRMLS_DF(p);
 
 	if (type && SUCCESS == zend_hash_index_find(&p->type.conv, type, (void *) &zconv)) {
-		zval *rv = NULL;
+		zval *ztype, *rv = NULL;
 
-		zend_call_method_with_1_params(zconv, NULL, NULL, "converttostring", &rv, *zpp);
+		MAKE_STD_ZVAL(ztype);
+		ZVAL_LONG(ztype, type);
+		zend_call_method_with_2_params(zconv, NULL, NULL, "converttostring", &rv, *zpp, ztype);
+		zval_ptr_dtor(&ztype);
 		convert_to_string(rv);
 		p->param.strings[index] = Z_STRVAL_P(rv);
 		zend_hash_next_index_insert(&p->param.dtor, (void *) &rv, sizeof(zval *), NULL);

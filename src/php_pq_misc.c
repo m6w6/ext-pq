@@ -142,12 +142,14 @@ zend_class_entry *php_pqconv_class_entry;
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconv_convert_types, 0, 0, 0)
 ZEND_END_ARG_INFO();
 
-ZEND_BEGIN_ARG_INFO_EX(ai_pqconv_convert_from_string, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(ai_pqconv_convert_from_string, 0, 0, 2)
 	ZEND_ARG_INFO(0, data)
+	ZEND_ARG_INFO(0, type)
 ZEND_END_ARG_INFO();
 
-ZEND_BEGIN_ARG_INFO_EX(ai_pqconv_convert_to_string, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(ai_pqconv_convert_to_string, 0, 0, 2)
 	ZEND_ARG_INFO(0, data)
+	ZEND_ARG_INFO(0, type)
 ZEND_END_ARG_INFO();
 
 zend_function_entry php_pqconv_methods[] = {

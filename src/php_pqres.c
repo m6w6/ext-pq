@@ -98,10 +98,13 @@ zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRM
 	MAKE_STD_ZVAL(zv);
 
 	if (SUCCESS == zend_hash_index_find(&res->converters, typ, (void *) &zconv)) {
-		zval *tmp = NULL;
+		zval *ztype, *tmp = NULL;
 
+		MAKE_STD_ZVAL(ztype);
+		ZVAL_LONG(ztype, typ);
 		ZVAL_STRINGL(zv, val, len, 1);
-		zend_call_method_with_1_params(zconv, NULL, NULL, "convertfromstring", &tmp, zv);
+		zend_call_method_with_2_params(zconv, NULL, NULL, "convertfromstring", &tmp, zv, ztype);
+		zval_ptr_dtor(&ztype);
 
 		if (tmp) {
 			zval_ptr_dtor(&zv);

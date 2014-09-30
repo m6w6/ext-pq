@@ -192,7 +192,7 @@ static PHP_METHOD(pqcopy, put) {
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\COPY not initialized");
 		} else if (obj->intern->direction != PHP_PQCOPY_FROM_STDIN) {
-			throw_exce(EX_RUNTIME TSRMLS_CC, "pq\\COPY was not initialized with FROM_STDIN");
+			throw_exce(EX_BAD_METHODCALL TSRMLS_CC, "pq\\COPY was not initialized with FROM_STDIN");
 		} else {
 			if (1 != PQputCopyData(obj->intern->conn->intern->conn, data_str, data_len)) {
 				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to put COPY data (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
@@ -219,9 +219,9 @@ static PHP_METHOD(pqcopy, end) {
 		php_pqcopy_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
 		if (!obj->intern) {
-			throw_exce(EX_RUNTIME TSRMLS_CC, "pq\\COPY not intitialized");
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\COPY not intitialized");
 		} else if (obj->intern->direction != PHP_PQCOPY_FROM_STDIN) {
-			throw_exce(EX_RUNTIME TSRMLS_CC, "pq\\COPY was not intitialized with FROM_STDIN");
+			throw_exce(EX_BAD_METHODCALL TSRMLS_CC, "pq\\COPY was not intitialized with FROM_STDIN");
 		} else {
 			if (1 != PQputCopyEnd(obj->intern->conn->intern->conn, error_str)) {
 				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to end COPY (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
