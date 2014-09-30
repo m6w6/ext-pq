@@ -346,7 +346,7 @@ array(1) {
       string(3) "UTC"
     }
     [17]=>
-    object(pq\DateTime)#159 (4) {
+    object(pq\DateTime)#%d (4) {
       ["format"]=>
       string(14) "Y-m-d H:i:s.uO"
       ["date"]=>
