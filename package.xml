@@ -148,7 +148,6 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </dependencies>
  <providesextension>pq</providesextension>
  <extsrcrelease>
-  <configureoption default="yes" name="with-pq" prompt="whether to enable libpq support" />
  </extsrcrelease>
 </package>
 
