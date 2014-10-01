@@ -164,12 +164,12 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_bind, 0, 0, 2)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqstm, bind) {
 	long param_no;
-	zval *param_ref;
+	zval **param_ref;
 	zend_error_handling zeh;
 	STATUS rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lz", &param_no, &param_ref);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lZ", &param_no, &param_ref);
 	zend_restore_error_handling(&zeh TSRMLS_CC);
 
 	if (SUCCESS == rv) {
@@ -178,8 +178,9 @@ static PHP_METHOD(pqstm, bind) {
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Statement not initialized");
 		} else {
-			Z_ADDREF_P(param_ref);
-			zend_hash_index_update(&obj->intern->bound, param_no, (void *) &param_ref, sizeof(zval *), NULL);
+			SEPARATE_ZVAL_TO_MAKE_IS_REF(param_ref);
+			Z_ADDREF_PP(param_ref);
+			zend_hash_index_update(&obj->intern->bound, param_no, (void *) param_ref, sizeof(zval *), NULL);
 			zend_hash_sort(&obj->intern->bound, zend_qsort, compare_index, 0 TSRMLS_CC);
 		}
 	}

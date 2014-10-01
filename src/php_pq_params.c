@@ -113,9 +113,9 @@ static zval *object_param_to_string(php_pq_params_t *p, zval *zobj, Oid type TSR
 		break;
 
 	default:
-		SEPARATE_ZVAL(&zobj);
-		convert_to_string(zobj);
-		return_value = zobj;
+		MAKE_STD_ZVAL(return_value);
+		MAKE_COPY_ZVAL(&zobj, return_value);
+		convert_to_string(return_value);
 		break;
 	}
 
@@ -154,9 +154,16 @@ static int apply_to_param_from_array(void *ptr, void *arg_ptr TSRMLS_DC)
 		ZVAL_LONG(ztype, arg->type);
 		zend_call_method_with_2_params(arg->zconv, NULL, NULL, "converttostring", &rv, zcopy, ztype);
 		zval_ptr_dtor(&ztype);
-		convert_to_string(rv);
-		zcopy = rv;
+
+		if (rv) {
+			convert_to_string(rv);
+			zcopy = rv;
+		} else {
+			return ZEND_HASH_APPLY_STOP;
+		}
+
 		goto append_string;
+
 	} else {
 		switch (Z_TYPE_P(zcopy)) {
 		case IS_NULL:
@@ -213,7 +220,7 @@ static int apply_to_param_from_array(void *ptr, void *arg_ptr TSRMLS_DC)
 
 static zval *array_param_to_string(php_pq_params_t *p, zval *zarr, Oid type TSRMLS_DC)
 {
-	zval *return_value;
+	zval *zcopy, *return_value;
 	smart_str s = {0};
 	struct apply_to_param_from_array_arg arg = {NULL};
 
@@ -234,7 +241,10 @@ static zval *array_param_to_string(php_pq_params_t *p, zval *zarr, Oid type TSRM
 		arg.type = PHP_PQ_TYPE_OF_ARRAY(type);
 		zend_hash_index_find(&p->type.conv, PHP_PQ_TYPE_OF_ARRAY(type), (void *) &arg.zconv);
 		smart_str_appendc(arg.buffer, '{');
-		zend_hash_apply_with_argument(Z_ARRVAL_P(zarr), apply_to_param_from_array, &arg TSRMLS_CC);
+		MAKE_STD_ZVAL(zcopy);
+		MAKE_COPY_ZVAL(&zarr, zcopy);
+		zend_hash_apply_with_argument(Z_ARRVAL_P(zcopy), apply_to_param_from_array, &arg TSRMLS_CC);
+		zval_ptr_dtor(&zcopy);
 		smart_str_appendc(arg.buffer, '}');
 		smart_str_0(&s);
 		break;
@@ -265,9 +275,11 @@ static void php_pq_params_set_param(php_pq_params_t *p, unsigned index, zval **z
 		ZVAL_LONG(ztype, type);
 		zend_call_method_with_2_params(zconv, NULL, NULL, "converttostring", &rv, *zpp, ztype);
 		zval_ptr_dtor(&ztype);
-		convert_to_string(rv);
-		p->param.strings[index] = Z_STRVAL_P(rv);
-		zend_hash_next_index_insert(&p->param.dtor, (void *) &rv, sizeof(zval *), NULL);
+		if (rv) {
+			convert_to_string(rv);
+			p->param.strings[index] = Z_STRVAL_P(rv);
+			zend_hash_next_index_insert(&p->param.dtor, (void *) &rv, sizeof(zval *), NULL);
+		}
 	} else {
 		zval *tmp, *zcopy = *zpp;
 
@@ -281,13 +293,18 @@ static void php_pq_params_set_param(php_pq_params_t *p, unsigned index, zval **z
 			return;
 
 		case IS_DOUBLE:
-			SEPARATE_ZVAL(&zcopy);
+			MAKE_STD_ZVAL(zcopy);
+			MAKE_COPY_ZVAL(zpp, zcopy);
 			Z_TYPE_P(zcopy) = IS_STRING;
 			Z_STRLEN_P(zcopy) = spprintf(&Z_STRVAL_P(zcopy), 0, "%F", Z_DVAL_PP(zpp));
 			break;
 
 		case IS_ARRAY:
-			zcopy = array_param_to_string(p, zcopy, type TSRMLS_CC);
+			MAKE_STD_ZVAL(zcopy);
+			MAKE_COPY_ZVAL(zpp, zcopy);
+			tmp = array_param_to_string(p, zcopy, type TSRMLS_CC);
+			zval_ptr_dtor(&zcopy);
+			zcopy = tmp;
 			break;
 
 		case IS_OBJECT:
@@ -310,12 +327,17 @@ static void php_pq_params_set_param(php_pq_params_t *p, unsigned index, zval **z
 	}
 }
 
-static int apply_to_params(void *zp TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
-{
-	php_pq_params_t *p = (php_pq_params_t *) va_arg(argv, php_pq_params_t *);
-	unsigned *index = (unsigned *) va_arg(argv, unsigned *);
+struct apply_to_params_arg {
+	php_pq_params_t *params;
+	unsigned index;
+};
 
-	php_pq_params_set_param(p, (*index)++, zp);
+static int apply_to_params(void *zp, void *arg_ptr TSRMLS_DC)
+{
+	struct apply_to_params_arg *arg = arg_ptr;
+
+	SEPARATE_ZVAL_IF_NOT_REF((zval **) zp);
+	php_pq_params_set_param(arg->params, arg->index++, zp);
 	return ZEND_HASH_APPLY_KEEP;
 }
 
@@ -337,9 +359,9 @@ unsigned php_pq_params_set_params(php_pq_params_t *p, HashTable *params)
 	}
 	zend_hash_clean(&p->param.dtor);
 	if (p->param.count) {
-		unsigned index = 0;
+		struct apply_to_params_arg arg = {p, 0};
 		p->param.strings = ecalloc(p->param.count, sizeof(*p->param.strings));
-		zend_hash_apply_with_arguments(params TSRMLS_CC, apply_to_params, 2, p, &index);
+		zend_hash_apply_with_argument(params, apply_to_params, &arg TSRMLS_CC);
 	}
 	return p->param.count;
 }
