@@ -161,6 +161,77 @@ static void php_pqcur_object_read_connection(zval *object, void *o, zval *return
 	php_pq_object_to_zval(obj->intern->conn, &return_value TSRMLS_CC);
 }
 
+char *php_pqcur_declare_str(const char *name_str, size_t name_len, unsigned flags, const char *query_str, size_t query_len)
+{
+	size_t decl_len = name_len + query_len + sizeof("DECLARE BINARY INSENSITIVE NO SCROLL  CURSOR WITHOUT HOLD FOR ");
+	char *decl_str;
+
+	decl_str = emalloc(decl_len);
+	decl_len = slprintf(decl_str, decl_len, "DECLARE %s %s %s %s CURSOR %s FOR %s",
+			name_str,
+			(flags & PHP_PQ_DECLARE_BINARY) ? "BINARY" : "",
+			(flags & PHP_PQ_DECLARE_INSENSITIVE) ? "INSENSITIVE" : "",
+			(flags & PHP_PQ_DECLARE_NO_SCROLL) ? "NO SCROLL" :
+					(flags & PHP_PQ_DECLARE_SCROLL) ? "SCROLL" : "",
+			(flags & PHP_PQ_DECLARE_WITH_HOLD) ? "WITH HOLD" : "",
+			query_str
+	);
+	return decl_str;
+}
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqcur___construct, 0, 0, 4)
+	ZEND_ARG_OBJ_INFO(0, connection, pq\\Connection, 0)
+	ZEND_ARG_INFO(0, name)
+	ZEND_ARG_INFO(0, flags)
+	ZEND_ARG_INFO(0, query)
+	ZEND_ARG_INFO(0, async)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqcur, __construct) {
+	zend_error_handling zeh;
+	char *name_str, *query_str;
+	int name_len, query_len;
+	long flags;
+	zval *zconn;
+	STATUS rv;
+	zend_bool async = 0;
+
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Osls|b", &zconn, php_pqconn_class_entry, &name_str, &name_len, &flags, &query_str, &query_len, &async);
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
+		php_pqcur_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+		php_pqconn_object_t *conn_obj = zend_object_store_get_object(zconn TSRMLS_CC);
+
+		if (obj->intern) {
+			throw_exce(EX_BAD_METHODCALL TSRMLS_CC, "pq\\Cursor already initialized");
+		} if (!conn_obj->intern) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
+		} else {
+			char *decl = php_pqcur_declare_str(name_str, name_len, flags, query_str, query_len);
+
+			if (async) {
+				rv = php_pqconn_declare_async(zconn, conn_obj, decl TSRMLS_CC);
+			} else {
+				rv = php_pqconn_declare(zconn, conn_obj, decl TSRMLS_CC);
+			}
+
+			if (SUCCESS != rv) {
+				efree(decl);
+			} else {
+				php_pqcur_t *cur = ecalloc(1, sizeof(*cur));
+
+				php_pq_object_addref(conn_obj TSRMLS_CC);
+				cur->conn = conn_obj;
+				cur->open = 1;
+				cur->name = estrdup(name_str);
+				cur->decl = decl;
+				obj->intern = cur;
+			}
+		}
+	}
+}
+
 ZEND_BEGIN_ARG_INFO_EX(ai_pqcur_open, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqcur, open)
@@ -242,6 +313,7 @@ static PHP_METHOD(pqcur, moveAsync)
 }
 
 static zend_function_entry php_pqcur_methods[] = {
+	PHP_ME(pqcur, __construct, ai_pqcur___construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
 	PHP_ME(pqcur, open, ai_pqcur_open, ZEND_ACC_PUBLIC)
 	PHP_ME(pqcur, close, ai_pqcur_close, ZEND_ACC_PUBLIC)
 	PHP_ME(pqcur, fetch, ai_pqcur_fetch, ZEND_ACC_PUBLIC)

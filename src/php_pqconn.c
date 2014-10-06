@@ -1343,24 +1343,6 @@ static PHP_METHOD(pqconn, prepareAsync) {
 	}
 }
 
-static inline char *declare_str(const char *name_str, size_t name_len, unsigned flags, const char *query_str, size_t query_len)
-{
-	size_t decl_len = name_len + query_len + sizeof("DECLARE BINARY INSENSITIVE NO SCROLL  CURSOR WITHOUT HOLD FOR ");
-	char *decl_str;
-
-	decl_str = emalloc(decl_len);
-	decl_len = slprintf(decl_str, decl_len, "DECLARE %s %s %s %s CURSOR %s FOR %s",
-			name_str,
-			(flags & PHP_PQ_DECLARE_BINARY) ? "BINARY" : "",
-			(flags & PHP_PQ_DECLARE_INSENSITIVE) ? "INSENSITIVE" : "",
-			(flags & PHP_PQ_DECLARE_NO_SCROLL) ? "NO SCROLL" :
-					(flags & PHP_PQ_DECLARE_SCROLL) ? "SCROLL" : "",
-			(flags & PHP_PQ_DECLARE_WITH_HOLD) ? "WITH HOLD" : "",
-			query_str
-	);
-	return decl_str;
-}
-
 STATUS php_pqconn_declare(zval *object, php_pqconn_object_t *obj, const char *decl TSRMLS_DC)
 {
 	PGresult *res;
@@ -1406,7 +1388,7 @@ static PHP_METHOD(pqconn, declare) {
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
 		} else {
-			char *decl = declare_str(name_str, name_len, flags, query_str, query_len);
+			char *decl = php_pqcur_declare_str(name_str, name_len, flags, query_str, query_len);
 
 			if (SUCCESS != php_pqconn_declare(getThis(), obj, decl TSRMLS_CC)) {
 				efree(decl);
@@ -1471,7 +1453,7 @@ static PHP_METHOD(pqconn, declareAsync) {
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
 		} else {
-			char *decl = declare_str(name_str, name_len, flags, query_str, query_len);
+			char *decl = php_pqcur_declare_str(name_str, name_len, flags, query_str, query_len);
 
 			if (SUCCESS != php_pqconn_declare_async(getThis(), obj, decl TSRMLS_CC)) {
 				efree(decl);

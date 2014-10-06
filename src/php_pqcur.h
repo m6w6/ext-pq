@@ -39,6 +39,8 @@ typedef struct php_pqcur_object {
 zend_class_entry *php_pqcur_class_entry;
 zend_object_value php_pqcur_create_object_ex(zend_class_entry *ce, php_pqcur_t *intern, php_pqcur_object_t **ptr TSRMLS_DC);
 
+char *php_pqcur_declare_str(const char *name_str, size_t name_len, unsigned flags, const char *query_str, size_t query_len);
+
 PHP_MINIT_FUNCTION(pqcur);
 PHP_MSHUTDOWN_FUNCTION(pqcur);
 
