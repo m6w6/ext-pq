@@ -112,7 +112,7 @@ static void php_pqstm_object_read_connection(zval *object, void *o, zval *return
 
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_construct, 0, 0, 3)
-	ZEND_ARG_OBJ_INFO(0, Connection, pq\\Connection, 0)
+	ZEND_ARG_OBJ_INFO(0, connection, pq\\Connection, 0)
 	ZEND_ARG_INFO(0, name)
 	ZEND_ARG_INFO(0, query)
 	ZEND_ARG_ARRAY_INFO(0, types, 1)
@@ -134,7 +134,9 @@ static PHP_METHOD(pqstm, __construct) {
 		php_pqstm_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 		php_pqconn_object_t *conn_obj = zend_object_store_get_object(zconn TSRMLS_CC);
 
-		if (!conn_obj->intern) {
+		if (obj->intern) {
+			throw_exce(EX_BAD_METHODCALL TSRMLS_CC, "pq\\Statement already initialized");
+		} else if (!conn_obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
 		} else {
 			php_pq_params_t *params = php_pq_params_init(&conn_obj->intern->converters, ztypes ? Z_ARRVAL_P(ztypes) : NULL, NULL TSRMLS_CC);

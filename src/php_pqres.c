@@ -1072,7 +1072,14 @@ static PHP_METHOD(pqres, fetchAll) {
 ZEND_BEGIN_ARG_INFO_EX(ai_pqres_count, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, count) {
-	if (SUCCESS == zend_parse_parameters_none()) {
+	zend_error_handling zeh;
+	STATUS rv;
+
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		long count;
 
 		if (SUCCESS != php_pqres_count_elements(getThis(), &count TSRMLS_CC)) {
@@ -1086,7 +1093,14 @@ static PHP_METHOD(pqres, count) {
 ZEND_BEGIN_ARG_INFO_EX(ai_pqres_desc, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, desc) {
-	if (SUCCESS == zend_parse_parameters_none()) {
+	zend_error_handling zeh;
+	STATUS rv;
+
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
 		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
 		if (!obj->intern) {

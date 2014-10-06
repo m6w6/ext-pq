@@ -243,9 +243,12 @@ static PHP_METHOD(pqlob, __construct) {
 	zend_restore_error_handling(&zeh TSRMLS_CC);
 
 	if (SUCCESS == rv) {
+		php_pqlob_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 		php_pqtxn_object_t *txn_obj = zend_object_store_get_object(ztxn TSRMLS_CC);
 
-		if (!txn_obj->intern) {
+		if (obj->intern) {
+			throw_exce(EX_BAD_METHODCALL TSRMLS_CC, "pq\\LOB already initialized");
+		} else if (!txn_obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Transaction not initialized");
 		} else if (!txn_obj->intern->open) {
 			throw_exce(EX_RUNTIME TSRMLS_CC, "pq\\Transation already closed");
@@ -262,8 +265,6 @@ static PHP_METHOD(pqlob, __construct) {
 				if (lofd < 0) {
 					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to open large object with oid=%u with mode '%s' (%s)", loid, strmode(mode), PHP_PQerrorMessage(txn_obj->intern->conn->intern->conn));
 				} else {
-					php_pqlob_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
-
 					obj->intern = ecalloc(1, sizeof(*obj->intern));
 					obj->intern->lofd = lofd;
 					obj->intern->loid = loid;
