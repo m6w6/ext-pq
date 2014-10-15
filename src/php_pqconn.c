@@ -301,6 +301,25 @@ static void php_pqconn_object_read_port(zval *object, void *o, zval *return_valu
 	}
 }
 
+static void php_pqconn_object_read_params(zval *object, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqconn_object_t *obj = o;
+	PQconninfoOption *ptr, *params = PQconninfo(obj->intern->conn);
+
+	array_init(return_value);
+
+	if (params) {
+		for (ptr = params; ptr->keyword; ++ptr) {
+			if (ptr->val) {
+				add_assoc_string(return_value, ptr->keyword, ptr->val, 1);
+			} else {
+				add_assoc_null(return_value, ptr->keyword);
+			}
+		}
+		PQconninfoFree(params);
+	}
+}
+
 static void php_pqconn_object_read_options(zval *object, void *o, zval *return_value TSRMLS_DC)
 {
 	php_pqconn_object_t *obj = o;
@@ -1971,7 +1990,7 @@ PHP_MINIT_FUNCTION(pqconn)
 	php_pqconn_object_handlers.get_properties = php_pq_object_properties;
 	php_pqconn_object_handlers.get_debug_info = php_pq_object_debug_info;
 
-	zend_hash_init(&php_pqconn_object_prophandlers, 19, NULL, NULL, 1);
+	zend_hash_init(&php_pqconn_object_prophandlers, 20, NULL, NULL, 1);
 
 	zend_declare_property_long(php_pqconn_class_entry, ZEND_STRL("status"), CONNECTION_BAD, ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqconn_object_read_status;
@@ -2024,6 +2043,10 @@ PHP_MINIT_FUNCTION(pqconn)
 	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("port"), ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqconn_object_read_port;
 	zend_hash_add(&php_pqconn_object_prophandlers, "port", sizeof("port"), (void *) &ph, sizeof(ph), NULL);
+
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("params"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqconn_object_read_params;
+	zend_hash_add(&php_pqconn_object_prophandlers, "params", sizeof("params"), (void *) &ph, sizeof(ph), NULL);
 
 	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("options"), ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqconn_object_read_options;
