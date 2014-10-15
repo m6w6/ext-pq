@@ -25,6 +25,7 @@
 #include "php_pqcancel.h"
 #include "php_pqconn.h"
 #include "php_pqcopy.h"
+#include "php_pqcur.h"
 #include "php_pqexc.h"
 #include "php_pqlob.h"
 #include "php_pqres.h"
@@ -70,6 +71,7 @@ static PHP_MSHUTDOWN_FUNCTION(pq)
 
 	PHP_MSHUT_CALL(pqlob);
 	PHP_MSHUT_CALL(pqcopy);
+	PHP_MSHUT_CALL(pqcur);
 	PHP_MSHUT_CALL(pqtxn);
 	PHP_MSHUT_CALL(pqstm);
 	PHP_MSHUT_CALL(pqres);
