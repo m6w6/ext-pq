@@ -13,17 +13,17 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <channel>pecl.php.net</channel>
  <summary>PostgreSQL client library (libpq) binding</summary>
  <description>
- Documents: https://bitbucket.org/m6w6/ext-pq/wiki
+ Documents: http://devel-m6w6.rhcloud.com/mdref/pq
  
  Highlights:
- * Nearly 100% support for asynchronous usage:
+ * Nearly complete support for asynchronous usage:
    http://devel-m6w6.rhcloud.com/mdref/pq/Connection/%3A%20Asynchronous%20Usage
  * Extended type support by pg_type:
    http:/devel-m6w6.rhcloud.com/mdref/pq/Types/%3A%20Overview
  * Fetching simple multi-dimensional array maps:
    http:/devel-m6w6.rhcloud.com/mdref/pq/Result/map
  * Working Gateway implementation: 
-   https://bitbucket.org/m6w6/pq-gateway
+   https://http://devel-m6w6.rhcloud.com/mdref/pq-gateway
  </description>
  <lead>
   <name>Michael Wallner</name>
@@ -31,9 +31,9 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>mike@php.net</email>
   <active>yes</active>
  </lead>
- <date>2014-09-30</date>
+ <date>2014-10-15</date>
  <version>
-  <release>0.5.0dev</release>
+  <release>0.5.0</release>
   <api>0.5.0</api>
  </version>
  <stability>
@@ -42,7 +42,24 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license>BSD, revised</license>
  <notes><![CDATA[
-*
++ Published documentation at http://devel-m6w6.rhcloud.com/mdref/pq
++ Added pq\Connection::$params
++ Added pq\Connection::declare(), pq\Connection::declareAsync() and pq\Cursor
++ Added pq\Connection::unlisten() and pq\Connection::off()
++ Added pq\Connection::$defaultFetchType, pq\Connection::$defaultTransactionIsolation, 
+  pq\Connection::$defaultTransactionReadonly and pq\Connection::$defaultTransactionDeferrable
++ Added pq\Connection::$defaultAutoConvert and pq\Result::$autoConvert
++ Added pq\Result::CONV_BOOL, pq\Result::CONV_INT, pq\Result::CONV_FLOAT, pq\Result::CONV_SCALAR,
+  pq\Result::CONV_ARRAY, pq\Result::CONV_DATETIME, pq\Result::CONV_JSON and pq\Result::CONV_ALL
++ Always declare pq\Types OID constants
++ Added pq\Result::fetchAllCols()
+- Reverse arguments of pq\Result::fetchCol()
+- Attempt to access properties of objects that have not been initialized by its constructor will throw E_RECOVERABLE_ERROR
+- Renamed pq\ConverterInterface to pq\Converter
+- Added second argument "$type" to pq\Converter::convertFromString() and pq\Converter::convertToString() 
+* Fixed wakeup of persistent connections to ping the server with an empty query and eventually reset the connection
+* Fixed possible invalid free and leak
+* Fixed a possible crash
 ]]></notes>
  <contents>
   <dir name="/">
