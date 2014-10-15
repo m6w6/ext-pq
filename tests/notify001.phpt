@@ -22,7 +22,7 @@ $producer->notify("test", "this is an async test");
 
 $r = array($consumer->socket);
 $w = null; $e = null;
-var_dump(stream_select($r, $w, $e, 0));
+var_dump(stream_select($r, $w, $e, NULL));
 $consumer->poll();
 
 $producer->notify("other", "this should not show up");
