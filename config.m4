@@ -31,6 +31,7 @@ if test "$PHP_PQ" != "no"; then
 		-L$PQ_DIR/$PHP_LIBDIR
 	])
 	PHP_CHECK_LIBRARY(pq, PQlibVersion, [AC_DEFINE(HAVE_PQLIBVERSION, 1, Have PQlibVersion)])
+	PHP_CHECK_LIBRARY(pq, PQconninfo, [AC_DEFINE(HAVE_PQCONNINFO, 1, Have PQconninfo)])
 	
 	PQ_SRC="\
 		src/php_pq_module.c\

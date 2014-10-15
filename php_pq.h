@@ -14,7 +14,7 @@
 #ifndef PHP_PQ_H
 #define PHP_PQ_H
 
-#define PHP_PQ_VERSION "0.5.0"
+#define PHP_PQ_VERSION "0.5.1"
 
 int pq_module_number;
 zend_module_entry pq_module_entry;
