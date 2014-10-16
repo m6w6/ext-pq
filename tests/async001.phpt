@@ -44,5 +44,5 @@ DONE
 --EXPECTREGEX--
 Test
 (WP(RP)*)+S
-3(,\d+),+4
+(2,)*3(,\d)*,4
 DONE

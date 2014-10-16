@@ -1133,8 +1133,10 @@ static PHP_METHOD(pqconn, execAsync) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
 		} else if (!PQsendQuery(obj->intern->conn, query_str)) {
 			throw_exce(EX_IO TSRMLS_CC, "Failed to execute query (%s)", PHP_PQerrorMessage(obj->intern->conn));
+#if HAVE_PQSETSINGLEROWMODE
 		} else if (obj->intern->unbuffered && !PQsetSingleRowMode(obj->intern->conn)) {
 			throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to enable unbuffered mode (%s)", PHP_PQerrorMessage(obj->intern->conn));
+#endif
 		} else {
 			php_pq_callback_recurse(&obj->intern->onevent, &resolver TSRMLS_CC);
 			obj->intern->poller = PQconsumeInput;
@@ -1222,8 +1224,10 @@ static PHP_METHOD(pqconn, execParamsAsync) {
 
 			if (!rc) {
 				throw_exce(EX_IO TSRMLS_CC, "Failed to execute query (%s)", PHP_PQerrorMessage(obj->intern->conn));
+#if HAVE_PQSETSINGLEROWMODE
 			} else if (obj->intern->unbuffered && !PQsetSingleRowMode(obj->intern->conn)) {
 				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to enable unbuffered mode (%s)", PHP_PQerrorMessage(obj->intern->conn));
+#endif
 			} else {
 				php_pq_callback_recurse(&obj->intern->onevent, &resolver TSRMLS_CC);
 				obj->intern->poller = PQconsumeInput;
@@ -1310,9 +1314,11 @@ STATUS php_pqconn_prepare_async(zval *object, php_pqconn_object_t *obj, const ch
 	if (!PQsendPrepare(obj->intern->conn, name, query, params->type.count, params->type.oids)) {
 		rv = FAILURE;
 		throw_exce(EX_IO TSRMLS_CC, "Failed to prepare statement (%s)", PHP_PQerrorMessage(obj->intern->conn));
+#if HAVE_PQSETSINGLEROWMODE
 	} else if (obj->intern->unbuffered && !PQsetSingleRowMode(obj->intern->conn)) {
 		rv = FAILURE;
 		throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to enable unbuffered mode (%s)", PHP_PQerrorMessage(obj->intern->conn));
+#endif
 	} else {
 		rv = SUCCESS;
 		obj->intern->poller = PQconsumeInput;
@@ -1440,9 +1446,11 @@ STATUS php_pqconn_declare_async(zval *object, php_pqconn_object_t *obj, const ch
 	if (!PQsendQuery(obj->intern->conn, decl)) {
 		rv = FAILURE;
 		throw_exce(EX_IO TSRMLS_CC, "Failed to declare cursor (%s)", PHP_PQerrorMessage(obj->intern->conn));
+#if HAVE_PQSETSINGLEROWMODE
 	} else if (obj->intern->unbuffered && !PQsetSingleRowMode(obj->intern->conn)) {
 		rv = FAILURE;
 		throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to enable unbuffered mode (%s)", PHP_PQerrorMessage(obj->intern->conn));
+#endif
 	} else {
 		rv = SUCCESS;
 		obj->intern->poller = PQconsumeInput;

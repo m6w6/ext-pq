@@ -39,7 +39,7 @@ object(pq\Result)#%d (8) {
   ["numCols"]=>
   int(2)
   ["affectedRows"]=>
-  int(1)
+  int(%d)
   ["fetchType"]=>
   int(0)
   ["autoConvert"]=>

@@ -1,7 +1,10 @@
 --TEST--
 async unbuffered exec
 --SKIPIF--
-<?php include "_skipif.inc"; ?>
+<?php
+include "_skipif.inc";
+defined("pq\\Result::SINGLE_TUPLE") or die("skip need pq\\Result::SINGLE_TUPLE");
+?>
 --FILE--
 <?php
 echo "Test\n";

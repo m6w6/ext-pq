@@ -20,18 +20,47 @@ if test "$PHP_PQ" != "no"; then
 		AC_MSG_ERROR(could not find include/libpq-events.h)
 	fi
 	PHP_ADD_INCLUDE($PQ_DIR/include)
-
-	PQ_SYM=PQregisterEventProc
-	PHP_CHECK_LIBRARY(pq, $PQ_SYM, [
-		PHP_ADD_LIBRARY_WITH_PATH(pq, $PQ_DIR/$PHP_LIBDIR, PQ_SHARED_LIBADD)
-		PHP_SUBST(PQ_SHARED_LIBADD)
-	],[
-		AC_MSG_ERROR(could not find $PQ_SYM in -lpq)
-	],[
-		-L$PQ_DIR/$PHP_LIBDIR
+	
+	ifdef([AC_PROG_EGREP], [
+		AC_PROG_EGREP
+	], [
+		AC_CHECK_PROG(EGREP, egrep, egrep)
 	])
-	PHP_CHECK_LIBRARY(pq, PQlibVersion, [AC_DEFINE(HAVE_PQLIBVERSION, 1, Have PQlibVersion)])
-	PHP_CHECK_LIBRARY(pq, PQconninfo, [AC_DEFINE(HAVE_PQCONNINFO, 1, Have PQconninfo)])
+	
+	for PQ_DEF in PGRES_SINGLE_TUPLE PGRES_COPY_BOTH; do
+		AC_MSG_CHECKING(for $PQ_DEF)
+		if $EGREP -q $PQ_DEF $PQ_DIR/include/libpq-fe.h; then
+			AC_DEFINE([$PQ_DEF], [1], [Have $PQ_DEF])
+			AC_MSG_RESULT(yep)
+		else
+			AC_MSG_RESULT(nope)
+		fi
+	done 
+
+	
+	AC_DEFUN([PQ_CHECK_FUNC], [
+		FAIL_HARD=$2
+		
+		PHP_CHECK_LIBRARY(pq, $1, [
+			AC_DEFINE([HAVE_]translit($1,a-z,A-Z), 1, Have $1)
+		], [
+			if test -n "$FAIL_HARD"; then
+				if "$FAIL_HARD"; then
+					AC_MSG_ERROR(could not find $PQ_SYM in -lpq)
+				fi
+			fi
+		], [
+			-L$PQ_DIR/$PHP_LIBDIR
+		])
+	])
+	
+	PQ_CHECK_FUNC(PQregisterEventProc, true)
+	PHP_ADD_LIBRARY_WITH_PATH(pq, $PQ_DIR/$PHP_LIBDIR, PQ_SHARED_LIBADD)
+	PHP_SUBST(PQ_SHARED_LIBADD)
+	
+	PQ_CHECK_FUNC(PQlibVersion)
+	PQ_CHECK_FUNC(PQconninfo)
+	PQ_CHECK_FUNC(PQsetSingleRowMode)
 	
 	PQ_SRC="\
 		src/php_pq_module.c\

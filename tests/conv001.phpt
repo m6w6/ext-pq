@@ -3,6 +3,7 @@ converter
 --SKIPIF--
 <?php
 include "_skipif.inc";
+_ext("json");
 ?>
 --INI--
 date.timezone=UTC

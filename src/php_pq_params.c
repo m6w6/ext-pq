@@ -17,7 +17,9 @@
 #include <php.h>
 #include <ext/standard/php_string.h>
 #include <ext/standard/php_smart_str.h>
+#ifdef HAVE_JSON
 #include <ext/json/php_json.h>
+#endif
 
 #include <Zend/zend_interfaces.h>
 
@@ -86,7 +88,7 @@ static zval *object_param_to_string(php_pq_params_t *p, zval *zobj, Oid type TSR
 	smart_str str = {0};
 
 	switch (type) {
-#ifdef PHP_PQ_OID_JSON
+#if HAVE_JSON && defined(PHP_PQ_OID_JSON)
 #	ifdef PHP_PQ_OID_JSONB
 	case PHP_PQ_OID_JSONB:
 #	endif
@@ -225,7 +227,7 @@ static zval *array_param_to_string(php_pq_params_t *p, zval *zarr, Oid type TSRM
 	struct apply_to_param_from_array_arg arg = {NULL};
 
 	switch (type) {
-#ifdef PHP_PQ_OID_JSON
+#if HAVE_JSON && defined(PHP_PQ_OID_JSON)
 #	ifdef PHP_PQ_OID_JSONB
 	case PHP_PQ_OID_JSONB:
 #	endif

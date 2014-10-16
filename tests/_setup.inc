@@ -1,2 +1,2 @@
 <?php
-define("PQ_DSN", "");
+define("PQ_DSN", "host=localhost");

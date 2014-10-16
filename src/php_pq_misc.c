@@ -17,9 +17,6 @@
 #include <php.h>
 #include <ext/date/php_date.h>
 #include <ext/standard/php_string.h>
-#if defined(HAVE_JSON) && !defined(COMPILE_DL_JSON)
-#	include <ext/json/php_json.h>
-#endif
 
 #include <Zend/zend_interfaces.h>
 

@@ -47,6 +47,7 @@ zend_class_entry *php_pqconv_class_entry;
 
 HashTable *php_pq_parse_array(php_pqres_t *res, const char *val_str, size_t val_len, Oid typ TSRMLS_DC);
 
+
 PHP_MINIT_FUNCTION(pq_misc);
 
 #endif

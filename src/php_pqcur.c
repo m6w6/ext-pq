@@ -79,8 +79,10 @@ static void cur_fetch_or_move(INTERNAL_FUNCTION_PARAMETERS, const char *action, 
 
 				if (!rc) {
 					throw_exce(EX_IO TSRMLS_CC, "Failed to %s cursor (%s)", *action == 'f' ? "fetch from" : "move in", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+#if HAVE_PQSETSINGLEROWMODE
 				} else if (obj->intern->conn->intern->unbuffered && !PQsetSingleRowMode(obj->intern->conn->intern->conn)) {
 					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to enable unbuffered mode (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+#endif
 				} else {
 					php_pq_callback_recurse(&obj->intern->conn->intern->onevent, &resolver TSRMLS_CC);
 					obj->intern->conn->intern->poller = PQconsumeInput;
