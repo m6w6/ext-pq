@@ -1,19 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package 
- packagerversion="1.4.11" 
- version="2.0" 
- xmlns="http://pear.php.net/dtd/package-2.0" 
- xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" 
- xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
- xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0
-http://pear.php.net/dtd/tasks-1.0.xsd
-http://pear.php.net/dtd/package-2.0
-http://pear.php.net/dtd/package-2.0.xsd">
+<package packagerversion="1.9.5" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
  <name>pq</name>
  <channel>pecl.php.net</channel>
  <summary>PostgreSQL client library (libpq) binding</summary>
- <description>
- Documents: http://devel-m6w6.rhcloud.com/mdref/pq
+ <description>Documents: http://devel-m6w6.rhcloud.com/mdref/pq
  
  Highlights:
  * Nearly complete support for asynchronous usage:
@@ -23,8 +13,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  * Fetching simple multi-dimensional array maps:
    http:/devel-m6w6.rhcloud.com/mdref/pq/Result/map
  * Working Gateway implementation: 
-   https://http://devel-m6w6.rhcloud.com/mdref/pq-gateway
- </description>
+   https://http://devel-m6w6.rhcloud.com/mdref/pq-gateway</description>
  <lead>
   <name>Michael Wallner</name>
   <user>mike</user>
@@ -32,8 +21,9 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <active>yes</active>
  </lead>
  <date>2014-10-17</date>
+ <time>07:55:42</time>
  <version>
-  <release>0.5.2</release>
+  <release>0.5.3dev</release>
   <api>0.5.0</api>
  </version>
  <stability>
@@ -41,94 +31,89 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <api>beta</api>
  </stability>
  <license>BSD, revised</license>
- <notes><![CDATA[
-* Support PostgreSQL 9.0 and up
-* Make JSON support optional
-]]></notes>
+ <notes>
+* Fix JSON dependency handling (Remi)
+ </notes>
  <contents>
   <dir name="/">
-   <file role="doc" name="CREDITS" />
-   <file role="doc" name="LICENSE" />
-   <file role="src" name="config.m4" />
-   <file role="src" name="php_pq.h" />
-   <file role="src" name="php_pq_type.awk" />
-   <file role="src" name="php_pq_type.h" />
-   <dir name="src">
-    <file role="src" name="php_pq_callback.c" />
-    <file role="src" name="php_pq_callback.h" />
-    <file role="src" name="php_pqcancel.c" />
-    <file role="src" name="php_pqcancel.h" />
-    <file role="src" name="php_pqconn.c" />
-    <file role="src" name="php_pqconn_event.c" />
-    <file role="src" name="php_pqconn_event.h" />
-    <file role="src" name="php_pqconn.h" />
-    <file role="src" name="php_pqcopy.c" />
-    <file role="src" name="php_pqcopy.h" />
-    <file role="src" name="php_pqcur.c" />
-    <file role="src" name="php_pqcur.h" />
-    <file role="src" name="php_pqexc.c" />
-    <file role="src" name="php_pqexc.h" />
-    <file role="src" name="php_pqlob.c" />
-    <file role="src" name="php_pqlob.h" />
-    <file role="src" name="php_pq_misc.c" />
-    <file role="src" name="php_pq_misc.h" />
-    <file role="src" name="php_pq_module.c" />
-    <file role="src" name="php_pq_object.c" />
-    <file role="src" name="php_pq_object.h" />
-    <file role="src" name="php_pq_params.c" />
-    <file role="src" name="php_pq_params.h" />
-    <file role="src" name="php_pqres.c" />
-    <file role="src" name="php_pqres.h" />
-    <file role="src" name="php_pqstm.c" />
-    <file role="src" name="php_pqstm.h" />
-    <file role="src" name="php_pqtxn.c" />
-    <file role="src" name="php_pqtxn.h" />
-    <file role="src" name="php_pqtypes.c" />
-    <file role="src" name="php_pqtypes.h" />
-   </dir>
-   <dir name="tests">
-    <file role="test" name="async001.phpt" />
-    <file role="test" name="async002.phpt" />
-    <file role="test" name="async003.phpt" />
-    <file role="test" name="async004.phpt" />
-    <file role="test" name="async005.phpt" />
-    <file role="test" name="async006.phpt" />
-    <file role="test" name="async007.phpt" />
-    <file role="test" name="async008.phpt" />
-    <file role="test" name="basic001.phpt" />
-    <file role="test" name="basic002.phpt" />
-    <file role="test" name="bound002.phpt" />
-    <file role="test" name="cancel001.phpt" />
-    <file role="test" name="conv001.phpt" />
-    <file role="test" name="copy001.phpt" />
-    <file role="test" name="cursor001.phpt" />
-    <file role="test" name="encoding001.phpt" />
-    <file role="test" name="exceptions001.phpt" />
-    <file role="test" name="exceptions002.phpt" />
-    <file role="test" name="fetch001.phpt" />
-    <file role="test" name="info001.phpt" />
-    <file role="test" name="info002.phpt" />
-    <file role="test" name="lob001.phpt" />
-    <file role="test" name="lob002.phpt" />
-    <file role="test" name="lob003.phpt" />
-    <file role="test" name="lob004.phpt" />
-    <file role="test" name="map001.phpt" />
-    <file role="test" name="notify001.phpt" />
-    <file role="test" name="persistent001.phpt" />
-    <file role="test" name="res001.phpt" />
-    <file role="test" name="reset001.phpt" />
-    <file role="test" name="savepoint001.phpt" />
-    <file role="test" name="stm_bound001.phpt" />
-    <file role="test" name="stm_desc001.phpt" />
-    <file role="test" name="stm_desc002.phpt" />
-    <file role="test" name="trans001.phpt" />
-    <file role="test" name="trans002.phpt" />
-    <file role="test" name="types001.phpt" />
-    <file role="test" name="types002.phpt" />
-    <file role="test" name="unbuffered001.phpt" />
-    <file role="test" name="_setup.inc" />
-    <file role="test" name="_skipif.inc" />
-   </dir>
+   <file md5sum="1df1bbf13a7315080d4ae6afd945571f" name="src/php_pq_callback.c" role="src" />
+   <file md5sum="236c465552a77ee4793c0f06d17b4720" name="src/php_pq_callback.h" role="src" />
+   <file md5sum="9ab168bc75361e5f61b18fb65af92c8f" name="src/php_pqcancel.c" role="src" />
+   <file md5sum="31143cf7cfa352a64bbdec10842a5f92" name="src/php_pqcancel.h" role="src" />
+   <file md5sum="95b1727c34795a004d0784d40199db42" name="src/php_pqconn.c" role="src" />
+   <file md5sum="a9ab82e3c6e92c7af018ca43e636b7cd" name="src/php_pqconn_event.c" role="src" />
+   <file md5sum="0ed794ada269ffe8c1a2b5d37481eda5" name="src/php_pqconn_event.h" role="src" />
+   <file md5sum="c2b2e621f5b0e607a9e44d8db626dcaa" name="src/php_pqconn.h" role="src" />
+   <file md5sum="193dd6e84b72105d7249fbe0d2e95b5e" name="src/php_pqcopy.c" role="src" />
+   <file md5sum="ee0105a392552c7b8478859b98d334d9" name="src/php_pqcopy.h" role="src" />
+   <file md5sum="f57573c95a303bb68f92ab6918bb1edd" name="src/php_pqcur.c" role="src" />
+   <file md5sum="af95a8f038acea76a1b137610975f774" name="src/php_pqcur.h" role="src" />
+   <file md5sum="39af0c0646c3f6193d5607c95006acf9" name="src/php_pqexc.c" role="src" />
+   <file md5sum="5f7c28323360ff1a1686f22cce8b7495" name="src/php_pqexc.h" role="src" />
+   <file md5sum="aace53ba9680380c8e897c8bbb270b3b" name="src/php_pqlob.c" role="src" />
+   <file md5sum="21c85dab81481ae031003104c1c29cb3" name="src/php_pqlob.h" role="src" />
+   <file md5sum="cd0702640f8c979a0f377a7113041ae3" name="src/php_pq_misc.c" role="src" />
+   <file md5sum="a31aad5e6e9256529d6cd17030d3a77b" name="src/php_pq_misc.h" role="src" />
+   <file md5sum="38d3bec375af24c5d98c4e9f5d8a29ad" name="src/php_pq_module.c" role="src" />
+   <file md5sum="4ed1ca0dffc70c45cc0a7f58782eb77c" name="src/php_pq_object.c" role="src" />
+   <file md5sum="3449da3d7f668077aa6f8a38d5a85534" name="src/php_pq_object.h" role="src" />
+   <file md5sum="dda98d36adc45cae9e5445e82d480b63" name="src/php_pq_params.c" role="src" />
+   <file md5sum="88d50ce43c598ede957fa1f6841e2369" name="src/php_pq_params.h" role="src" />
+   <file md5sum="91baefe30ffb85d21c67cdddbf2bac93" name="src/php_pqres.c" role="src" />
+   <file md5sum="54b4c40128683c274eb2cfbd7909b6b8" name="src/php_pqres.h" role="src" />
+   <file md5sum="db83fe7a9cd82c657a1c1c59639e38ed" name="src/php_pqstm.c" role="src" />
+   <file md5sum="6e6506d9a95d5be302bac04fa63bf81d" name="src/php_pqstm.h" role="src" />
+   <file md5sum="66f5c8cf8a6ae416e8547b2b88e97950" name="src/php_pqtxn.c" role="src" />
+   <file md5sum="8c4847f26dace5625280bdde5b267797" name="src/php_pqtxn.h" role="src" />
+   <file md5sum="8d1b195d8302e4e33b77a250a9854841" name="src/php_pqtypes.c" role="src" />
+   <file md5sum="497b0a6e5e59b26832703f902892ceb5" name="src/php_pqtypes.h" role="src" />
+   <file md5sum="d852b03113186fc3dcef68acdcb24aea" name="tests/async001.phpt" role="test" />
+   <file md5sum="3958201d576ba07878f554c37dae024a" name="tests/async002.phpt" role="test" />
+   <file md5sum="d2b52305af9b2ee963a8013892d4a40f" name="tests/async003.phpt" role="test" />
+   <file md5sum="9cc62747d1ecea7830a69aba8eaf428e" name="tests/async004.phpt" role="test" />
+   <file md5sum="c5f950f8c1cc4c3a43dd319c3ae21449" name="tests/async005.phpt" role="test" />
+   <file md5sum="4ce5734b2ce9cded3bf6c2c09efa59d0" name="tests/async006.phpt" role="test" />
+   <file md5sum="c8082d2698c835db3049ea4df55f5ac5" name="tests/async007.phpt" role="test" />
+   <file md5sum="ba0d193a2eaeaca54322214411d57d8f" name="tests/async008.phpt" role="test" />
+   <file md5sum="f2f278840be319ae5d6a0c29c9d98c9c" name="tests/basic001.phpt" role="test" />
+   <file md5sum="4b5bfca2b4e41fc90412cc88077c5dd2" name="tests/basic002.phpt" role="test" />
+   <file md5sum="78c720e918d39eee624621a36c4a763d" name="tests/bound002.phpt" role="test" />
+   <file md5sum="cbd8202ac9f11dbb3de0f475637416aa" name="tests/cancel001.phpt" role="test" />
+   <file md5sum="e61e5ac0383373ad45d149d8057befe9" name="tests/conv001.phpt" role="test" />
+   <file md5sum="53b3db1db965dc2e600d4f40b5f5df0b" name="tests/copy001.phpt" role="test" />
+   <file md5sum="5c24eeeee6e642c632819462ed77bab0" name="tests/cursor001.phpt" role="test" />
+   <file md5sum="3ee96a70db9c8036a6d6bd2032649127" name="tests/encoding001.phpt" role="test" />
+   <file md5sum="4aa06a21043e57c51d53b62eaa9b3e2a" name="tests/exceptions001.phpt" role="test" />
+   <file md5sum="7298c21e469380f27d9f04aa9c64d5c2" name="tests/exceptions002.phpt" role="test" />
+   <file md5sum="762c2130cbeaae6269289c82fb5a4798" name="tests/fetch001.phpt" role="test" />
+   <file md5sum="6165811f29b6535f17cabbfb4c8fecde" name="tests/info001.phpt" role="test" />
+   <file md5sum="74dd6cfe0e971d06626595cd9a55ff03" name="tests/info002.phpt" role="test" />
+   <file md5sum="0042fb8af682dec382dd2906dcb3f4a8" name="tests/lob001.phpt" role="test" />
+   <file md5sum="f8e6ac302cd7ea15d29c410c867e9c3e" name="tests/lob002.phpt" role="test" />
+   <file md5sum="63eb00fe699e78acc163088ce44214ac" name="tests/lob003.phpt" role="test" />
+   <file md5sum="3dfcf766f1f437fcf84c2e8b00fe4b3a" name="tests/lob004.phpt" role="test" />
+   <file md5sum="5df20fac454a140cdbd70a574f452e83" name="tests/map001.phpt" role="test" />
+   <file md5sum="fedd8c97a6beeb8b74e30a3b01a5ce80" name="tests/notify001.phpt" role="test" />
+   <file md5sum="a44f81f58c066962b34712ad77b0c95d" name="tests/persistent001.phpt" role="test" />
+   <file md5sum="ed5ab67aa07d24481c1bd0caa41c396c" name="tests/res001.phpt" role="test" />
+   <file md5sum="73bc65f664c765dfc4954fa5fd013639" name="tests/reset001.phpt" role="test" />
+   <file md5sum="9d75770f1ad9d968eb27cd511d8c73d4" name="tests/savepoint001.phpt" role="test" />
+   <file md5sum="25b5f204b0c56efbb06097bdff2a27e7" name="tests/stm_bound001.phpt" role="test" />
+   <file md5sum="8387ee0712269bf640fd2f404b983f9a" name="tests/stm_desc001.phpt" role="test" />
+   <file md5sum="c58524a1d3c3be01c9e3d4978d658c62" name="tests/stm_desc002.phpt" role="test" />
+   <file md5sum="7b1d099119c7ac0fe57686ecdca94d50" name="tests/trans001.phpt" role="test" />
+   <file md5sum="2174585b0105adc5247200865bf06670" name="tests/trans002.phpt" role="test" />
+   <file md5sum="0168518265e7872714d86ffedde27067" name="tests/types001.phpt" role="test" />
+   <file md5sum="c2761fdece38bd3d79d69e22d116bfe5" name="tests/types002.phpt" role="test" />
+   <file md5sum="a3c0a17c9cc04ab1cad0965d53600184" name="tests/unbuffered001.phpt" role="test" />
+   <file md5sum="856a84bc41538908767770b7c8a45d1c" name="tests/_setup.inc" role="test" />
+   <file md5sum="ca2317a618938061ba021df0eda83646" name="tests/_skipif.inc" role="test" />
+   <file md5sum="9d04f6416870e6f15d07c7fb02bf920b" name="CREDITS" role="doc" />
+   <file md5sum="a3b4fd992df13edab98ba5c58c0a0b0a" name="LICENSE" role="doc" />
+   <file md5sum="756c28e50070ff7fe1cdddda3a7d938c" name="config.m4" role="src" />
+   <file md5sum="88509ef9b3dab149a2351674cb18a7c4" name="php_pq.h" role="src" />
+   <file md5sum="db3d71c4ed941a0820b8cc25c75d5fe8" name="php_pq_type.awk" role="src" />
+   <file md5sum="6c5d2ac2470938da1041c2746cad3d2d" name="php_pq_type.h" role="src" />
   </dir>
  </contents>
  <dependencies>
@@ -148,7 +133,5 @@ http://pear.php.net/dtd/package-2.0.xsd">
   </required>
  </dependencies>
  <providesextension>pq</providesextension>
- <extsrcrelease>
- </extsrcrelease>
+ <extsrcrelease />
 </package>
-
