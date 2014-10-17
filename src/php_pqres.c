@@ -82,7 +82,7 @@ static STATUS php_pqres_iterator_valid(zend_object_iterator *i TSRMLS_DC)
 
 	switch (PQresultStatus(obj->intern->res)) {
 	case PGRES_TUPLES_OK:
-#if HAVE_PGRES_SINGLE_TUPLE
+#ifdef HAVE_PGRES_SINGLE_TUPLE
 	case PGRES_SINGLE_TUPLE:
 #endif
 		if (PQntuples(obj->intern->res) <= iter->index) {
@@ -1211,7 +1211,7 @@ PHP_MINIT_FUNCTION(pqres)
 #ifdef HAVE_PGRES_COPY_BOTH
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("COPY_BOTH"), PGRES_COPY_BOTH TSRMLS_CC);
 #endif
-#if HAVE_PGRES_SINGLE_TUPLE
+#ifdef HAVE_PGRES_SINGLE_TUPLE
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("SINGLE_TUPLE"), PGRES_SINGLE_TUPLE TSRMLS_CC);
 #endif
 

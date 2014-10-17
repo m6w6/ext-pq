@@ -27,15 +27,21 @@ if test "$PHP_PQ" != "no"; then
 		AC_CHECK_PROG(EGREP, egrep, egrep)
 	])
 	
-	for PQ_DEF in PGRES_SINGLE_TUPLE PGRES_COPY_BOTH; do
-		AC_MSG_CHECKING(for $PQ_DEF)
-		if $EGREP -q $PQ_DEF $PQ_DIR/include/libpq-fe.h; then
-			AC_DEFINE([$PQ_DEF], [1], [Have $PQ_DEF])
+	dnl
+	dnl PQ_CHECK_CONST(name)
+	dnl
+	AC_DEFUN([PQ_CHECK_CONST], [
+		AC_MSG_CHECKING(for $1)
+		if $EGREP -q $1 $PQ_DIR/include/libpq-fe.h; then
+			AC_DEFINE(HAVE_$1, 1, [Have $1])
 			AC_MSG_RESULT(yep)
 		else
 			AC_MSG_RESULT(nope)
 		fi
-	done 
+	])
+
+	PQ_CHECK_CONST(PGRES_SINGLE_TUPLE)
+	PQ_CHECK_CONST(PGRES_COPY_BOTH)
 
 	
 	dnl
