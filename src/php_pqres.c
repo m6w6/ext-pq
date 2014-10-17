@@ -17,9 +17,10 @@
 #include <php.h>
 
 #include <ext/spl/spl_iterators.h>
-#if HAVE_JSON
-#include <ext/json/php_json.h>
+#if PHP_PQ_HAVE_PHP_JSON_H
+#include <php_json.h> /* we've added the include directory to INCLUDES */
 #endif
+
 #include <libpq-events.h>
 
 #include "php_pq.h"

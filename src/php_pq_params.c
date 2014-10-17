@@ -17,8 +17,8 @@
 #include <php.h>
 #include <ext/standard/php_string.h>
 #include <ext/standard/php_smart_str.h>
-#ifdef HAVE_JSON
-#include <ext/json/php_json.h>
+#if PHP_PQ_HAVE_PHP_JSON_H
+#include <php_json.h> /* we've added the include directory to INCLUDES */
 #endif
 
 #include <Zend/zend_interfaces.h>

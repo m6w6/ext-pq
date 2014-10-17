@@ -38,6 +38,9 @@ if test "$PHP_PQ" != "no"; then
 	done 
 
 	
+	dnl
+	dnl PQ_CHECK_FUNC(sym, fail-hard)
+	dnl
 	AC_DEFUN([PQ_CHECK_FUNC], [
 		FAIL_HARD=$2
 		
@@ -62,6 +65,35 @@ if test "$PHP_PQ" != "no"; then
 	PQ_CHECK_FUNC(PQconninfo)
 	PQ_CHECK_FUNC(PQsetSingleRowMode)
 	
+	dnl
+	dnl PQ_HAVE_PHP_EXT(name[, code-if-yes[, code-if-not]])
+	dnl
+	AC_DEFUN([PQ_HAVE_PHP_EXT], [
+		extname=$1
+		haveext=$[PHP_]translit($1,a-z_-,A-Z__)
+		AC_MSG_CHECKING([for ext/$extname support])
+		if test -x "$PHP_EXECUTABLE"; then
+			grepext=`$PHP_EXECUTABLE -m | $EGREP ^$extname\$`
+			if test "$grepext" = "$extname"; then
+				[PHP_PQ_HAVE_EXT_]translit($1,a-z_-,A-Z__)=1
+				AC_MSG_RESULT([yes])
+				$2
+			else
+				[PHP_PQ_HAVE_EXT_]translit($1,a-z_-,A-Z__)=
+				AC_MSG_RESULT([no])
+				$3
+			fi
+		elif test "$haveext" != "no" && test "x$haveext" != "x"; then
+			[PHP_PQ_HAVE_EXT_]translit($1,a-z_-,A-Z__)=1
+			AC_MSG_RESULT([yes])
+			$2
+		else
+			[PHP_PQ_HAVE_EXT_]translit($1,a-z_-,A-Z__)=
+			AC_MSG_RESULT([no])
+			$3
+		fi
+	])
+	
 	PQ_SRC="\
 		src/php_pq_module.c\
 		src/php_pq_misc.c\
@@ -83,7 +115,53 @@ if test "$PHP_PQ" != "no"; then
 	PHP_NEW_EXTENSION(pq, $PQ_SRC, $ext_shared)
 	PHP_ADD_BUILD_DIR($ext_builddir/src)
 	PHP_ADD_INCLUDE($ext_srcdir/src)
-	PHP_ADD_EXTENSION_DEP(pq, raphf)
 	
+	PQ_HAVE_PHP_EXT([raphf], [
+		AC_MSG_CHECKING([for php_raphf.h])
+		PQ_EXT_RAPHF_INCDIR=
+		for i in `echo $INCLUDES | $SED -e's/-I//g'` $abs_srcdir ../raphf; do
+			if test -d $i; then
+				if test -f $i/php_raphf.h; then
+					PQ_EXT_RAPHF_INCDIR=$i
+					break
+				elif test -f $i/ext/raphf/php_raphf.h; then
+					PQ_EXT_RAPHF_INCDIR=$i/ext/raphf
+					break
+				fi
+			fi
+		done
+		if test "x$PQ_EXT_RAPHF_INCDIR" = "x"; then
+			AC_MSG_ERROR([not found])
+		else
+			AC_MSG_RESULT([$PQ_EXT_RAPHF_INCDIR])
+			AC_DEFINE([PHP_PQ_HAVE_PHP_RAPHF_H], [1], [Have ext/raphf support])
+			PHP_ADD_INCLUDE([$PQ_EXT_RAPHF_INCDIR])
+		fi
+	], [
+		AC_MSG_ERROR([Please install pecl/raphf and activate extension=raphf.$SHLIB_DL_SUFFIX_NAME in your php.ini])
+	])
+	PHP_ADD_EXTENSION_DEP(pq, raphf, true)
+	PQ_HAVE_PHP_EXT([json], [
+		AC_MSG_CHECKING([for php_json.h])
+		PQ_EXT_JSON_INCDIR=
+		for i in `echo $INCLUDES | $SED -e's/-I//g'` $abs_srcdir ../json ../jsonc ../jsond; do
+			if test -d $i; then
+				if test -f $i/php_json.h; then
+					PQ_EXT_JSON_INCDIR=$i
+					break
+				elif test -f $i/ext/json/php_json.h; then
+					PQ_EXT_JSON_INCDIR=$i/ext/json
+					break
+				fi
+			fi
+		done
+		if test "x$PQ_EXT_JSON_INCDIR" = "x"; then
+			AC_MSG_ERROR([not found])
+		else
+			AC_MSG_RESULT([$PQ_EXT_JSON_INCDIR])
+			AC_DEFINE([PHP_PQ_HAVE_PHP_JSON_H], [1], [Have ext/json support])
+			PHP_ADD_INCLUDE([$PQ_EXT_JSON_INCDIR])
+		fi
+	])
 fi
 
