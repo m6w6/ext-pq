@@ -38,7 +38,7 @@ object(pq\Result)#%d (8) {
   ["numCols"]=>
   int(1)
   ["affectedRows"]=>
-  int(1)
+  int(%d)
   ["fetchType"]=>
   int(0)
   ["autoConvert"]=>
@@ -56,7 +56,7 @@ object(pq\Result)#%d (8) {
   ["numCols"]=>
   int(3)
   ["affectedRows"]=>
-  int(1)
+  int(%d)
   ["fetchType"]=>
   int(0)
   ["autoConvert"]=>

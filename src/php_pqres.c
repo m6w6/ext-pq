@@ -17,7 +17,9 @@
 #include <php.h>
 
 #include <ext/spl/spl_iterators.h>
+#if HAVE_JSON
 #include <ext/json/php_json.h>
+#endif
 #include <libpq-events.h>
 
 #include "php_pq.h"
@@ -79,7 +81,9 @@ static STATUS php_pqres_iterator_valid(zend_object_iterator *i TSRMLS_DC)
 
 	switch (PQresultStatus(obj->intern->res)) {
 	case PGRES_TUPLES_OK:
+#if HAVE_PGRES_SINGLE_TUPLE
 	case PGRES_SINGLE_TUPLE:
+#endif
 		if (PQntuples(obj->intern->res) <= iter->index) {
 			return FAILURE;
 		}
@@ -171,7 +175,7 @@ zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRM
 		php_pqdt_from_string(val, len, "Y-m-d H:i:s.uO", zv TSRMLS_CC);
 		break;
 
-#ifdef PHP_PQ_OID_JSON
+#if HAVE_JSON && defined(PHP_PQ_OID_JSON)
 #	ifdef PHP_PQ_OID_JSONB
 	case PHP_PQ_OID_JSONB:
 #	endif
@@ -1203,8 +1207,12 @@ PHP_MINIT_FUNCTION(pqres)
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("BAD_RESPONSE"), PGRES_BAD_RESPONSE TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("NONFATAL_ERROR"), PGRES_NONFATAL_ERROR TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("FATAL_ERROR"), PGRES_FATAL_ERROR TSRMLS_CC);
+#ifdef HAVE_PGRES_COPY_BOTH
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("COPY_BOTH"), PGRES_COPY_BOTH TSRMLS_CC);
+#endif
+#if HAVE_PGRES_SINGLE_TUPLE
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("SINGLE_TUPLE"), PGRES_SINGLE_TUPLE TSRMLS_CC);
+#endif
 
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("FETCH_ARRAY"), PHP_PQRES_FETCH_ARRAY TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("FETCH_ASSOC"), PHP_PQRES_FETCH_ASSOC TSRMLS_CC);
@@ -1216,7 +1224,9 @@ PHP_MINIT_FUNCTION(pqres)
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_SCALAR"), PHP_PQRES_CONV_SCALAR TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_ARRAY"), PHP_PQRES_CONV_ARRAY TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_DATETIME"), PHP_PQRES_CONV_DATETIME TSRMLS_CC);
+#if HAVE_JSON
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_JSON"), PHP_PQRES_CONV_JSON TSRMLS_CC);
+#endif
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_ALL"), PHP_PQRES_CONV_ALL TSRMLS_CC);
 
 	return SUCCESS;
