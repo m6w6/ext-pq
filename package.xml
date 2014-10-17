@@ -42,7 +42,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license>BSD, revised</license>
  <notes><![CDATA[
-* Fix build with PostgreSQL 9.1 and 9.0
+* Support PostgreSQL 9.0 and up
+* Make JSON support optional
 ]]></notes>
  <contents>
   <dir name="/">
