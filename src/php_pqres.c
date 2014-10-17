@@ -176,7 +176,7 @@ zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRM
 		php_pqdt_from_string(val, len, "Y-m-d H:i:s.uO", zv TSRMLS_CC);
 		break;
 
-#if HAVE_JSON && defined(PHP_PQ_OID_JSON)
+#if PHP_PQ_HAVE_PHP_JSON_H && defined(PHP_PQ_OID_JSON)
 #	ifdef PHP_PQ_OID_JSONB
 	case PHP_PQ_OID_JSONB:
 #	endif
@@ -1225,7 +1225,7 @@ PHP_MINIT_FUNCTION(pqres)
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_SCALAR"), PHP_PQRES_CONV_SCALAR TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_ARRAY"), PHP_PQRES_CONV_ARRAY TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_DATETIME"), PHP_PQRES_CONV_DATETIME TSRMLS_CC);
-#if HAVE_JSON
+#if PHP_PQ_HAVE_PHP_JSON_H
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_JSON"), PHP_PQRES_CONV_JSON TSRMLS_CC);
 #endif
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_ALL"), PHP_PQRES_CONV_ALL TSRMLS_CC);

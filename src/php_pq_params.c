@@ -88,7 +88,7 @@ static zval *object_param_to_string(php_pq_params_t *p, zval *zobj, Oid type TSR
 	smart_str str = {0};
 
 	switch (type) {
-#if HAVE_JSON && defined(PHP_PQ_OID_JSON)
+#if PHP_PQ_HAVE_PHP_JSON_H && defined(PHP_PQ_OID_JSON)
 #	ifdef PHP_PQ_OID_JSONB
 	case PHP_PQ_OID_JSONB:
 #	endif
@@ -227,7 +227,7 @@ static zval *array_param_to_string(php_pq_params_t *p, zval *zarr, Oid type TSRM
 	struct apply_to_param_from_array_arg arg = {NULL};
 
 	switch (type) {
-#if HAVE_JSON && defined(PHP_PQ_OID_JSON)
+#if PHP_PQ_HAVE_PHP_JSON_H && defined(PHP_PQ_OID_JSON)
 #	ifdef PHP_PQ_OID_JSONB
 	case PHP_PQ_OID_JSONB:
 #	endif
