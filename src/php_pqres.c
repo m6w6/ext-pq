@@ -126,10 +126,9 @@ zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRM
 		}
 		ZVAL_BOOL(zv, *val == 't');
 		break;
-#if SIZEOF_LONG >= 8
+
 	case PHP_PQ_OID_INT8:
 	case PHP_PQ_OID_TID:
-#endif
 	case PHP_PQ_OID_INT4:
 	case PHP_PQ_OID_INT2:
 	case PHP_PQ_OID_XID:
@@ -137,7 +136,21 @@ zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRM
 		if (!(res->auto_convert & PHP_PQRES_CONV_INT)) {
 			goto noconversion;
 		}
-		ZVAL_LONG(zv, zend_atol(val, len));
+		{
+			long lval;
+			double dval;
+
+			switch (is_numeric_string(val, len, &lval, &dval, 0)) {
+				case IS_LONG:
+					ZVAL_LONG(zv, lval);
+					break;
+				case IS_DOUBLE:
+					ZVAL_DOUBLE(zv, dval);
+					break;
+				default:
+					goto noconversion;
+			}
+		}
 		break;
 
 	case PHP_PQ_OID_FLOAT4:
