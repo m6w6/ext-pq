@@ -30,11 +30,11 @@ typedef struct php_pqstm_object {
 	php_pqstm_t *intern;
 } php_pqstm_object_t;
 
-zend_class_entry *php_pqstm_class_entry;
-zend_object_value php_pqstm_create_object_ex(zend_class_entry *ce, php_pqstm_t *intern, php_pqstm_object_t **ptr TSRMLS_DC);
+extern zend_class_entry *php_pqstm_class_entry;
+extern zend_object_value php_pqstm_create_object_ex(zend_class_entry *ce, php_pqstm_t *intern, php_pqstm_object_t **ptr TSRMLS_DC);
 
-PHP_MINIT_FUNCTION(pqstm);
-PHP_MSHUTDOWN_FUNCTION(pqstm);
+extern PHP_MINIT_FUNCTION(pqstm);
+extern PHP_MSHUTDOWN_FUNCTION(pqstm);
 
 #endif
 

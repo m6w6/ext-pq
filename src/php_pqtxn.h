@@ -38,13 +38,13 @@ typedef struct php_pqtxn_object {
 	php_pqtxn_t *intern;
 } php_pqtxn_object_t;
 
-const char *isolation_level(long *isolation);
+extern const char *isolation_level(long *isolation);
 
-zend_class_entry *php_pqtxn_class_entry;
-zend_object_value php_pqtxn_create_object_ex(zend_class_entry *ce, php_pqtxn_t *intern, php_pqtxn_object_t **ptr TSRMLS_DC);
+extern zend_class_entry *php_pqtxn_class_entry;
+extern zend_object_value php_pqtxn_create_object_ex(zend_class_entry *ce, php_pqtxn_t *intern, php_pqtxn_object_t **ptr TSRMLS_DC);
 
-PHP_MINIT_FUNCTION(pqtxn);
-PHP_MSHUTDOWN_FUNCTION(pqtxn);
+extern PHP_MINIT_FUNCTION(pqtxn);
+extern PHP_MSHUTDOWN_FUNCTION(pqtxn);
 
 #endif
 

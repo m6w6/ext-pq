@@ -25,10 +25,10 @@ typedef struct php_pqconn_event_data {
 #endif
 } php_pqconn_event_data_t;
 
-php_pqconn_event_data_t *php_pqconn_event_data_init(php_pqconn_object_t *obj TSRMLS_DC);
-void php_pqconn_notice_recv(void *p, const PGresult *res);
-void php_pqconn_notice_ignore(void *p, const PGresult *res);
-int php_pqconn_event(PGEventId id, void *e, void *data);
+extern php_pqconn_event_data_t *php_pqconn_event_data_init(php_pqconn_object_t *obj TSRMLS_DC);
+extern void php_pqconn_notice_recv(void *p, const PGresult *res);
+extern void php_pqconn_notice_ignore(void *p, const PGresult *res);
+extern int php_pqconn_event(PGEventId id, void *e, void *data);
 
 #endif
 

@@ -33,7 +33,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </lead>
  <date>2014-10-23</date>
  <version>
-  <release>0.5.3</release>
+  <release>0.5.4dev</release>
   <api>0.5.0</api>
  </version>
  <stability>
@@ -42,8 +42,6 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license>BSD, revised</license>
  <notes><![CDATA[
-+ Add PostgreSQL-9.4beta3 type OIDs
-* Fix JSON dep (Remi)
 * Fix build on MacOSX
 ]]></notes>
  <contents>

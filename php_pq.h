@@ -14,11 +14,7 @@
 #ifndef PHP_PQ_H
 #define PHP_PQ_H
 
-#define PHP_PQ_VERSION "0.5.3"
-
-int pq_module_number;
-zend_module_entry pq_module_entry;
-#define phpext_pq_ptr &pq_module_entry
+#define PHP_PQ_VERSION "0.5.4dev"
 
 #ifdef PHP_WIN32
 #	define PHP_PQ_API __declspec(dllexport)
@@ -27,6 +23,11 @@ zend_module_entry pq_module_entry;
 #else
 #	define PHP_PQ_API extern
 #endif
+
+extern int pq_module_number;
+extern zend_module_entry pq_module_entry;
+#define phpext_pq_ptr &pq_module_entry
+
 
 #ifdef ZTS
 #	include "TSRM.h"

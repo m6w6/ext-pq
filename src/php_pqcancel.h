@@ -28,11 +28,11 @@ typedef struct php_pqcancel_object {
 	php_pqcancel_t *intern;
 } php_pqcancel_object_t;
 
-zend_class_entry *php_pqcancel_class_entry;
-zend_object_value php_pqcancel_create_object_ex(zend_class_entry *ce, php_pqcancel_t *intern, php_pqcancel_object_t **ptr TSRMLS_DC);
+extern zend_class_entry *php_pqcancel_class_entry;
+extern zend_object_value php_pqcancel_create_object_ex(zend_class_entry *ce, php_pqcancel_t *intern, php_pqcancel_object_t **ptr TSRMLS_DC);
 
-PHP_MINIT_FUNCTION(pqcancel);
-PHP_MSHUTDOWN_FUNCTION(pqcancel);
+extern PHP_MINIT_FUNCTION(pqcancel);
+extern PHP_MSHUTDOWN_FUNCTION(pqcancel);
 
 #endif
 

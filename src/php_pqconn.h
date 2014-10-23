@@ -49,20 +49,20 @@ typedef struct php_pqconn_resource_factory_data {
 	long flags;
 } php_pqconn_resource_factory_data_t;
 
-php_resource_factory_ops_t *php_pqconn_get_resource_factory_ops(void);
+extern php_resource_factory_ops_t *php_pqconn_get_resource_factory_ops(void);
 
-zend_class_entry *php_pqconn_class_entry;
-zend_object_value php_pqconn_create_object_ex(zend_class_entry *ce, php_pqconn_t *intern, php_pqconn_object_t **ptr TSRMLS_DC);
-void php_pqconn_notify_listeners(php_pqconn_object_t *obj TSRMLS_DC);
-STATUS php_pqconn_prepare(zval *object, php_pqconn_object_t *obj, const char *name, const char *query, php_pq_params_t *params TSRMLS_DC);
-STATUS php_pqconn_prepare_async(zval *object, php_pqconn_object_t *obj, const char *name, const char *query, php_pq_params_t *params TSRMLS_DC);
-STATUS php_pqconn_start_transaction(zval *zconn, php_pqconn_object_t *conn_obj, long isolation, zend_bool readonly, zend_bool deferrable TSRMLS_DC);
-STATUS php_pqconn_start_transaction_async(zval *zconn, php_pqconn_object_t *conn_obj, long isolation, zend_bool readonly, zend_bool deferrable TSRMLS_DC);
-STATUS php_pqconn_declare(zval *object, php_pqconn_object_t *obj, const char *decl TSRMLS_DC);
-STATUS php_pqconn_declare_async(zval *object, php_pqconn_object_t *obj, const char *decl TSRMLS_DC);
+extern zend_class_entry *php_pqconn_class_entry;
+extern zend_object_value php_pqconn_create_object_ex(zend_class_entry *ce, php_pqconn_t *intern, php_pqconn_object_t **ptr TSRMLS_DC);
+extern void php_pqconn_notify_listeners(php_pqconn_object_t *obj TSRMLS_DC);
+extern STATUS php_pqconn_prepare(zval *object, php_pqconn_object_t *obj, const char *name, const char *query, php_pq_params_t *params TSRMLS_DC);
+extern STATUS php_pqconn_prepare_async(zval *object, php_pqconn_object_t *obj, const char *name, const char *query, php_pq_params_t *params TSRMLS_DC);
+extern STATUS php_pqconn_start_transaction(zval *zconn, php_pqconn_object_t *conn_obj, long isolation, zend_bool readonly, zend_bool deferrable TSRMLS_DC);
+extern STATUS php_pqconn_start_transaction_async(zval *zconn, php_pqconn_object_t *conn_obj, long isolation, zend_bool readonly, zend_bool deferrable TSRMLS_DC);
+extern STATUS php_pqconn_declare(zval *object, php_pqconn_object_t *obj, const char *decl TSRMLS_DC);
+extern STATUS php_pqconn_declare_async(zval *object, php_pqconn_object_t *obj, const char *decl TSRMLS_DC);
 
-PHP_MINIT_FUNCTION(pqconn);
-PHP_MSHUTDOWN_FUNCTION(pqconn);
+extern PHP_MINIT_FUNCTION(pqconn);
+extern PHP_MSHUTDOWN_FUNCTION(pqconn);
 
 #endif
 

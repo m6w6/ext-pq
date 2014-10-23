@@ -29,14 +29,13 @@ typedef struct php_pq_params {
 #endif
 } php_pq_params_t;
 
-php_pq_params_t *php_pq_params_init(HashTable *conv, HashTable *oids, HashTable *params TSRMLS_DC);
-void php_pq_params_free(php_pq_params_t **p);
-unsigned php_pq_params_set_params(php_pq_params_t *p, HashTable *params);
-unsigned php_pq_params_set_type_oids(php_pq_params_t *p, HashTable *oids);
-unsigned php_pq_params_add_type_oid(php_pq_params_t *p, Oid type);
-unsigned php_pq_params_add_param(php_pq_params_t *p, zval *param);
-void php_pq_params_set_type_conv(php_pq_params_t *p, HashTable *conv);
-
+extern php_pq_params_t *php_pq_params_init(HashTable *conv, HashTable *oids, HashTable *params TSRMLS_DC);
+extern void php_pq_params_free(php_pq_params_t **p);
+extern unsigned php_pq_params_set_params(php_pq_params_t *p, HashTable *params);
+extern unsigned php_pq_params_set_type_oids(php_pq_params_t *p, HashTable *oids);
+extern unsigned php_pq_params_add_type_oid(php_pq_params_t *p, Oid type);
+extern unsigned php_pq_params_add_param(php_pq_params_t *p, zval *param);
+extern void php_pq_params_set_type_conv(php_pq_params_t *p, HashTable *conv);
 
 #endif
 

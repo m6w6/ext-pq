@@ -30,11 +30,11 @@ typedef struct php_pqlob_object {
 	php_pqlob_t *intern;
 } php_pqlob_object_t;
 
-zend_class_entry *php_pqlob_class_entry;
-zend_object_value php_pqlob_create_object_ex(zend_class_entry *ce, php_pqlob_t *intern, php_pqlob_object_t **ptr TSRMLS_DC);
+extern zend_class_entry *php_pqlob_class_entry;
+extern zend_object_value php_pqlob_create_object_ex(zend_class_entry *ce, php_pqlob_t *intern, php_pqlob_object_t **ptr TSRMLS_DC);
 
-PHP_MINIT_FUNCTION(pqlob);
-PHP_MSHUTDOWN_FUNCTION(pqlob);
+extern PHP_MINIT_FUNCTION(pqlob);
+extern PHP_MSHUTDOWN_FUNCTION(pqlob);
 
 #endif
 

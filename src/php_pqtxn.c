@@ -32,7 +32,7 @@ zend_class_entry *php_pqtxn_class_entry;
 static zend_object_handlers php_pqtxn_object_handlers;
 static HashTable php_pqtxn_object_prophandlers;
 
-const char *isolation_level(long *isolation)
+const char *php_pq_isolation_level(long *isolation)
 {
 	switch (*isolation) {
 	case PHP_PQTXN_SERIALIZABLE:
