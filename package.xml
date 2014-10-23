@@ -42,7 +42,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license>BSD, revised</license>
  <notes><![CDATA[
-* Fix build on MacOSX
+* Re-add the default configureoption for the PEAR/PECL installer
 ]]></notes>
  <contents>
   <dir name="/">
@@ -149,7 +149,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </dependencies>
  <providesextension>pq</providesextension>
  <extsrcrelease>
-  <configureoption default="yes" name="with-pq" prompt="whether to enable libpq support" />
+  <configureoption default="yes" name="with-pq" prompt="where to find the postgresql library/headers" />
  </extsrcrelease>
 </package>
 
