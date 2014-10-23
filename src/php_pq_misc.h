@@ -36,8 +36,8 @@ const char *php_pq_strmode(long mode);
 /* compare array index */
 int php_pq_compare_index(const void *lptr, const void *rptr TSRMLS_DC);
 
-#define PHP_PQerrorMessage(c) rtrim(PQerrorMessage((c)))
-#define PHP_PQresultErrorMessage(r) rtrim(PQresultErrorMessage((r)))
+#define PHP_PQerrorMessage(c) php_pq_rtrim(PQerrorMessage((c)))
+#define PHP_PQresultErrorMessage(r) php_pq_rtrim(PQresultErrorMessage((r)))
 
 zend_class_entry *php_pqdt_class_entry;
 zval *php_pqdt_from_string(char *datetime_str, size_t datetime_len, char *fmt, zval *zv TSRMLS_DC);
