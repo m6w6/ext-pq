@@ -183,7 +183,7 @@ static PHP_METHOD(pqstm, bind) {
 			SEPARATE_ZVAL_TO_MAKE_IS_REF(param_ref);
 			Z_ADDREF_PP(param_ref);
 			zend_hash_index_update(&obj->intern->bound, param_no, (void *) param_ref, sizeof(zval *), NULL);
-			zend_hash_sort(&obj->intern->bound, zend_qsort, compare_index, 0 TSRMLS_CC);
+			zend_hash_sort(&obj->intern->bound, zend_qsort, php_pq_compare_index, 0 TSRMLS_CC);
 		}
 	}
 }

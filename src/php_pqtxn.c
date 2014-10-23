@@ -704,7 +704,7 @@ static PHP_METHOD(pqtxn, openLOB) {
 			int lofd = lo_open(obj->intern->conn->intern->conn, loid, mode);
 
 			if (lofd < 0) {
-				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to open large object with oid=%u with mode '%s' (%s)", loid, strmode(mode), PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to open large object with oid=%u with mode '%s' (%s)", loid, php_pq_strmode(mode), PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			} else {
 				php_pqlob_t *lob = ecalloc(1, sizeof(*lob));
 
@@ -743,12 +743,12 @@ static PHP_METHOD(pqtxn, createLOB) {
 			Oid loid = lo_creat(obj->intern->conn->intern->conn, mode);
 
 			if (loid == InvalidOid) {
-				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to create large object with mode '%s' (%s)", strmode(mode), PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to create large object with mode '%s' (%s)", php_pq_strmode(mode), PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			} else {
 				int lofd = lo_open(obj->intern->conn->intern->conn, loid, mode);
 
 				if (lofd < 0) {
-					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to open large object with oid=%u with mode '%s': %s", loid, strmode(mode), PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to open large object with oid=%u with mode '%s': %s", loid, php_pq_strmode(mode), PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				} else {
 					php_pqlob_t *lob = ecalloc(1, sizeof(*lob));
 

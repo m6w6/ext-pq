@@ -28,13 +28,13 @@ typedef int STATUS; /* SUCCESS/FAILURE */
 #endif
 
 /* trim LF from EOL */
-char *rtrim(char *e);
+char *php_pq_rtrim(char *e);
 
 /* R, W, RW */
-const char *strmode(long mode);
+const char *php_pq_strmode(long mode);
 
 /* compare array index */
-int compare_index(const void *lptr, const void *rptr TSRMLS_DC);
+int php_pq_compare_index(const void *lptr, const void *rptr TSRMLS_DC);
 
 #define PHP_PQerrorMessage(c) rtrim(PQerrorMessage((c)))
 #define PHP_PQresultErrorMessage(r) rtrim(PQresultErrorMessage((r)))

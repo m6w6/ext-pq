@@ -25,7 +25,7 @@
 #include "php_pq.h"
 #include "php_pq_misc.h"
 
-char *rtrim(char *e)
+char *php_pq_rtrim(char *e)
 {
 	size_t l = strlen(e);
 
@@ -35,7 +35,7 @@ char *rtrim(char *e)
 	return e;
 }
 
-const char *strmode(long mode)
+const char *php_pq_strmode(long mode)
 {
 	switch (mode & (INV_READ|INV_WRITE)) {
 	case INV_READ|INV_WRITE:
@@ -49,7 +49,7 @@ const char *strmode(long mode)
 	}
 }
 
-int compare_index(const void *lptr, const void *rptr TSRMLS_DC)
+int php_pq_compare_index(const void *lptr, const void *rptr TSRMLS_DC)
 {
 	const Bucket *l = *(const Bucket **) lptr;
 	const Bucket *r = *(const Bucket **) rptr;

@@ -700,7 +700,7 @@ static PHP_METHOD(pqres, bind) {
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to bind column %s@%d", col.name, col.num);
 					RETVAL_FALSE;
 				} else {
-					zend_hash_sort(&obj->intern->bound, zend_qsort, compare_index, 0 TSRMLS_CC);
+					zend_hash_sort(&obj->intern->bound, zend_qsort, php_pq_compare_index, 0 TSRMLS_CC);
 					RETVAL_TRUE;
 				}
 			}

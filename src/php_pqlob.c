@@ -258,12 +258,12 @@ static PHP_METHOD(pqlob, __construct) {
 			}
 
 			if (loid == InvalidOid) {
-				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to create large object with mode '%s' (%s)", strmode(mode), PHP_PQerrorMessage(txn_obj->intern->conn->intern->conn));
+				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to create large object with mode '%s' (%s)", php_pq_strmode(mode), PHP_PQerrorMessage(txn_obj->intern->conn->intern->conn));
 			} else {
 				int lofd = lo_open(txn_obj->intern->conn->intern->conn, loid, mode);
 
 				if (lofd < 0) {
-					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to open large object with oid=%u with mode '%s' (%s)", loid, strmode(mode), PHP_PQerrorMessage(txn_obj->intern->conn->intern->conn));
+					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to open large object with oid=%u with mode '%s' (%s)", loid, php_pq_strmode(mode), PHP_PQerrorMessage(txn_obj->intern->conn->intern->conn));
 				} else {
 					obj->intern = ecalloc(1, sizeof(*obj->intern));
 					obj->intern->lofd = lofd;
