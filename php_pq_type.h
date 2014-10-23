@@ -449,6 +449,14 @@ PHP_PQ_TYPE("UUID", 2950)
 # define PHP_PQ_OID_UUIDARRAY 2951
 #endif
 PHP_PQ_TYPE("UUIDARRAY", 2951)
+#ifndef PHP_PQ_OID_PG_LSN
+# define PHP_PQ_OID_PG_LSN 3220
+#endif
+PHP_PQ_TYPE("PG_LSN", 3220)
+#ifndef PHP_PQ_OID_PG_LSNARRAY
+# define PHP_PQ_OID_PG_LSNARRAY 3221
+#endif
+PHP_PQ_TYPE("PG_LSNARRAY", 3221)
 #ifndef PHP_PQ_OID_TSVECTOR
 # define PHP_PQ_OID_TSVECTOR 3614
 #endif
@@ -489,6 +497,14 @@ PHP_PQ_TYPE("REGCONFIGARRAY", 3735)
 # define PHP_PQ_OID_REGDICTIONARYARRAY 3770
 #endif
 PHP_PQ_TYPE("REGDICTIONARYARRAY", 3770)
+#ifndef PHP_PQ_OID_JSONB
+# define PHP_PQ_OID_JSONB 3802
+#endif
+PHP_PQ_TYPE("JSONB", 3802)
+#ifndef PHP_PQ_OID_JSONBARRAY
+# define PHP_PQ_OID_JSONBARRAY 3807
+#endif
+PHP_PQ_TYPE("JSONBARRAY", 3807)
 #ifndef PHP_PQ_OID_TXID_SNAPSHOT
 # define PHP_PQ_OID_TXID_SNAPSHOT 2970
 #endif
@@ -667,11 +683,13 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	||	((oid) == 2287) \
 	||	((oid) == 2949) \
 	||	((oid) == 2951) \
+	||	((oid) == 3221) \
 	||	((oid) == 3643) \
 	||	((oid) == 3644) \
 	||	((oid) == 3645) \
 	||	((oid) == 3735) \
 	||	((oid) == 3770) \
+	||	((oid) == 3807) \
 	||	((oid) == 3905) \
 	||	((oid) == 3907) \
 	||	((oid) == 3909) \
@@ -737,11 +755,13 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	(oid) == 2287 ? 2249 : \
 	(oid) == 2949 ? 2970 : \
 	(oid) == 2951 ? 2950 : \
+	(oid) == 3221 ? 3220 : \
 	(oid) == 3643 ? 3614 : \
 	(oid) == 3644 ? 3642 : \
 	(oid) == 3645 ? 3615 : \
 	(oid) == 3735 ? 3734 : \
 	(oid) == 3770 ? 3769 : \
+	(oid) == 3807 ? 3802 : \
 	(oid) == 3905 ? 3904 : \
 	(oid) == 3907 ? 3906 : \
 	(oid) == 3909 ? 3908 : \
