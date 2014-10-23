@@ -58,6 +58,7 @@ extern STATUS php_pqres_success(PGresult *res TSRMLS_DC);
 extern void php_pqres_init_instance_data(PGresult *res, php_pqconn_object_t *obj, php_pqres_object_t **ptr TSRMLS_DC);
 extern zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch_type, zval **data_ptr TSRMLS_DC);
 extern zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRMLS_DC);
+extern php_pqres_fetch_t php_pqres_fetch_type(php_pqres_t *res);
 
 #include "php_pq_object.h"
 #include "php_pqconn_event.h"

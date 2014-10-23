@@ -70,7 +70,7 @@ class JSONConverter extends Converter
 	}
 	
 	function convertFromString($string, $type) {
-		return json_decode($string);
+		return json_decode($string, true);
 	}
 	
 	function convertToString($data, $type) {
@@ -209,11 +209,11 @@ array(1) {
       int(1343423)
     }
     [3]=>
-    object(stdClass)#%d (3) {
+    array(3) {
       ["int"]=>
       int(123)
       ["obj"]=>
-      object(stdClass)#%d (3) {
+      array(3) {
         ["a"]=>
         int(1)
         ["b"]=>

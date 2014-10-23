@@ -96,6 +96,9 @@ static STATUS php_pqres_iterator_valid(zend_object_iterator *i TSRMLS_DC)
 	return SUCCESS;
 }
 
+#define PHP_PQRES_JSON_OPTIONS(res) \
+	(php_pqres_fetch_type(res) != PHP_PQRES_FETCH_OBJECT ? PHP_JSON_OBJECT_AS_ARRAY:0)
+
 zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRMLS_DC)
 {
 	zval *zv, **zconv;
@@ -197,7 +200,7 @@ zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRM
 		if (!(res->auto_convert & PHP_PQRES_CONV_JSON)) {
 			goto noconversion;
 		}
-		php_json_decode_ex(zv, val, len, 0, 512 /* PHP_JSON_DEFAULT_DEPTH */ TSRMLS_CC);
+		php_json_decode_ex(zv, val, len, PHP_PQRES_JSON_OPTIONS(res), 512 /* PHP_JSON_DEFAULT_DEPTH */ TSRMLS_CC);
 		break;
 #endif
 
@@ -419,6 +422,11 @@ void php_pqres_init_instance_data(PGresult *res, php_pqconn_object_t *conn_obj, 
 	}
 }
 
+php_pqres_fetch_t php_pqres_fetch_type(php_pqres_t *res)
+{
+	return res->iter ? res->iter->fetch_type : res->default_fetch_type;
+}
+
 static void php_pqres_object_free(void *o TSRMLS_DC)
 {
 	php_pqres_object_t *obj = o;
@@ -526,11 +534,7 @@ static void php_pqres_object_read_fetch_type(zval *object, void *o, zval *return
 {
 	php_pqres_object_t *obj = o;
 
-	if (obj->intern->iter) {
-		RETVAL_LONG(obj->intern->iter->fetch_type);
-	} else {
-		RETVAL_LONG(obj->intern->default_fetch_type);
-	}
+	RETVAL_LONG(php_pqres_fetch_type(obj->intern));
 }
 
 static void php_pqres_object_write_fetch_type(zval *object, void *o, zval *value TSRMLS_DC)
@@ -783,7 +787,7 @@ static PHP_METHOD(pqres, fetchRow) {
 			zval **row = NULL;
 
 			if (fetch_type == -1) {
-				 fetch_type = obj->intern->iter ? obj->intern->iter->fetch_type : obj->intern->default_fetch_type;
+				 fetch_type = php_pqres_fetch_type(obj->intern);
 			}
 
 			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh TSRMLS_CC);
@@ -837,7 +841,7 @@ static PHP_METHOD(pqres, fetchCol) {
 			zval **row = NULL;
 
 			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh TSRMLS_CC);
-			php_pqres_iteration(getThis(), obj, obj->intern->iter ? obj->intern->iter->fetch_type : 0, &row TSRMLS_CC);
+			php_pqres_iteration(getThis(), obj, php_pqres_fetch_type(obj->intern), &row TSRMLS_CC);
 			if (row) {
 				php_pqres_col_t col;
 
@@ -979,7 +983,7 @@ static PHP_METHOD(pqres, map) {
 			}
 
 			if (fetch_type == -1) {
-				fetch_type = obj->intern->iter ? obj->intern->iter->fetch_type : obj->intern->default_fetch_type;
+				fetch_type = php_pqres_fetch_type(obj->intern);
 			}
 
 			if (keys) {
@@ -1076,7 +1080,7 @@ static PHP_METHOD(pqres, fetchAll) {
 			int r, rows = PQntuples(obj->intern->res);
 
 			if (fetch_type == -1) {
-				 fetch_type = obj->intern->iter ? obj->intern->iter->fetch_type : obj->intern->default_fetch_type;
+				 fetch_type = php_pqres_fetch_type(obj->intern);
 			}
 
 			array_init(return_value);
