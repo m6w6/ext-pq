@@ -38,7 +38,7 @@ typedef struct php_pqtxn_object {
 	php_pqtxn_t *intern;
 } php_pqtxn_object_t;
 
-extern const char *isolation_level(long *isolation);
+extern const char *php_pq_isolation_level(long *isolation);
 
 extern zend_class_entry *php_pqtxn_class_entry;
 extern zend_object_value php_pqtxn_create_object_ex(zend_class_entry *ce, php_pqtxn_t *intern, php_pqtxn_object_t **ptr TSRMLS_DC);

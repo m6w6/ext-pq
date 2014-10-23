@@ -1621,7 +1621,7 @@ STATUS php_pqconn_start_transaction(zval *zconn, php_pqconn_object_t *conn_obj, 
 	} else {
 		PGresult *res;
 		smart_str cmd = {0};
-		const char *il = isolation_level(&isolation);
+		const char *il = php_pq_isolation_level(&isolation);
 
 		smart_str_appends(&cmd, "START TRANSACTION ISOLATION LEVEL ");
 		smart_str_appends(&cmd, il);
@@ -1660,7 +1660,7 @@ STATUS php_pqconn_start_transaction_async(zval *zconn, php_pqconn_object_t *conn
 		throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
 	} else {
 		smart_str cmd = {0};
-		const char *il = isolation_level(&isolation);
+		const char *il = php_pq_isolation_level(&isolation);
 
 		smart_str_appends(&cmd, "START TRANSACTION ISOLATION LEVEL ");
 		smart_str_appends(&cmd, il);
