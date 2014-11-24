@@ -43,8 +43,8 @@ static zend_object_iterator *php_pqres_iterator_init(zend_class_entry *ce, zval 
 
 	iter = ecalloc(1, sizeof(*iter));
 	iter->zi.funcs = &php_pqres_iterator_funcs;
-	iter->zi.data = object;
-	/* do not addref, because the iterator lives inside this object anyway */
+	iter->zi.data = zend_object_store_get_object(object TSRMLS_CC);
+	zend_objects_store_add_ref(object TSRMLS_CC);
 
 	zfetch_type = prop = zend_read_property(ce, object, ZEND_STRL("fetchType"), 0 TSRMLS_CC);
 	if (Z_TYPE_P(zfetch_type) != IS_LONG) {
@@ -67,18 +67,20 @@ static zend_object_iterator *php_pqres_iterator_init(zend_class_entry *ce, zval 
 static void php_pqres_iterator_dtor(zend_object_iterator *i TSRMLS_DC)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
+	php_pqres_object_t *obj = i->data;
 
 	if (iter->current_val) {
 		zval_ptr_dtor(&iter->current_val);
 		iter->current_val = NULL;
 	}
+	zend_objects_store_del_ref_by_handle_ex(obj->zv.handle, obj->zv.handlers TSRMLS_CC);
 	efree(iter);
 }
 
 static STATUS php_pqres_iterator_valid(zend_object_iterator *i TSRMLS_DC)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
-	php_pqres_object_t *obj = zend_object_store_get_object(iter->zi.data TSRMLS_CC);
+	php_pqres_object_t *obj = i->data;
 
 	switch (PQresultStatus(obj->intern->res)) {
 	case PGRES_TUPLES_OK:
@@ -305,7 +307,7 @@ zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch
 static void php_pqres_iterator_current(zend_object_iterator *i, zval ***data_ptr TSRMLS_DC)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
-	php_pqres_object_t *obj = zend_object_store_get_object(iter->zi.data TSRMLS_CC);
+	php_pqres_object_t *obj = i->data;
 
 	if (!iter->current_val) {
 		iter->current_val = php_pqres_row_to_zval(obj->intern->res, iter->index, iter->fetch_type, NULL TSRMLS_CC);

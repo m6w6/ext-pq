@@ -42,7 +42,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </stability>
  <license>BSD, revised</license>
  <notes><![CDATA[
-*
+* Fixed crash with result iterator when the iterator exists longer than the result
 ]]></notes>
  <contents>
   <dir name="/">
