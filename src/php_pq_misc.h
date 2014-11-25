@@ -40,7 +40,7 @@ extern int php_pq_compare_index(const void *lptr, const void *rptr TSRMLS_DC);
 #define PHP_PQresultErrorMessage(r) php_pq_rtrim(PQresultErrorMessage((r)))
 
 extern zend_class_entry *php_pqdt_class_entry;
-extern zval *php_pqdt_from_string(char *datetime_str, size_t datetime_len, char *fmt, zval *zv TSRMLS_DC);
+extern zval *php_pqdt_from_string(zval *zv, char *input_fmt, char *dt_str, size_t dt_len, char *output_fmt, zval *ztimezone TSRMLS_DC);
 extern void php_pqdt_to_string(zval *zdt, const char *format, char **str_buf, size_t *str_len TSRMLS_DC);
 
 extern zend_class_entry *php_pqconv_class_entry;

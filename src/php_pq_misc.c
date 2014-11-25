@@ -23,6 +23,7 @@
 #include <libpq/libpq-fs.h>
 
 #include "php_pq.h"
+#include "php_pqexc.h"
 #include "php_pq_misc.h"
 
 char *php_pq_rtrim(char *e)
@@ -78,13 +79,37 @@ static PHP_METHOD(pqdt, __toString)
 	}
 }
 
+ZEND_BEGIN_ARG_INFO_EX(ai_pqdt_create_from_format, 0, 0, 2)
+	ZEND_ARG_INFO(0, format)
+	ZEND_ARG_INFO(0, datetime)
+	/* ZEND_ARG_OBJ_INFO(0, timezone, DateTimezone, 1) date's arginfo is not specific */
+	ZEND_ARG_INFO(0, timezone)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqdt, createFromFormat)
+{
+	zend_error_handling zeh;
+	char *fmt_str, *dt_str;
+	int fmt_len, dt_len;
+	zval *ztz = NULL;
+	STATUS rv;
+
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|O", &fmt_str, &fmt_len, &dt_str, &dt_len, &ztz, php_date_get_timezone_ce());
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (SUCCESS == rv) {
+		php_pqdt_from_string(return_value, fmt_str, dt_str, dt_len, "Y-m-d H:i:s.uO", ztz TSRMLS_CC);
+	}
+}
+
 static zend_function_entry php_pqdt_methods[] = {
+	PHP_ME(pqdt, createFromFormat, ai_pqdt_create_from_format, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	PHP_ME(pqdt, __toString, ai_pqdt_to_string, ZEND_ACC_PUBLIC)
 	PHP_MALIAS(pqdt, jsonSerialize, __toString, ai_pqdt_to_string, ZEND_ACC_PUBLIC)
 	{0}
 };
 
-zval *php_pqdt_from_string(char *dt_str, size_t dt_len, char *fmt, zval *zv TSRMLS_DC)
+zval *php_pqdt_from_string(zval *zv, char *input_fmt, char *dt_str, size_t dt_len, char *output_fmt, zval *ztimezone TSRMLS_DC)
 {
 	php_date_obj *dobj;
 
@@ -94,11 +119,11 @@ zval *php_pqdt_from_string(char *dt_str, size_t dt_len, char *fmt, zval *zv TSRM
 
 	php_date_instantiate(php_pqdt_class_entry, zv TSRMLS_CC);
 	dobj = zend_object_store_get_object(zv TSRMLS_CC);
-	if (!php_date_initialize(dobj, dt_str, dt_len, NULL, NULL, 1 TSRMLS_CC)) {
+	if (!php_date_initialize(dobj, dt_str, dt_len, input_fmt, ztimezone, 1 TSRMLS_CC)) {
 		zval_dtor(zv);
 		ZVAL_NULL(zv);
-	} else if (fmt) {
-		zend_update_property_string(php_pqdt_class_entry, zv, ZEND_STRL("format"), fmt TSRMLS_CC);
+	} else if (output_fmt) {
+		zend_update_property_string(php_pqdt_class_entry, zv, ZEND_STRL("format"), output_fmt TSRMLS_CC);
 	}
 
 	return zv;

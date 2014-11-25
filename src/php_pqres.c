@@ -170,28 +170,28 @@ zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRM
 		if (!(res->auto_convert & PHP_PQRES_CONV_DATETIME)) {
 			goto noconversion;
 		}
-		php_pqdt_from_string(val, len, "Y-m-d", zv TSRMLS_CC);
+		php_pqdt_from_string(zv, NULL, val, len, "Y-m-d", NULL TSRMLS_CC);
 		break;
 
 	case PHP_PQ_OID_ABSTIME:
 		if (!(res->auto_convert & PHP_PQRES_CONV_DATETIME)) {
 			goto noconversion;
 		}
-		php_pqdt_from_string(val, len, "Y-m-d H:i:s", zv TSRMLS_CC);
+		php_pqdt_from_string(zv, NULL, val, len, "Y-m-d H:i:s", NULL TSRMLS_CC);
 		break;
 
 	case PHP_PQ_OID_TIMESTAMP:
 		if (!(res->auto_convert & PHP_PQRES_CONV_DATETIME)) {
 			goto noconversion;
 		}
-		php_pqdt_from_string(val, len, "Y-m-d H:i:s.u", zv TSRMLS_CC);
+		php_pqdt_from_string(zv, NULL, val, len, "Y-m-d H:i:s.u", NULL TSRMLS_CC);
 		break;
 
 	case PHP_PQ_OID_TIMESTAMPTZ:
 		if (!(res->auto_convert & PHP_PQRES_CONV_DATETIME)) {
 			goto noconversion;
 		}
-		php_pqdt_from_string(val, len, "Y-m-d H:i:s.uO", zv TSRMLS_CC);
+		php_pqdt_from_string(zv, NULL, val, len, "Y-m-d H:i:s.uO", NULL TSRMLS_CC);
 		break;
 
 #if PHP_PQ_HAVE_PHP_JSON_H && defined(PHP_PQ_OID_JSON)
