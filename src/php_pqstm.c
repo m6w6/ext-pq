@@ -36,26 +36,28 @@ static void php_pqstm_object_free(void *o TSRMLS_DC)
 	fprintf(stderr, "FREE stm(#%d) %p (conn(#%d): %p)\n", obj->zv.handle, obj, obj->intern->conn->zv.handle, obj->intern->conn);
 #endif
 	if (obj->intern) {
-		char *quoted_name = PQescapeIdentifier(obj->intern->conn->intern->conn, obj->intern->name, strlen(obj->intern->name));
+		if (obj->intern->conn->intern) {
+			char *quoted_name = PQescapeIdentifier(obj->intern->conn->intern->conn, obj->intern->name, strlen(obj->intern->name));
 
-		php_pq_callback_dtor(&obj->intern->conn->intern->onevent);
+			php_pq_callback_dtor(&obj->intern->conn->intern->onevent);
 
-		if (quoted_name) {
-			PGresult *res;
-			smart_str cmd = {0};
+			if (quoted_name) {
+				PGresult *res;
+				smart_str cmd = {0};
 
-			smart_str_appends(&cmd, "DEALLOCATE ");
-			smart_str_appends(&cmd, quoted_name);
-			smart_str_0(&cmd);
-			PQfreemem(quoted_name);
+				smart_str_appends(&cmd, "DEALLOCATE ");
+				smart_str_appends(&cmd, quoted_name);
+				smart_str_0(&cmd);
+				PQfreemem(quoted_name);
 
-			if ((res = PQexec(obj->intern->conn->intern->conn, cmd.c))) {
-				PHP_PQclear(res);
+				if ((res = PQexec(obj->intern->conn->intern->conn, cmd.c))) {
+					PHP_PQclear(res);
+				}
+				smart_str_free(&cmd);
 			}
-			smart_str_free(&cmd);
-		}
 
-		php_pq_object_delref(obj->intern->conn TSRMLS_CC);
+			php_pq_object_delref(obj->intern->conn TSRMLS_CC);
+		}
 		efree(obj->intern->name);
 		zend_hash_destroy(&obj->intern->bound);
 		if (obj->intern->params) {
