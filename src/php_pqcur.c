@@ -165,7 +165,7 @@ static void php_pqcur_object_read_connection(zval *object, void *o, zval *return
 
 char *php_pqcur_declare_str(const char *name_str, size_t name_len, unsigned flags, const char *query_str, size_t query_len)
 {
-	size_t decl_len = name_len + query_len + sizeof("DECLARE BINARY INSENSITIVE NO SCROLL  CURSOR WITHOUT HOLD FOR ");
+	size_t decl_len = name_len + query_len + sizeof("DECLARE  BINARY INSENSITIVE NO SCROLL CURSOR WITH HOLD FOR ");
 	char *decl_str;
 
 	decl_str = emalloc(decl_len);
