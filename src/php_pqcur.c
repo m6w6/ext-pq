@@ -31,7 +31,7 @@ static HashTable php_pqcur_object_prophandlers;
 
 static void cur_close(php_pqcur_object_t *obj TSRMLS_DC)
 {
-	if (obj->intern->open) {
+	if (obj->intern->open && obj->intern->conn->intern) {
 		PGresult *res;
 		smart_str cmd = {0};
 

@@ -54,7 +54,7 @@ static void php_pqtxn_object_free(void *o TSRMLS_DC)
 	fprintf(stderr, "FREE txn(#%d) %p (conn(#%d): %p)\n", obj->zv.handle, obj, obj->intern->conn->zv.handle, obj->intern->conn);
 #endif
 	if (obj->intern) {
-		if (obj->intern->open) {
+		if (obj->intern->open && obj->intern->conn->intern) {
 			PGresult *res = PQexec(obj->intern->conn->intern->conn, "ROLLBACK");
 
 			if (res) {
