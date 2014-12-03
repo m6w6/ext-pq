@@ -1736,6 +1736,7 @@ static PHP_METHOD(pqconn, startTransactionAsync) {
 
 			php_pq_object_addref(obj TSRMLS_CC);
 			txn->conn = obj;
+			txn->open = 1;
 			txn->isolation = isolation;
 			txn->readonly = readonly;
 			txn->deferrable = deferrable;
