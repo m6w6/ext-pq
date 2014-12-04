@@ -48,6 +48,39 @@ static void cur_close(php_pqcur_object_t *obj TSRMLS_DC)
 	}
 }
 
+static void cur_open(INTERNAL_FUNCTION_PARAMETERS, zend_bool async)
+{
+	zend_error_handling zeh;
+	STATUS rv;
+
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (rv == FAILURE) {
+		return;
+	}
+
+	php_pqcur_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
+	if (!obj->intern) {
+		throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Cursor not initialized");
+		return;
+	} else if (obj->intern->open) {
+		return;
+	}
+
+	if (async) {
+		rv = php_pqconn_declare_async(NULL, obj->intern->conn, obj->intern->decl TSRMLS_CC);
+	} else {
+		rv = php_pqconn_declare(NULL, obj->intern->conn, obj->intern->decl TSRMLS_CC);
+	}
+
+	if (rv == SUCCESS) {
+		obj->intern->open = 1;
+	}
+}
+
 static void cur_fetch_or_move(INTERNAL_FUNCTION_PARAMETERS, const char *action, zend_bool async)
 {
 	char *spec_str = "1";
@@ -238,24 +271,14 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqcur_open, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqcur, open)
 {
-	zend_error_handling zeh;
-	STATUS rv;
+	cur_open(INTERNAL_FUNCTION_PARAM_PASSTHRU, 0);
+}
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters_none();
-	zend_restore_error_handling(&zeh TSRMLS_CC);
-
-	if (rv == SUCCESS) {
-		php_pqcur_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
-
-		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Cursor not initialized");
-		} else if (!obj->intern->open) {
-			if (SUCCESS == php_pqconn_declare(NULL, obj->intern->conn, obj->intern->decl TSRMLS_CC)) {
-				obj->intern->open = 1;
-			}
-		}
-	}
+ZEND_BEGIN_ARG_INFO_EX(ai_pqcur_openAsync, 0, 0, 0)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqcur, openAsync)
+{
+	cur_open(INTERNAL_FUNCTION_PARAM_PASSTHRU, 1);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqcur_close, 0, 0, 0)
@@ -317,6 +340,7 @@ static PHP_METHOD(pqcur, moveAsync)
 static zend_function_entry php_pqcur_methods[] = {
 	PHP_ME(pqcur, __construct, ai_pqcur___construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
 	PHP_ME(pqcur, open, ai_pqcur_open, ZEND_ACC_PUBLIC)
+	PHP_ME(pqcur, openAsync, ai_pqcur_open, ZEND_ACC_PUBLIC)
 	PHP_ME(pqcur, close, ai_pqcur_close, ZEND_ACC_PUBLIC)
 	PHP_ME(pqcur, fetch, ai_pqcur_fetch, ZEND_ACC_PUBLIC)
 	PHP_ME(pqcur, move, ai_pqcur_move, ZEND_ACC_PUBLIC)
