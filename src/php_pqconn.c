@@ -1410,6 +1410,7 @@ static PHP_METHOD(pqconn, declare) {
 				cur->open = 1;
 				cur->name = estrdup(name_str);
 				cur->decl = decl;
+				cur->flags = flags;
 
 				return_value->type = IS_OBJECT;
 				return_value->value.obj = php_pqcur_create_object_ex(php_pqcur_class_entry, cur, NULL TSRMLS_CC);

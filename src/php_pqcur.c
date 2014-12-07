@@ -207,6 +207,13 @@ static void php_pqcur_object_read_connection(zval *object, void *o, zval *return
 	php_pq_object_to_zval(obj->intern->conn, &return_value TSRMLS_CC);
 }
 
+static void php_pqcur_object_read_flags(zval *object, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqcur_object_t *obj = o;
+
+	RETVAL_LONG(obj->intern->flags);
+}
+
 char *php_pqcur_declare_str(const char *name_str, size_t name_len, unsigned flags, const char *query_str, size_t query_len)
 {
 	size_t decl_len = name_len + query_len + sizeof("DECLARE  BINARY INSENSITIVE NO SCROLL CURSOR WITH HOLD FOR ");
@@ -272,6 +279,7 @@ static PHP_METHOD(pqcur, __construct) {
 				cur->open = 1;
 				cur->name = estrdup(name_str);
 				cur->decl = decl;
+				cur->flags = flags;
 				obj->intern = cur;
 			}
 		}
@@ -422,6 +430,10 @@ PHP_MINIT_FUNCTION(pqcur)
 	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("connection"), ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqcur_object_read_connection;
 	zend_hash_add(&php_pqcur_object_prophandlers, "connection", sizeof("connection"), (void *) &ph, sizeof(ph), NULL);
+
+	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("flags"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqcur_object_read_flags;
+	zend_hash_add(&php_pqcur_object_prophandlers, "flags", sizeof("flags"), (void *) &ph, sizeof(ph), NULL);
 
 	return SUCCESS;
 }

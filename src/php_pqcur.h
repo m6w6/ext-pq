@@ -27,6 +27,7 @@ typedef struct php_pqcur {
 	char *name;
 	char *decl;
 	unsigned open:1;
+	long flags;
 } php_pqcur_t;
 
 typedef struct php_pqcur_object {
