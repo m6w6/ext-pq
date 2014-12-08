@@ -21,6 +21,8 @@ typedef struct php_pqstm {
 	char *name;
 	HashTable bound;
 	php_pq_params_t *params;
+	char *query;
+	unsigned allocated:1;
 } php_pqstm_t;
 
 typedef struct php_pqstm_object {
@@ -32,6 +34,7 @@ typedef struct php_pqstm_object {
 
 extern zend_class_entry *php_pqstm_class_entry;
 extern zend_object_value php_pqstm_create_object_ex(zend_class_entry *ce, php_pqstm_t *intern, php_pqstm_object_t **ptr TSRMLS_DC);
+extern php_pqstm_t *php_pqstm_init(php_pqconn_object_t *conn, const char *name, const char *query, php_pq_params_t *params TSRMLS_DC);
 
 extern PHP_MINIT_FUNCTION(pqstm);
 extern PHP_MSHUTDOWN_FUNCTION(pqstm);
