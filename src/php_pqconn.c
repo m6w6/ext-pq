@@ -1398,19 +1398,13 @@ static PHP_METHOD(pqconn, declare) {
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
 		} else {
-			char *decl = php_pqcur_declare_str(name_str, name_len, flags, query_str, query_len);
+			int query_offset;
+			char *decl = php_pqcur_declare_str(name_str, name_len, flags, query_str, query_len, &query_offset);
 
 			if (SUCCESS != php_pqconn_declare(getThis(), obj, decl TSRMLS_CC)) {
 				efree(decl);
 			} else {
-				php_pqcur_t *cur = ecalloc(1, sizeof(*cur));
-
-				php_pq_object_addref(obj TSRMLS_CC);
-				cur->conn = obj;
-				cur->open = 1;
-				cur->name = estrdup(name_str);
-				cur->decl = decl;
-				cur->flags = flags;
+				php_pqcur_t *cur = php_pqcur_init(obj, name_str, decl, query_offset, flags TSRMLS_CC);
 
 				return_value->type = IS_OBJECT;
 				return_value->value.obj = php_pqcur_create_object_ex(php_pqcur_class_entry, cur, NULL TSRMLS_CC);
@@ -1461,18 +1455,13 @@ static PHP_METHOD(pqconn, declareAsync) {
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
 		} else {
-			char *decl = php_pqcur_declare_str(name_str, name_len, flags, query_str, query_len);
+			int query_offset;
+			char *decl = php_pqcur_declare_str(name_str, name_len, flags, query_str, query_len, &query_offset);
 
 			if (SUCCESS != php_pqconn_declare_async(getThis(), obj, decl TSRMLS_CC)) {
 				efree(decl);
 			} else {
-				php_pqcur_t *cur = ecalloc(1, sizeof(*cur));
-
-				php_pq_object_addref(obj TSRMLS_CC);
-				cur->conn = obj;
-				cur->open = 1;
-				cur->name = estrdup(name_str);
-				cur->decl = decl;
+				php_pqcur_t *cur = php_pqcur_init(obj, name_str, decl, query_offset, flags TSRMLS_CC);
 
 				return_value->type = IS_OBJECT;
 				return_value->value.obj = php_pqcur_create_object_ex(php_pqcur_class_entry, cur, NULL TSRMLS_CC);

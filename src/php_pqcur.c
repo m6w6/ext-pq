@@ -207,6 +207,13 @@ static void php_pqcur_object_read_connection(zval *object, void *o, zval *return
 	php_pq_object_to_zval(obj->intern->conn, &return_value TSRMLS_CC);
 }
 
+static void php_pqcur_object_read_query(zval *object, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqcur_object_t *obj = o;
+
+	RETVAL_STRING(obj->intern->decl + obj->intern->query_offset, 1);
+}
+
 static void php_pqcur_object_read_flags(zval *object, void *o, zval *return_value TSRMLS_DC)
 {
 	php_pqcur_object_t *obj = o;
@@ -214,7 +221,7 @@ static void php_pqcur_object_read_flags(zval *object, void *o, zval *return_valu
 	RETVAL_LONG(obj->intern->flags);
 }
 
-char *php_pqcur_declare_str(const char *name_str, size_t name_len, unsigned flags, const char *query_str, size_t query_len)
+char *php_pqcur_declare_str(const char *name_str, size_t name_len, unsigned flags, const char *query_str, size_t query_len, int *query_offset)
 {
 	size_t decl_len = name_len + query_len + sizeof("DECLARE  BINARY INSENSITIVE NO SCROLL CURSOR WITH HOLD FOR ");
 	char *decl_str;
@@ -229,7 +236,36 @@ char *php_pqcur_declare_str(const char *name_str, size_t name_len, unsigned flag
 			(flags & PHP_PQ_DECLARE_WITH_HOLD) ? "WITH HOLD" : "",
 			query_str
 	);
+
+	if (query_offset) {
+		/* sizeof() includes the terminating null byte, so no need for spaces in the string literals */
+		*query_offset = sizeof("DECLARE")
+			+ (name_len + 1)
+			+ ((flags & PHP_PQ_DECLARE_BINARY) ? sizeof("BINARY") : 1)
+			+ ((flags & PHP_PQ_DECLARE_INSENSITIVE) ? sizeof("INSENSITIVE") : 1)
+			+ ((flags & PHP_PQ_DECLARE_NO_SCROLL) ? sizeof("NO SCROLL") :
+					(flags & PHP_PQ_DECLARE_SCROLL) ? sizeof("SCROLL") : 1)
+			+ sizeof("CURSOR")
+			+ ((flags & PHP_PQ_DECLARE_WITH_HOLD) ? sizeof("WITH HOLD") : 1)
+			+ sizeof("FOR");
+	}
+
 	return decl_str;
+}
+
+php_pqcur_t *php_pqcur_init(php_pqconn_object_t *conn, const char *name, char *decl, int query_offset, long flags TSRMLS_DC)
+{
+	php_pqcur_t *cur = ecalloc(1, sizeof(*cur));
+
+	php_pq_object_addref(conn TSRMLS_CC);
+	cur->conn = conn;
+	cur->name = estrdup(name);
+	cur->decl = decl;
+	cur->query_offset = query_offset;
+	cur->flags = flags;
+	cur->open = 1;
+
+	return cur;
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqcur___construct, 0, 0, 4)
@@ -261,7 +297,8 @@ static PHP_METHOD(pqcur, __construct) {
 		} if (!conn_obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
 		} else {
-			char *decl = php_pqcur_declare_str(name_str, name_len, flags, query_str, query_len);
+			int query_offset;
+			char *decl = php_pqcur_declare_str(name_str, name_len, flags, query_str, query_len, &query_offset);
 
 			if (async) {
 				rv = php_pqconn_declare_async(zconn, conn_obj, decl TSRMLS_CC);
@@ -272,15 +309,7 @@ static PHP_METHOD(pqcur, __construct) {
 			if (SUCCESS != rv) {
 				efree(decl);
 			} else {
-				php_pqcur_t *cur = ecalloc(1, sizeof(*cur));
-
-				php_pq_object_addref(conn_obj TSRMLS_CC);
-				cur->conn = conn_obj;
-				cur->open = 1;
-				cur->name = estrdup(name_str);
-				cur->decl = decl;
-				cur->flags = flags;
-				obj->intern = cur;
+				obj->intern = php_pqcur_init(conn_obj, name_str, decl, query_offset, flags TSRMLS_CC);
 			}
 		}
 	}
@@ -430,6 +459,10 @@ PHP_MINIT_FUNCTION(pqcur)
 	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("connection"), ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqcur_object_read_connection;
 	zend_hash_add(&php_pqcur_object_prophandlers, "connection", sizeof("connection"), (void *) &ph, sizeof(ph), NULL);
+
+	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("query"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqcur_object_read_query;
+	zend_hash_add(&php_pqcur_object_prophandlers, "query", sizeof("query"), (void *) &ph, sizeof(ph), NULL);
 
 	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("flags"), ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqcur_object_read_flags;
