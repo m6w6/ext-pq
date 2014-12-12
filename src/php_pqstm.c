@@ -132,6 +132,31 @@ static void php_pqstm_object_read_connection(zval *object, void *o, zval *return
 	php_pq_object_to_zval(obj->intern->conn, &return_value TSRMLS_CC);
 }
 
+static void php_pqstm_object_read_query(zval *object, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqstm_object_t *obj = o;
+
+	RETVAL_STRING(obj->intern->query, 1);
+}
+
+static void php_pqstm_object_read_types(zval *object, void *o, zval *return_value)
+{
+	int i;
+	HashTable *ht;
+	php_pqstm_object_t *obj;
+
+	obj = (php_pqstm_object_t *)o;
+	ht = (HashTable *)emalloc(sizeof(HashTable));
+
+	zend_hash_init(ht, obj->intern->params->type.count, NULL, ZVAL_PTR_DTOR, 0);
+	Z_TYPE_P(return_value) = IS_ARRAY;
+	Z_ARRVAL_P(return_value) = ht;
+
+	for (i = 0; i < obj->intern->params->type.count; i++) {
+		add_next_index_long(return_value, (long)obj->intern->params->type.oids[i]);
+	}
+}
+
 php_pqstm_t *php_pqstm_init(php_pqconn_object_t *conn, const char *name, const char *query, php_pq_params_t *params TSRMLS_DC)
 {
 	php_pqstm_t *stm = ecalloc(1, sizeof(*stm));
@@ -490,6 +515,14 @@ PHP_MINIT_FUNCTION(pqstm)
 	zend_declare_property_null(php_pqstm_class_entry, ZEND_STRL("connection"), ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqstm_object_read_connection;
 	zend_hash_add(&php_pqstm_object_prophandlers, "connection", sizeof("connection"), (void *) &ph, sizeof(ph), NULL);
+
+	zend_declare_property_null(php_pqstm_class_entry, ZEND_STRL("query"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqstm_object_read_query;
+	zend_hash_add(&php_pqstm_object_prophandlers, "query", sizeof("query"), (void *) &ph, sizeof(ph), NULL);
+
+	zend_declare_property_null(php_pqstm_class_entry, ZEND_STRL("types"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqstm_object_read_types;
+	zend_hash_add(&php_pqstm_object_prophandlers, "types", sizeof("types"), (void *) &ph, sizeof(ph), NULL);
 
 	return SUCCESS;
 }
