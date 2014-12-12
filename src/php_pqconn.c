@@ -1288,13 +1288,7 @@ static PHP_METHOD(pqconn, prepare) {
 			if (SUCCESS != php_pqconn_prepare(getThis(), obj, name_str, query_str, params TSRMLS_CC)) {
 				php_pq_params_free(&params);
 			} else {
-				php_pqstm_t *stm = ecalloc(1, sizeof(*stm));
-
-				php_pq_object_addref(obj TSRMLS_CC);
-				stm->conn = obj;
-				stm->name = estrdup(name_str);
-				stm->params = params;
-				ZEND_INIT_SYMTABLE(&stm->bound);
+				php_pqstm_t *stm = php_pqstm_init(obj, name_str, query_str, params TSRMLS_CC);
 
 				return_value->type = IS_OBJECT;
 				return_value->value.obj = php_pqstm_create_object_ex(php_pqstm_class_entry, stm, NULL TSRMLS_CC);
@@ -1350,13 +1344,7 @@ static PHP_METHOD(pqconn, prepareAsync) {
 			if (SUCCESS != php_pqconn_prepare_async(getThis(), obj, name_str, query_str, params TSRMLS_CC)) {
 				php_pq_params_free(&params);
 			} else {
-				php_pqstm_t *stm = ecalloc(1, sizeof(*stm));
-
-				php_pq_object_addref(obj TSRMLS_CC);
-				stm->conn = obj;
-				stm->name = estrdup(name_str);
-				stm->params = params;
-				ZEND_INIT_SYMTABLE(&stm->bound);
+				php_pqstm_t *stm = php_pqstm_init(obj, name_str, query_str, params TSRMLS_CC);
 
 				return_value->type = IS_OBJECT;
 				return_value->value.obj = php_pqstm_create_object_ex(php_pqstm_class_entry, stm, NULL TSRMLS_CC);

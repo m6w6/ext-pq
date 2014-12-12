@@ -29,6 +29,43 @@ zend_class_entry *php_pqstm_class_entry;
 static zend_object_handlers php_pqstm_object_handlers;
 static HashTable php_pqstm_object_prophandlers;
 
+static void php_pqstm_deallocate(php_pqstm_object_t *obj, zend_bool async, zend_bool silent)
+{
+	if (obj->intern->allocated) {
+		char *quoted_name = PQescapeIdentifier(obj->intern->conn->intern->conn, obj->intern->name, strlen(obj->intern->name));
+
+		if (quoted_name) {
+			smart_str cmd = {0};
+
+			smart_str_appends(&cmd, "DEALLOCATE ");
+			smart_str_appends(&cmd, quoted_name);
+			smart_str_0(&cmd);
+
+			if (async) {
+				if (PQsendQuery(obj->intern->conn->intern->conn, cmd.c)) {
+					obj->intern->conn->intern->poller = PQconsumeInput;
+					php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
+				} else if (!silent) {
+					throw_exce(EX_IO TSRMLS_CC, "Failed to deallocate statement (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+				}
+			} else {
+				PGresult *res;
+
+				if ((res = PQexec(obj->intern->conn->intern->conn, cmd.c))) {
+					PHP_PQclear(res);
+				} else if (!silent) {
+					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to deallocate statement (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+				}
+			}
+
+			PQfreemem(quoted_name);
+			smart_str_free(&cmd);
+		}
+
+		obj->intern->allocated = 0;
+	}
+}
+
 static void php_pqstm_object_free(void *o TSRMLS_DC)
 {
 	php_pqstm_object_t *obj = o;
@@ -37,25 +74,8 @@ static void php_pqstm_object_free(void *o TSRMLS_DC)
 #endif
 	if (obj->intern) {
 		if (obj->intern->conn->intern) {
-			char *quoted_name = PQescapeIdentifier(obj->intern->conn->intern->conn, obj->intern->name, strlen(obj->intern->name));
-
 			php_pq_callback_dtor(&obj->intern->conn->intern->onevent);
-
-			if (quoted_name) {
-				PGresult *res;
-				smart_str cmd = {0};
-
-				smart_str_appends(&cmd, "DEALLOCATE ");
-				smart_str_appends(&cmd, quoted_name);
-				smart_str_0(&cmd);
-				PQfreemem(quoted_name);
-
-				if ((res = PQexec(obj->intern->conn->intern->conn, cmd.c))) {
-					PHP_PQclear(res);
-				}
-				smart_str_free(&cmd);
-			}
-
+			php_pqstm_deallocate(obj, 0, 1);
 			php_pq_object_delref(obj->intern->conn TSRMLS_CC);
 		}
 		efree(obj->intern->name);
@@ -112,6 +132,46 @@ static void php_pqstm_object_read_connection(zval *object, void *o, zval *return
 	php_pq_object_to_zval(obj->intern->conn, &return_value TSRMLS_CC);
 }
 
+static void php_pqstm_object_read_query(zval *object, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqstm_object_t *obj = o;
+
+	RETVAL_STRING(obj->intern->query, 1);
+}
+
+static void php_pqstm_object_read_types(zval *object, void *o, zval *return_value)
+{
+	int i;
+	HashTable *ht;
+	php_pqstm_object_t *obj;
+
+	obj = (php_pqstm_object_t *)o;
+	ht = (HashTable *)emalloc(sizeof(HashTable));
+
+	zend_hash_init(ht, obj->intern->params->type.count, NULL, ZVAL_PTR_DTOR, 0);
+	Z_TYPE_P(return_value) = IS_ARRAY;
+	Z_ARRVAL_P(return_value) = ht;
+
+	for (i = 0; i < obj->intern->params->type.count; i++) {
+		add_next_index_long(return_value, (long)obj->intern->params->type.oids[i]);
+	}
+}
+
+php_pqstm_t *php_pqstm_init(php_pqconn_object_t *conn, const char *name, const char *query, php_pq_params_t *params TSRMLS_DC)
+{
+	php_pqstm_t *stm = ecalloc(1, sizeof(*stm));
+
+	php_pq_object_addref(conn TSRMLS_CC);
+	stm->conn = conn;
+	stm->name = estrdup(name);
+	stm->params = params;
+	stm->query = estrdup(query);
+	stm->allocated = 1;
+
+	ZEND_INIT_SYMTABLE(&stm->bound);
+
+	return stm;
+}
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_construct, 0, 0, 3)
 	ZEND_ARG_OBJ_INFO(0, connection, pq\\Connection, 0)
@@ -150,14 +210,7 @@ static PHP_METHOD(pqstm, __construct) {
 			}
 
 			if (SUCCESS == rv) {
-				php_pqstm_t *stm = ecalloc(1, sizeof(*stm));
-
-				php_pq_object_addref(conn_obj TSRMLS_CC);
-				stm->conn = conn_obj;
-				stm->name = estrdup(name_str);
-				stm->params = params;
-				ZEND_INIT_SYMTABLE(&stm->bound);
-				obj->intern = stm;
+				obj->intern = php_pqstm_init(conn_obj, name_str, query_str, params TSRMLS_CC);
 			}
 		}
 	}
@@ -181,6 +234,8 @@ static PHP_METHOD(pqstm, bind) {
 
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Statement not initialized");
+		} else if (!obj->intern->allocated) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Statement has been deallocated");
 		} else {
 			SEPARATE_ZVAL_TO_MAKE_IS_REF(param_ref);
 			Z_ADDREF_PP(param_ref);
@@ -207,6 +262,8 @@ static PHP_METHOD(pqstm, exec) {
 
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Statement not initialized");
+		} else if (!obj->intern->allocated) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Statement has been deallocated");
 		} else {
 			PGresult *res;
 
@@ -243,6 +300,8 @@ static PHP_METHOD(pqstm, execAsync) {
 
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Statement not initialized");
+		} else if (!obj->intern->allocated) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Statement has been deallocated");
 		} else {
 			int rc;
 
@@ -281,6 +340,8 @@ static PHP_METHOD(pqstm, desc) {
 
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Statement not initialized");
+		} else if (!obj->intern->allocated) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Statement has been deallocated");
 		} else {
 			PGresult *res = PQdescribePrepared(obj->intern->conn->intern->conn, obj->intern->name);
 
@@ -319,6 +380,8 @@ static PHP_METHOD(pqstm, descAsync) {
 
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Statement not initialized");
+		} else if (!obj->intern->allocated) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Statement has been deallocated");
 		} else if (!PQsendDescribePrepared(obj->intern->conn->intern->conn, obj->intern->name)) {
 			throw_exce(EX_IO TSRMLS_CC, "Failed to describe statement: %s", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 		} else {
@@ -329,13 +392,93 @@ static PHP_METHOD(pqstm, descAsync) {
 	}
 }
 
+static zend_always_inline void php_pqstm_deallocate_handler(INTERNAL_FUNCTION_PARAMETERS, zend_bool async)
+{
+	zend_error_handling zeh;
+	STATUS rv;
+
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (rv == SUCCESS) {
+		php_pqstm_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
+		if (!obj->intern) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Statement not initialized");
+		} else {
+			php_pqstm_deallocate(obj, async, 0 TSRMLS_CC);
+		}
+	}
+}
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_deallocate, 0, 0, 0)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqstm, deallocate)
+{
+	php_pqstm_deallocate_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, 0);
+}
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_deallocate_async, 0, 0, 0)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqstm, deallocateAsync)
+{
+	php_pqstm_deallocate_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, 1);
+}
+
+static zend_always_inline void php_pqstm_prepare_handler(INTERNAL_FUNCTION_PARAMETERS, zend_bool async)
+{
+	zend_error_handling zeh;
+	STATUS rv;
+
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh TSRMLS_CC);
+
+	if (rv == SUCCESS) {
+		php_pqstm_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+
+		if (!obj->intern) {
+			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Statement not initialized");
+		} else if (!obj->intern->allocated) {
+			if (async) {
+				rv = php_pqconn_prepare_async(NULL, obj->intern->conn, obj->intern->name, obj->intern->query, obj->intern->params TSRMLS_CC);
+			} else {
+				rv = php_pqconn_prepare(NULL, obj->intern->conn, obj->intern->name, obj->intern->query, obj->intern->params TSRMLS_CC);
+			}
+
+			if (SUCCESS == rv) {
+				obj->intern->allocated = 1;
+			}
+		}
+	}
+}
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_prepare, 0, 0, 0)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqstm, prepare)
+{
+	php_pqstm_prepare_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, 0);
+}
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_prepare_async, 0, 0, 0)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqstm, prepareAsync)
+{
+	php_pqstm_prepare_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, 1);
+}
+
 static zend_function_entry php_pqstm_methods[] = {
 	PHP_ME(pqstm, __construct, ai_pqstm_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
 	PHP_ME(pqstm, bind, ai_pqstm_bind, ZEND_ACC_PUBLIC)
-	PHP_ME(pqstm, exec, ai_pqstm_exec, ZEND_ACC_PUBLIC)
+	PHP_ME(pqstm, deallocate, ai_pqstm_deallocate, ZEND_ACC_PUBLIC)
+	PHP_ME(pqstm, deallocateAsync, ai_pqstm_deallocate_async, ZEND_ACC_PUBLIC)
 	PHP_ME(pqstm, desc, ai_pqstm_desc, ZEND_ACC_PUBLIC)
-	PHP_ME(pqstm, execAsync, ai_pqstm_exec_async, ZEND_ACC_PUBLIC)
 	PHP_ME(pqstm, descAsync, ai_pqstm_desc_async, ZEND_ACC_PUBLIC)
+	PHP_ME(pqstm, exec, ai_pqstm_exec, ZEND_ACC_PUBLIC)
+	PHP_ME(pqstm, execAsync, ai_pqstm_exec_async, ZEND_ACC_PUBLIC)
+	PHP_ME(pqstm, prepare, ai_pqstm_prepare, ZEND_ACC_PUBLIC)
+	PHP_ME(pqstm, prepareAsync, ai_pqstm_prepare_async, ZEND_ACC_PUBLIC)
 	{0}
 };
 
@@ -372,6 +515,14 @@ PHP_MINIT_FUNCTION(pqstm)
 	zend_declare_property_null(php_pqstm_class_entry, ZEND_STRL("connection"), ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqstm_object_read_connection;
 	zend_hash_add(&php_pqstm_object_prophandlers, "connection", sizeof("connection"), (void *) &ph, sizeof(ph), NULL);
+
+	zend_declare_property_null(php_pqstm_class_entry, ZEND_STRL("query"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqstm_object_read_query;
+	zend_hash_add(&php_pqstm_object_prophandlers, "query", sizeof("query"), (void *) &ph, sizeof(ph), NULL);
+
+	zend_declare_property_null(php_pqstm_class_entry, ZEND_STRL("types"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqstm_object_read_types;
+	zend_hash_add(&php_pqstm_object_prophandlers, "types", sizeof("types"), (void *) &ph, sizeof(ph), NULL);
 
 	return SUCCESS;
 }
