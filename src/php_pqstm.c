@@ -29,7 +29,7 @@ zend_class_entry *php_pqstm_class_entry;
 static zend_object_handlers php_pqstm_object_handlers;
 static HashTable php_pqstm_object_prophandlers;
 
-static void php_pqstm_deallocate(php_pqstm_object_t *obj, zend_bool async, zend_bool silent)
+static void php_pqstm_deallocate(php_pqstm_object_t *obj, zend_bool async, zend_bool silent TSRMLS_DC)
 {
 	if (obj->intern->allocated) {
 		char *quoted_name = PQescapeIdentifier(obj->intern->conn->intern->conn, obj->intern->name, strlen(obj->intern->name));
@@ -75,7 +75,7 @@ static void php_pqstm_object_free(void *o TSRMLS_DC)
 	if (obj->intern) {
 		if (obj->intern->conn->intern) {
 			php_pq_callback_dtor(&obj->intern->conn->intern->onevent);
-			php_pqstm_deallocate(obj, 0, 1);
+			php_pqstm_deallocate(obj, 0, 1 TSRMLS_CC);
 			php_pq_object_delref(obj->intern->conn TSRMLS_CC);
 		}
 		efree(obj->intern->name);
