@@ -1,0 +1,17 @@
+language: c
+
+addons:
+    postgresql: "9.3"
+
+before_install:
+    - sudo apt-get update -qq
+    - sudo apt-get install -qq libpq-dev
+
+before_script:
+    - sudo ./travis/compile-php.sh
+    - sudo ./travis/compile-raphf.sh
+    - sudo ./travis/compile-ext.sh
+    - sudo ./travis/configure-postgres.sh
+
+script:
+    - REPORT_EXIT_STATUS=1 $HOME/bin/php ./run-tests.php -p $HOME/bin/php --show-diff
