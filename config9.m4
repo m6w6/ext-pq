@@ -2,14 +2,22 @@ PHP_ARG_WITH(pq, [whether to enable libpq (PostgreSQL) support],
 [  --with-pq[=DIR]           Include libpq support])
 
 if test "$PHP_PQ" != "no"; then
-	SEARCH_PATH="/usr/local /usr /opt"
+	SEARCH_PATH="/usr/local /usr /usr/include/postgresql /opt"
 	if test "$PHP_PQ" != "yes"; then
 		SEARCH_PATH="$PHP_PQ $SEARCH_PATH"
 	fi
 	for i in $SEARCH_PATH; do
+		AC_MSG_CHECKING(for $i/libpq-events.h)
+		if test -f "$i/libpq-events.h"; then
+			PQ_DIR=$i
+			AC_MSG_RESULT(yep)
+			break
+		fi
+		AC_MSG_RESULT(nope)
+
 		AC_MSG_CHECKING(for $i/include/libpq-events.h)
 		if test -f "$i/include/libpq-events.h"; then
-			PQ_DIR=$i
+			PQ_DIR=$i/include
 			AC_MSG_RESULT(yep)
 			break
 		fi
@@ -19,7 +27,7 @@ if test "$PHP_PQ" != "no"; then
 	if test -z "$PQ_DIR"; then
 		AC_MSG_ERROR(could not find include/libpq-events.h)
 	fi
-	PHP_ADD_INCLUDE($PQ_DIR/include)
+	PHP_ADD_INCLUDE($PQ_DIR)
 
 	ifdef([AC_PROG_EGREP], [
 		AC_PROG_EGREP
@@ -32,7 +40,7 @@ if test "$PHP_PQ" != "no"; then
 	dnl
 	AC_DEFUN([PQ_CHECK_CONST], [
 		AC_MSG_CHECKING(for $1)
-		if $EGREP -q $1 $PQ_DIR/include/libpq-fe.h; then
+		if $EGREP -q $1 $PQ_DIR/libpq-fe.h; then
 			AC_DEFINE(HAVE_$1, 1, [Have $1])
 			AC_MSG_RESULT(yep)
 		else
