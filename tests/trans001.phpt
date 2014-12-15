@@ -10,6 +10,7 @@ include "_setup.inc";
 
 $c = new pq\Connection(PQ_DSN);
 $c->exec("DROP TABLE IF EXISTS test CASCADE");
+$c->exec("SET client_min_messages TO NOTICE");
 $c->on(pq\Connection::EVENT_NOTICE, function($c, $notice) {
 	echo "Got notice: $notice\n";
 });
