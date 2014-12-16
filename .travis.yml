@@ -3,15 +3,31 @@ language: c
 addons:
     postgresql: "9.3"
 
+env:
+    global:
+        - BUILD_SRC_DIR=/src
+        - BUILD_INSTALL_DIR=/install
+        - PHP_EXTENSIONS="--enable-json --with-mhash"
+        - PG_TEST_DB_NAME=pq_test
+        - PG_TEST_DB_USER=postgres
+        - REPORT_EXIT_STATUS=1
+    matrix:
+        - PHP_TARGET_REF=PHP-5.4 PHP_CONFIGURE_OPTS=""
+        - PHP_TARGET_REF=PHP-5.4 PHP_CONFIGURE_OPTS="--enable-maintainer-zts"
+        - PHP_TARGET_REF=PHP-5.5 PHP_CONFIGURE_OPTS=""
+        - PHP_TARGET_REF=PHP-5.5 PHP_CONFIGURE_OPTS="--enable-maintainer-zts"
+        - PHP_TARGET_REF=PHP-5.6 PHP_CONFIGURE_OPTS=""
+        - PHP_TARGET_REF=PHP-5.6 PHP_CONFIGURE_OPTS="--enable-maintainer-zts"
+
 before_install:
     - sudo apt-get update -qq
     - sudo apt-get install -qq libpq-dev
 
 before_script:
-    - sudo ./travis/compile-php.sh
-    - sudo ./travis/compile-raphf.sh
-    - sudo ./travis/compile-ext.sh
-    - sudo ./travis/configure-postgres.sh
+    - ./travis/compile-php.sh
+    - ./travis/compile-ext-raphf.sh
+    - ./travis/compile-ext-pq.sh
+    - ./travis/configure-postgres.sh
 
 script:
-    - REPORT_EXIT_STATUS=1 $HOME/bin/php ./run-tests.php -p $HOME/bin/php --show-diff
+    - $HOME$BUILD_INSTALL_DIR/bin/php ./run-tests.php -q -p $HOME$BUILD_INSTALL_DIR/bin/php --show-diff

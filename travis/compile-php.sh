@@ -1,14 +1,19 @@
 #!/bin/sh -x
 
 set -e
-TARGET_PHP_REF="PHP-5.6"
 
-mkdir -p $HOME/php
-mkdir -p $HOME/php.d
-git clone --depth=1 --branch=$TARGET_PHP_REF https://github.com/php/php-src $HOME/php/src
+mkdir -p $HOME$BUILD_SRC_DIR
+mkdir -p $HOME$BUILD_INSTALL_DIR/conf.d
 
-cd $HOME/php/src
+git clone --depth=1 --branch=$PHP_TARGET_REF https://github.com/php/php-src $HOME$BUILD_SRC_DIR/php-src
+
+cd $HOME$BUILD_SRC_DIR/php-src
 ./buildconf --force
-./configure --prefix=$HOME --with-config-file-scan-dir=$HOME/php.d --disable-all --enable-maintainer-zts --enable-json --with-mhash
+./configure --quiet \
+  --prefix=$HOME$BUILD_INSTALL_DIR \
+  --with-config-file-scan-dir=$HOME$BUILD_INSTALL_DIR/conf.d \
+  --disable-all \
+  $PHP_CONFIGURE_OPTS \
+  $PHP_EXTENSIONS
 
 make -j2 --quiet install
