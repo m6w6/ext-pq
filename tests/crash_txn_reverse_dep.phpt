@@ -11,7 +11,7 @@ echo "Test\n";
 include "_setup.inc";
 
 $c = new pq\Connection(PQ_DSN);
-$c->c = $c->declare("test", "SELECT 1");
+$c->c = $c->declare("test", pq\Cursor::WITH_HOLD, "SELECT 1");
 
 ?>
 ===DONE===

@@ -79,6 +79,7 @@ static void php_pqstm_object_free(void *o TSRMLS_DC)
 			php_pq_object_delref(obj->intern->conn TSRMLS_CC);
 		}
 		efree(obj->intern->name);
+		efree(obj->intern->query);
 		zend_hash_destroy(&obj->intern->bound);
 		if (obj->intern->params) {
 			php_pq_params_free(&obj->intern->params);
