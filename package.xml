@@ -31,10 +31,16 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>mike@php.net</email>
   <active>yes</active>
  </lead>
- <date>2014-10-23</date>
+ <developer>
+  <name>Chris Wright</name>
+  <user>daverandom</user>
+  <email>daverandom@php.net</email>
+  <active>yes</active>
+ </developer>
+ <date>2014-12-17</date>
  <version>
-  <release>0.5.6dev</release>
-  <api>0.5.0</api>
+  <release>0.6.0dev</release>
+  <api>0.6.0</api>
  </version>
  <stability>
   <release>beta</release>
@@ -43,6 +49,8 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <license>BSD, revised</license>
  <notes><![CDATA[
 * Fixed crash with result iterator when the iterator exists longer than the result
+* Added pq\Statement::deallocate{,Async}() and pq\Statement::prepare{,Async}() methods
+* Added pq\Statement::$query and pq\Statment::$types readonly properties
 ]]></notes>
  <contents>
   <dir name="/">
