@@ -140,19 +140,12 @@ static void php_pqstm_object_read_query(zval *object, void *o, zval *return_valu
 	RETVAL_STRING(obj->intern->query, 1);
 }
 
-static void php_pqstm_object_read_types(zval *object, void *o, zval *return_value)
+static void php_pqstm_object_read_types(zval *object, void *o, zval *return_value TSRMLS_DC)
 {
 	int i;
-	HashTable *ht;
-	php_pqstm_object_t *obj;
+	php_pqstm_object_t *obj = o;
 
-	obj = (php_pqstm_object_t *)o;
-	ht = (HashTable *)emalloc(sizeof(HashTable));
-
-	zend_hash_init(ht, obj->intern->params->type.count, NULL, ZVAL_PTR_DTOR, 0);
-	Z_TYPE_P(return_value) = IS_ARRAY;
-	Z_ARRVAL_P(return_value) = ht;
-
+	array_init_size(return_value, obj->intern->params->type.count);
 	for (i = 0; i < obj->intern->params->type.count; i++) {
 		add_next_index_long(return_value, (long)obj->intern->params->type.oids[i]);
 	}
