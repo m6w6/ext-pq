@@ -116,7 +116,7 @@ static PHP_METHOD(pqcopy, __construct) {
 	char *expr_str, *opt_str = "";
 	int expr_len, opt_len = 0;
 	long direction;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Osl|s", &zconn, php_pqconn_class_entry, &expr_str, &expr_len, &direction, &opt_str, &opt_len);
@@ -180,7 +180,7 @@ static PHP_METHOD(pqcopy, put) {
 	zend_error_handling zeh;
 	char *data_str;
 	int data_len;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &data_str, &data_len);
@@ -209,7 +209,7 @@ static PHP_METHOD(pqcopy, end) {
 	zend_error_handling zeh;
 	char *error_str = NULL;
 	int error_len = 0;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s!", &error_str, &error_len);
@@ -247,7 +247,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqcopy, get) {
 	zend_error_handling zeh;
 	zval *zdata;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &zdata);

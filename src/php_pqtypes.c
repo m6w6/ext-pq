@@ -189,7 +189,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtypes, __construct) {
 	zend_error_handling zeh;
 	zval *zconn, *znsp = NULL;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O|a!", &zconn, php_pqconn_class_entry, &znsp);
@@ -260,7 +260,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtypes, refresh) {
 	HashTable *nsp = NULL;
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|H/!", &nsp);

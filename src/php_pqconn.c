@@ -486,11 +486,11 @@ static void php_pqconn_object_write_def_auto_conv(zval*object, void *o, zval *va
 	}
 }
 
-static STATUS php_pqconn_update_socket(zval *this_ptr, php_pqconn_object_t *obj TSRMLS_DC)
+static ZEND_RESULT_CODE php_pqconn_update_socket(zval *this_ptr, php_pqconn_object_t *obj TSRMLS_DC)
 {
 	zval *zsocket, zmember;
 	php_stream *stream;
-	STATUS retval;
+	ZEND_RESULT_CODE retval;
 	int socket;
 
 	if (!obj) {
@@ -659,7 +659,7 @@ static PHP_METHOD(pqconn, __construct) {
 	char *dsn_str = "";
 	int dsn_len = 0;
 	long flags = 0;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|sl", &dsn_str, &dsn_len, &flags);
@@ -709,7 +709,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_reset, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, reset) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -736,7 +736,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_reset_async, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, resetAsync) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -767,7 +767,7 @@ static PHP_METHOD(pqconn, unlisten)
 	zend_error_handling zeh;
 	char *channel_str;
 	int channel_len;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &channel_str, &channel_len);
@@ -796,7 +796,7 @@ static PHP_METHOD(pqconn, unlistenAsync) {
 	zend_error_handling zeh;
 	char *channel_str;
 	int channel_len;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &channel_str, &channel_len);
@@ -858,7 +858,7 @@ static PHP_METHOD(pqconn, listen) {
 	char *channel_str = NULL;
 	int channel_len = 0;
 	php_pq_callback_t listener = {{0}};
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sf", &channel_str, &channel_len, &listener.fci, &listener.fcc);
@@ -912,7 +912,7 @@ static PHP_METHOD(pqconn, listenAsync) {
 	char *channel_str = NULL;
 	int channel_len = 0;
 	php_pq_callback_t listener = {{0}};
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sf", &channel_str, &channel_len, &listener.fci, &listener.fcc);
@@ -958,7 +958,7 @@ static PHP_METHOD(pqconn, notify) {
 	zend_error_handling zeh;
 	char *channel_str, *message_str;
 	int channel_len, message_len;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &channel_str, &channel_len, &message_str, &message_len);
@@ -995,7 +995,7 @@ static PHP_METHOD(pqconn, notifyAsync) {
 	zend_error_handling zeh;
 	char *channel_str, *message_str;
 	int channel_len, message_len;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &channel_str, &channel_len, &message_str, &message_len);
@@ -1024,7 +1024,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_poll, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, poll) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -1055,7 +1055,7 @@ static PHP_METHOD(pqconn, exec) {
 	zend_error_handling zeh;
 	char *query_str;
 	int query_len;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &query_str, &query_len);
@@ -1086,7 +1086,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_get_result, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, getResult) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -1120,7 +1120,7 @@ static PHP_METHOD(pqconn, execAsync) {
 	php_pq_callback_t resolver = {{0}};
 	char *query_str;
 	int query_len;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|f", &query_str, &query_len, &resolver.fci, &resolver.fcc);
@@ -1156,7 +1156,7 @@ static PHP_METHOD(pqconn, execParams) {
 	int query_len;
 	zval *zparams;
 	zval *ztypes = NULL;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sa/|a/!", &query_str, &query_len, &zparams, &ztypes);
@@ -1203,7 +1203,7 @@ static PHP_METHOD(pqconn, execParamsAsync) {
 	int query_len;
 	zval *zparams;
 	zval *ztypes = NULL;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sa/|a/!f", &query_str, &query_len, &zparams, &ztypes, &resolver.fci, &resolver.fcc);
@@ -1238,10 +1238,10 @@ static PHP_METHOD(pqconn, execParamsAsync) {
 	zend_restore_error_handling(&zeh TSRMLS_CC);
 }
 
-STATUS php_pqconn_prepare(zval *object, php_pqconn_object_t *obj, const char *name, const char *query, php_pq_params_t *params TSRMLS_DC)
+ZEND_RESULT_CODE php_pqconn_prepare(zval *object, php_pqconn_object_t *obj, const char *name, const char *query, php_pq_params_t *params TSRMLS_DC)
 {
 	PGresult *res;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	if (!obj) {
 		obj = zend_object_store_get_object(object TSRMLS_CC);
@@ -1271,7 +1271,7 @@ static PHP_METHOD(pqconn, prepare) {
 	zval *ztypes = NULL;
 	char *name_str, *query_str;
 	int name_len, *query_len;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|a/!", &name_str, &name_len, &query_str, &query_len, &ztypes);
@@ -1297,9 +1297,9 @@ static PHP_METHOD(pqconn, prepare) {
 	}
 }
 
-STATUS php_pqconn_prepare_async(zval *object, php_pqconn_object_t *obj, const char *name, const char *query, php_pq_params_t *params TSRMLS_DC)
+ZEND_RESULT_CODE php_pqconn_prepare_async(zval *object, php_pqconn_object_t *obj, const char *name, const char *query, php_pq_params_t *params TSRMLS_DC)
 {
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	if (!obj) {
 		obj = zend_object_store_get_object(object TSRMLS_CC);
@@ -1327,7 +1327,7 @@ static PHP_METHOD(pqconn, prepareAsync) {
 	zval *ztypes = NULL;
 	char *name_str, *query_str;
 	int name_len, *query_len;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|a/!", &name_str, &name_len, &query_str, &query_len, &ztypes);
@@ -1353,10 +1353,10 @@ static PHP_METHOD(pqconn, prepareAsync) {
 	}
 }
 
-STATUS php_pqconn_declare(zval *object, php_pqconn_object_t *obj, const char *decl TSRMLS_DC)
+ZEND_RESULT_CODE php_pqconn_declare(zval *object, php_pqconn_object_t *obj, const char *decl TSRMLS_DC)
 {
 	PGresult *res;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	if (!obj) {
 		obj = zend_object_store_get_object(object TSRMLS_CC);
@@ -1386,7 +1386,7 @@ static PHP_METHOD(pqconn, declare) {
 	char *name_str, *query_str;
 	int name_len, query_len;
 	long flags;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sls", &name_str, &name_len, &flags, &query_str, &query_len);
@@ -1418,9 +1418,9 @@ static PHP_METHOD(pqconn, declare) {
 	}
 }
 
-STATUS php_pqconn_declare_async(zval *object, php_pqconn_object_t *obj, const char *decl TSRMLS_DC)
+ZEND_RESULT_CODE php_pqconn_declare_async(zval *object, php_pqconn_object_t *obj, const char *decl TSRMLS_DC)
 {
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	if (!obj) {
 		obj = zend_object_store_get_object(object TSRMLS_CC);
@@ -1448,7 +1448,7 @@ static PHP_METHOD(pqconn, declareAsync) {
 	char *name_str, *query_str;
 	int name_len, query_len;
 	long flags;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sls", &name_str, &name_len, &flags, &query_str, &query_len);
@@ -1586,9 +1586,9 @@ static PHP_METHOD(pqconn, unescapeBytea) {
 	}
 }
 
-STATUS php_pqconn_start_transaction(zval *zconn, php_pqconn_object_t *conn_obj, long isolation, zend_bool readonly, zend_bool deferrable TSRMLS_DC)
+ZEND_RESULT_CODE php_pqconn_start_transaction(zval *zconn, php_pqconn_object_t *conn_obj, long isolation, zend_bool readonly, zend_bool deferrable TSRMLS_DC)
 {
-	STATUS rv = FAILURE;
+	ZEND_RESULT_CODE rv = FAILURE;
 
 	if (!conn_obj) {
 		conn_obj = zend_object_store_get_object(zconn TSRMLS_CC);
@@ -1626,9 +1626,9 @@ STATUS php_pqconn_start_transaction(zval *zconn, php_pqconn_object_t *conn_obj, 
 	return rv;
 }
 
-STATUS php_pqconn_start_transaction_async(zval *zconn, php_pqconn_object_t *conn_obj, long isolation, zend_bool readonly, zend_bool deferrable TSRMLS_DC)
+ZEND_RESULT_CODE php_pqconn_start_transaction_async(zval *zconn, php_pqconn_object_t *conn_obj, long isolation, zend_bool readonly, zend_bool deferrable TSRMLS_DC)
 {
-	STATUS rv = FAILURE;
+	ZEND_RESULT_CODE rv = FAILURE;
 
 	if (!conn_obj) {
 		conn_obj = zend_object_store_get_object(zconn TSRMLS_CC);
@@ -1674,7 +1674,7 @@ static PHP_METHOD(pqconn, startTransaction) {
 	long isolation = obj->intern ? obj->intern->default_txn_isolation : PHP_PQTXN_READ_COMMITTED;
 	zend_bool readonly = obj->intern ? obj->intern->default_txn_readonly : 0;
 	zend_bool deferrable = obj->intern ? obj->intern->default_txn_deferrable : 0;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|lbb", &isolation, &readonly, &deferrable);
@@ -1710,7 +1710,7 @@ static PHP_METHOD(pqconn, startTransactionAsync) {
 	long isolation = obj->intern ? obj->intern->default_txn_isolation : PHP_PQTXN_READ_COMMITTED;
 	zend_bool readonly = obj->intern ? obj->intern->default_txn_readonly : 0;
 	zend_bool deferrable = obj->intern ? obj->intern->default_txn_deferrable : 0;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|lbb", &isolation, &readonly, &deferrable);
@@ -1775,7 +1775,7 @@ static PHP_METHOD(pqconn, off) {
 	zend_error_handling zeh;
 	char *type_str;
 	int type_len;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &type_str, &type_len);
@@ -1801,7 +1801,7 @@ static PHP_METHOD(pqconn, on) {
 	char *type_str;
 	int type_len;
 	php_pq_callback_t cb = {{0}};
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sf", &type_str, &type_len, &cb.fci, &cb.fcc);
@@ -1849,7 +1849,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_set_converter, 0, 0, 1)
 	ZEND_ARG_OBJ_INFO(0, converter, pq\\Converter, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, setConverter) {
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 	zend_error_handling zeh;
 	zval *zcnv;
 
@@ -1887,7 +1887,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_unset_converter, 0, 0, 1)
 	ZEND_ARG_OBJ_INFO(0, converter, pq\\Converter, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, unsetConverter) {
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 	zend_error_handling zeh;
 	zval *zcnv;
 

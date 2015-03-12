@@ -16,7 +16,14 @@
 
 #include <libpq-fe.h>
 
-typedef int STATUS; /* SUCCESS/FAILURE */
+#if PHP_VERSION_ID < 50500
+#undef SUCCESS
+#undef FAILURE
+typedef enum {
+	SUCCESS = 0,
+	FAILURE = -1
+} ZEND_RESULT_CODE;
+#endif
 
 #include "php_pqres.h"
 

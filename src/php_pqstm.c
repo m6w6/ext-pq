@@ -180,7 +180,7 @@ static PHP_METHOD(pqstm, __construct) {
 	char *name_str, *query_str;
 	int name_len, *query_len;
 	zend_bool async = 0;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Oss|a/!b", &zconn, php_pqconn_class_entry, &name_str, &name_len, &query_str, &query_len, &ztypes, &async);
@@ -217,7 +217,7 @@ static PHP_METHOD(pqstm, bind) {
 	long param_no;
 	zval **param_ref;
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lZ", &param_no, &param_ref);
@@ -245,7 +245,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqstm, exec) {
 	zend_error_handling zeh;
 	zval *zparams = NULL;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|a/!", &zparams);
@@ -283,7 +283,7 @@ static PHP_METHOD(pqstm, execAsync) {
 	zend_error_handling zeh;
 	zval *zparams = NULL;
 	php_pq_callback_t resolver = {{0}};
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|a/!f", &zparams, &resolver.fci, &resolver.fcc);
@@ -323,7 +323,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_desc, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqstm, desc) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -363,7 +363,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqstm, descAsync) {
 	zend_error_handling zeh;
 	php_pq_callback_t resolver = {{0}};
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "f", &resolver.fci, &resolver.fcc);
@@ -389,7 +389,7 @@ static PHP_METHOD(pqstm, descAsync) {
 static zend_always_inline void php_pqstm_deallocate_handler(INTERNAL_FUNCTION_PARAMETERS, zend_bool async)
 {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -423,7 +423,7 @@ static PHP_METHOD(pqstm, deallocateAsync)
 static zend_always_inline void php_pqstm_prepare_handler(INTERNAL_FUNCTION_PARAMETERS, zend_bool async)
 {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();

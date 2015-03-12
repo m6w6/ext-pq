@@ -52,7 +52,7 @@ static void cur_fetch_or_move(INTERNAL_FUNCTION_PARAMETERS, const char *action, 
 {
 	char *spec_str = "1";
 	int spec_len = 1;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 	php_pq_callback_t resolver = {{0}};
 	zend_error_handling zeh;
 
@@ -194,7 +194,7 @@ static PHP_METHOD(pqcur, __construct) {
 	int name_len, query_len;
 	long flags;
 	zval *zconn;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 	zend_bool async = 0;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
@@ -239,7 +239,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqcur, open)
 {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -263,7 +263,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqcur, close)
 {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();

@@ -82,8 +82,8 @@ static PHP_METHOD(pqdt, __toString)
 ZEND_BEGIN_ARG_INFO_EX(ai_pqdt_create_from_format, 0, 0, 2)
 	ZEND_ARG_INFO(0, format)
 	ZEND_ARG_INFO(0, datetime)
-	/* ZEND_ARG_OBJ_INFO(0, timezone, DateTimezone, 1) date's arginfo is not specific */
-	ZEND_ARG_INFO(0, timezone)
+	ZEND_ARG_OBJ_INFO(0, timezone, DateTimezone, 1) /*date's arginfo is not specific */
+	/*ZEND_ARG_INFO(0, timezone) */
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqdt, createFromFormat)
 {
@@ -91,7 +91,7 @@ static PHP_METHOD(pqdt, createFromFormat)
 	char *fmt_str, *dt_str;
 	int fmt_len, dt_len;
 	zval *ztz = NULL;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|O", &fmt_str, &fmt_len, &dt_str, &dt_len, &ztz, php_date_get_timezone_ce());
@@ -236,7 +236,7 @@ static char caa(ArrayParserState *a, const char *any, unsigned advance)
 	return 0;
 }
 
-static STATUS add_element(ArrayParserState *a, const char *start)
+static ZEND_RESULT_CODE add_element(ArrayParserState *a, const char *start)
 {
 	zval *zelem;
 	size_t el_len = a->ptr - start;
@@ -266,9 +266,9 @@ static STATUS add_element(ArrayParserState *a, const char *start)
 	return zend_hash_next_index_insert(&a->list->ht, &zelem, sizeof(zval *), NULL);
 }
 
-static STATUS parse_array(ArrayParserState *a);
+static ZEND_RESULT_CODE parse_array(ArrayParserState *a);
 
-static STATUS parse_element(ArrayParserState *a)
+static ZEND_RESULT_CODE parse_element(ArrayParserState *a)
 {
 	const char *el;
 	TSRMLS_FETCH_FROM_CTX(a->ts);
@@ -322,7 +322,7 @@ static STATUS parse_element(ArrayParserState *a)
 	return FAILURE;
 }
 
-static STATUS parse_elements(ArrayParserState *a)
+static ZEND_RESULT_CODE parse_elements(ArrayParserState *a)
 {
 	TSRMLS_FETCH_FROM_CTX(a->ts);
 
@@ -346,7 +346,7 @@ static STATUS parse_elements(ArrayParserState *a)
 	return FAILURE;
 }
 
-static STATUS parse_array(ArrayParserState *a)
+static ZEND_RESULT_CODE parse_array(ArrayParserState *a)
 {
 	HashTableList *list;
 

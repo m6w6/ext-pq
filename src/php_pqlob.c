@@ -153,7 +153,7 @@ static size_t php_pqlob_stream_read(php_stream *stream, char *buffer, size_t len
 	return read;
 }
 
-static STATUS php_pqlob_stream_close(php_stream *stream, int close_handle TSRMLS_DC)
+static ZEND_RESULT_CODE php_pqlob_stream_close(php_stream *stream, int close_handle TSRMLS_DC)
 {
 	return SUCCESS;
 }
@@ -163,9 +163,9 @@ static int php_pqlob_stream_flush(php_stream *stream TSRMLS_DC)
 	return SUCCESS;
 }
 
-static STATUS php_pqlob_stream_seek(php_stream *stream, off_t offset, int whence, off_t *newoffset TSRMLS_DC)
+static ZEND_RESULT_CODE php_pqlob_stream_seek(php_stream *stream, off_t offset, int whence, off_t *newoffset TSRMLS_DC)
 {
-	STATUS rv = FAILURE;
+	ZEND_RESULT_CODE rv = FAILURE;
 	php_pqlob_object_t *obj = stream->abstract;
 
 	if (obj) {
@@ -236,7 +236,7 @@ static PHP_METHOD(pqlob, __construct) {
 	zend_error_handling zeh;
 	zval *ztxn;
 	long mode = INV_WRITE|INV_READ, loid = InvalidOid;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O|ll", &ztxn, php_pqtxn_class_entry, &loid, &mode);
@@ -285,7 +285,7 @@ static PHP_METHOD(pqlob, write) {
 	zend_error_handling zeh;
 	char *data_str;
 	int data_len;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &data_str, &data_len);
@@ -318,7 +318,7 @@ static PHP_METHOD(pqlob, read) {
 	zend_error_handling zeh;
 	long length = 0x1000;
 	zval *zread = NULL;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|lz!", &length, &zread);
@@ -357,7 +357,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqlob, seek) {
 	zend_error_handling zeh;
 	long offset, whence = SEEK_SET;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|l", &offset, &whence);
@@ -386,7 +386,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqlob_tell, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqlob, tell) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -417,7 +417,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqlob, truncate) {
 	zend_error_handling zeh;
 	long length = 0;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &length);

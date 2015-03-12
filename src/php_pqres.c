@@ -77,7 +77,7 @@ static void php_pqres_iterator_dtor(zend_object_iterator *i TSRMLS_DC)
 	efree(iter);
 }
 
-static STATUS php_pqres_iterator_valid(zend_object_iterator *i TSRMLS_DC)
+static ZEND_RESULT_CODE php_pqres_iterator_valid(zend_object_iterator *i TSRMLS_DC)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
 	php_pqres_object_t *obj = i->data;
@@ -387,7 +387,7 @@ static int php_pqres_count_elements(zval *object, long *count TSRMLS_DC)
 	}
 }
 
-STATUS php_pqres_success(PGresult *res TSRMLS_DC)
+ZEND_RESULT_CODE php_pqres_success(PGresult *res TSRMLS_DC)
 {
 	zval *zexc;
 
@@ -598,9 +598,9 @@ static void php_pqres_object_write_auto_conv(zval *object, void *o, zval *value 
 	}
 }
 
-static STATUS php_pqres_iteration(zval *this_ptr, php_pqres_object_t *obj, php_pqres_fetch_t fetch_type, zval ***row TSRMLS_DC)
+static ZEND_RESULT_CODE php_pqres_iteration(zval *this_ptr, php_pqres_object_t *obj, php_pqres_fetch_t fetch_type, zval ***row TSRMLS_DC)
 {
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 	php_pqres_fetch_t orig_fetch;
 
 	if (!obj) {
@@ -628,7 +628,7 @@ typedef struct php_pqres_col {
 	int num;
 } php_pqres_col_t;
 
-static STATUS column_nn(php_pqres_object_t *obj, zval *zcol, php_pqres_col_t *col TSRMLS_DC)
+static ZEND_RESULT_CODE column_nn(php_pqres_object_t *obj, zval *zcol, php_pqres_col_t *col TSRMLS_DC)
 {
 	long index = -1;
 	char *name = NULL;
@@ -683,7 +683,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, bind) {
 	zval *zcol, *zref;
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z/z", &zcol, &zref);
@@ -718,7 +718,7 @@ static int apply_bound(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key 
 {
 	zval **zvalue, **zbound = p;
 	zval **zrow = va_arg(argv, zval **);
-	STATUS *rv = va_arg(argv, STATUS *);
+	ZEND_RESULT_CODE *rv = va_arg(argv, ZEND_RESULT_CODE *);
 
 	if (SUCCESS != zend_hash_index_find(Z_ARRVAL_PP(zrow), key->h, (void *) &zvalue)) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to find column ad index %lu", key->h);
@@ -740,7 +740,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_bound, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, fetchBound) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -776,7 +776,7 @@ static PHP_METHOD(pqres, fetchRow) {
 	zend_error_handling zeh;
 	php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 	long fetch_type = -1;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &fetch_type);
@@ -828,7 +828,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, fetchCol) {
 	zend_error_handling zeh;
 	zval *zcol = NULL, *zref;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z|z/!", &zref, &zcol);
@@ -872,7 +872,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, fetchAllCols) {
 	zend_error_handling zeh;
 	zval *zcol = NULL;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|z!", &zcol);
@@ -903,7 +903,7 @@ static PHP_METHOD(pqres, fetchAllCols) {
 struct apply_to_col_arg {
 	php_pqres_object_t *obj;
 	php_pqres_col_t *cols;
-	STATUS status;
+	ZEND_RESULT_CODE status;
 };
 
 static int apply_to_col(void *p, void *a TSRMLS_DC)
@@ -948,7 +948,7 @@ static PHP_METHOD(pqres, map) {
 	zend_error_handling zeh;
 	zval *zkeys = 0, *zvals = 0;
 	long fetch_type = -1;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|z/!z/!l", &zkeys, &zvals, &fetch_type);
@@ -1068,7 +1068,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, fetchAll) {
 	zend_error_handling zeh;
 	long fetch_type = -1;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &fetch_type);
@@ -1097,7 +1097,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqres_count, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, count) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -1118,7 +1118,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqres_desc, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, desc) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();

@@ -217,7 +217,7 @@ static PHP_METHOD(pqtxn, __construct) {
 	zval *zconn;
 	long isolation = PHP_PQTXN_READ_COMMITTED;
 	zend_bool async = 0, readonly = 0, deferrable = 0;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O|blbb", &zconn, php_pqconn_class_entry, &async, &isolation, &readonly, &deferrable);
@@ -269,7 +269,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_savepoint, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, savepoint) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -309,7 +309,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_savepoint_async, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, savepointAsync) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -343,7 +343,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_commit, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, commit) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -392,7 +392,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_commit_async, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, commitAsync) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -439,7 +439,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_rollback, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, rollback) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -488,7 +488,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_rollback_async, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, rollbackAsync) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -535,7 +535,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_export_snapshot, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, exportSnapshot) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -568,7 +568,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqtxn_export_snapshot_async, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, exportSnapshotAsync) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -595,7 +595,7 @@ static PHP_METHOD(pqtxn, importSnapshot) {
 	zend_error_handling zeh;
 	char *snapshot_str;
 	int snapshot_len;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &snapshot_str, &snapshot_len);
@@ -644,7 +644,7 @@ static PHP_METHOD(pqtxn, importSnapshotAsync) {
 	zend_error_handling zeh;
 	char *snapshot_str;
 	int snapshot_len;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &snapshot_str, &snapshot_len);
@@ -689,7 +689,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, openLOB) {
 	zend_error_handling zeh;
 	long mode = INV_WRITE|INV_READ, loid;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|l", &loid, &mode);
@@ -728,7 +728,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, createLOB) {
 	zend_error_handling zeh;
 	long mode = INV_WRITE|INV_READ;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &mode);
@@ -773,7 +773,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqtxn, unlinkLOB) {
 	zend_error_handling zeh;
 	long loid;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &loid);
@@ -805,7 +805,7 @@ static PHP_METHOD(pqtxn, importLOB) {
 	char *path_str;
 	int path_len;
 	long oid = InvalidOid;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p|l", &path_str, &path_len, &oid);
@@ -843,7 +843,7 @@ static PHP_METHOD(pqtxn, exportLOB) {
 	char *path_str;
 	int path_len;
 	long oid;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lp", &oid, &path_str, &path_len);

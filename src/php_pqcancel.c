@@ -85,7 +85,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqcancel, __construct) {
 	zend_error_handling zeh;
 	zval *zconn;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &zconn, php_pqconn_class_entry);
@@ -117,7 +117,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqcancel_cancel, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqcancel, cancel) {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
