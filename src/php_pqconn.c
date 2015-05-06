@@ -652,7 +652,7 @@ static void php_pqconn_retire(php_persistent_handle_factory_t *f, void **handle 
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_construct, 0, 0, 1)
 	ZEND_ARG_INFO(0, dsn)
-	ZEND_ARG_INFO(0, async)
+	ZEND_ARG_INFO(0, flags)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, __construct) {
 	zend_error_handling zeh;
