@@ -82,8 +82,7 @@ static PHP_METHOD(pqdt, __toString)
 ZEND_BEGIN_ARG_INFO_EX(ai_pqdt_create_from_format, 0, 0, 2)
 	ZEND_ARG_INFO(0, format)
 	ZEND_ARG_INFO(0, datetime)
-	ZEND_ARG_OBJ_INFO(0, timezone, DateTimezone, 1) /*date's arginfo is not specific */
-	/*ZEND_ARG_INFO(0, timezone) */
+	ZEND_ARG_INFO(0, timezone)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqdt, createFromFormat)
 {

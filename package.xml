@@ -39,7 +39,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  </developer>
  <date>2014-12-17</date>
  <version>
-  <release>0.6.0dev</release>
+  <release>0.6.0RC1</release>
   <api>0.6.0</api>
  </version>
  <stability>
