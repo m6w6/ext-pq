@@ -134,6 +134,7 @@ struct apply_to_param_from_array_arg {
 	unsigned index;
 	smart_str *buffer;
 	Oid type;
+	char delim;
 	zval **zconv;
 };
 
@@ -146,7 +147,7 @@ static int apply_to_param_from_array(void *ptr, void *arg_ptr TSRMLS_DC)
 	int tmp_len;
 
 	if (arg->index++) {
-		smart_str_appendc(arg->buffer, ',');
+		smart_str_appendc(arg->buffer, arg->delim);
 	}
 
 	if (arg->zconv) {
@@ -241,6 +242,7 @@ static zval *array_param_to_string(php_pq_params_t *p, zval *zarr, Oid type TSRM
 		arg.params = p;
 		arg.buffer = &s;
 		arg.type = PHP_PQ_TYPE_OF_ARRAY(type);
+		arg.delim = PHP_PQ_DELIM_OF_ARRAY(type);
 		zend_hash_index_find(&p->type.conv, PHP_PQ_TYPE_OF_ARRAY(type), (void *) &arg.zconv);
 		smart_str_appendc(arg.buffer, '{');
 		MAKE_STD_ZVAL(zcopy);

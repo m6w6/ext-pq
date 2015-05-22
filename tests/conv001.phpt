@@ -78,6 +78,43 @@ class JSONConverter extends Converter
 	}
 }
 
+class Point {
+	public $x;
+	public $y;
+	function __construct($x, $y) {
+		$this->x = $x;
+		$this->y = $y;
+	}
+}
+
+class Box {
+	public $p1;
+	public $p2;
+	function __construct(Point $p1, Point $p2) {
+		$this->p1 = $p1;
+		$this->p2 = $p2;
+	}
+}
+
+class BoxConverter extends Converter
+{
+	function convertTypes() {
+		return [ $this->types["box"]->oid ];
+	}
+
+	function convertToString($box, $type) {
+		return sprintf("(%F,%F),(%F,%F)",
+				$box->p1->x, $box->p1->y,
+				$box->p2->x, $box->p2->y
+		);
+	}
+
+	function convertFromString($data, $type) {
+		list($p1x, $p1y, $p2x, $p2y) = sscanf($data, "(%f,%f),(%f,%f)");
+		return new Box(new Point($p1x, $p1y), new Point($p2x, $p2y));
+	}
+}
+
 class Text {
 	private $data;
 	function __construct($data) {
@@ -97,8 +134,10 @@ $c->setConverter(new IntVectorConverter($t));
 if (!defined("pq\\Types::JSON")) {
 	$c->setConverter(new JSONConverter($t));
 }
+$c->setConverter(new BoxConverter($t));
+
 $r = $c->execParams("SELECT \$1 as hs, \$2 as iv, \$3 as oids, \$4 as js, \$5 as ia, \$6 as ta, \$7 as ba, \$8 as da, \$9 as dbl, \$10 as bln, ".
-		"\$11 as dt1, \$12 as dt2, \$13 as dt3, \$14 as dt4, \$15 as dt5, \$16 as dt6, \$17 as dt7, \$18 as dt8, \$19 as txta ",
+		"\$11 as dt1, \$12 as dt2, \$13 as dt3, \$14 as dt4, \$15 as dt5, \$16 as dt6, \$17 as dt7, \$18 as dt8, \$19 as txta, \$20 as boxa",
 	array(
 		// hstore
 		array(
@@ -141,7 +180,10 @@ $r = $c->execParams("SELECT \$1 as hs, \$2 as iv, \$3 as oids, \$4 as js, \$5 as
 		new pq\Datetime,
 		new pq\Datetime,
 		new pq\Datetime,
+		// text array
 		[new Text(0), new Text(" or "), new Text(true)],
+		// box array
+		[new Box(new Point(1,2), new Point(2,3)), new Box(new Point(3,4), new Point(4,5))],
 	),
 	array(
 		$t["hstore"]->oid,
@@ -162,7 +204,8 @@ $r = $c->execParams("SELECT \$1 as hs, \$2 as iv, \$3 as oids, \$4 as js, \$5 as
 		$t["abstime"]->oid,
 		$t["timestamp"]->oid,
 		$t["timestamptz"]->oid,
-		$t["_text"]->oid
+		$t["_text"]->oid,
+		$t["_box"]->oid
 	)
 );
 
@@ -365,6 +408,43 @@ array(1) {
       string(4) " or "
       [2]=>
       string(1) "1"
+    }
+    [19]=>
+    array(2) {
+      [0]=>
+      object(Box)#%d (2) {
+        ["p1"]=>
+        object(Point)#%d (2) {
+          ["x"]=>
+          float(2)
+          ["y"]=>
+          float(3)
+        }
+        ["p2"]=>
+        object(Point)#%d (2) {
+          ["x"]=>
+          float(1)
+          ["y"]=>
+          float(2)
+        }
+      }
+      [1]=>
+      object(Box)#%d (2) {
+        ["p1"]=>
+        object(Point)#%d (2) {
+          ["x"]=>
+          float(4)
+          ["y"]=>
+          float(5)
+        }
+        ["p2"]=>
+        object(Point)#%d (2) {
+          ["x"]=>
+          float(3)
+          ["y"]=>
+          float(4)
+        }
+      }
     }
   }
 }

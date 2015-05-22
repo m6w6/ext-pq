@@ -49,6 +49,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <license>BSD, revised</license>
  <notes><![CDATA[
 * Fixed crash with result iterator when the iterator exists longer than the result
+* Fixed array parser compatibility with arrays of boxes 
 * Added pq\Statement::deallocate{,Async}() and pq\Statement::prepare{,Async}() methods
 * Added pq\Statement::$query and pq\Statment::$types readonly properties
 ]]></notes>

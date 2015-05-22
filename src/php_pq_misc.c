@@ -25,6 +25,8 @@
 #include "php_pq.h"
 #include "php_pqexc.h"
 #include "php_pq_misc.h"
+#undef PHP_PQ_TYPE
+#include "php_pq_type.h"
 
 char *php_pq_rtrim(char *e)
 {
@@ -267,7 +269,7 @@ static ZEND_RESULT_CODE add_element(ArrayParserState *a, const char *start)
 
 static ZEND_RESULT_CODE parse_array(ArrayParserState *a);
 
-static ZEND_RESULT_CODE parse_element(ArrayParserState *a)
+static ZEND_RESULT_CODE parse_element(ArrayParserState *a, char delim)
 {
 	const char *el;
 	TSRMLS_FETCH_FROM_CTX(a->ts);
@@ -284,6 +286,10 @@ static ZEND_RESULT_CODE parse_element(ArrayParserState *a)
 
 	for (el = a->ptr; a->ptr < a->end; ++a->ptr) {
 		switch (*a->ptr) {
+		case '\\':
+			a->escaped = !a->escaped;
+			break;
+
 		case '"':
 			if (a->escaped) {
 				a->escaped = 0;
@@ -300,20 +306,18 @@ static ZEND_RESULT_CODE parse_element(ArrayParserState *a)
 			}
 			break;
 
-		case ',':
+		default:
+			if (delim != *a->ptr) {
+				a->escaped = 0;
+				break;
+			}
+			/* no break */
 		case '}':
 			if (!a->quotes) {
 				return add_element(a, el);
 			}
 			break;
 
-		case '\\':
-			a->escaped = !a->escaped;
-			break;
-
-		default:
-			a->escaped = 0;
-			break;
 		}
 	}
 
@@ -323,10 +327,11 @@ static ZEND_RESULT_CODE parse_element(ArrayParserState *a)
 
 static ZEND_RESULT_CODE parse_elements(ArrayParserState *a)
 {
+	char delims[] = {'}', PHP_PQ_DELIM_OF_ARRAY(a->typ), 0};
 	TSRMLS_FETCH_FROM_CTX(a->ts);
 
-	while (SUCCESS == parse_element(a)) {
-		switch (caa(a, ",}", 0)) {
+	while (SUCCESS == parse_element(a, delims[1])) {
+		switch (caa(a, delims, 0)) {
 		case 0:
 			return FAILURE;
 

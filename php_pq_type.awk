@@ -13,10 +13,18 @@ END {
 		printf "\t||\t((oid) == %d) \\\n", oid
 	}
 	printf ")\n#endif\n"
+	
 	printf "#ifndef PHP_PQ_TYPE_OF_ARRAY\n"
 	printf "# define PHP_PQ_TYPE_OF_ARRAY(oid) ("
 	for (oid in arrays) {
 		printf "\\\n\t(oid) == %d ? %s : ", oid, arrays[oid]
+	}
+	printf "0 \\\n)\n#endif\n"
+	
+	printf "#ifndef PHP_PQ_DELIM_OF_ARRAY\n"
+	printf "# define PHP_PQ_DELIM_OF_ARRAY(oid) ("
+	for (oid in delims) {
+		printf "\\\n\t(oid) == %d ? '%s' : ", oid, delims[oid]
 	}
 	printf "0 \\\n)\n#endif\n"
 }
@@ -24,11 +32,13 @@ END {
 /^DATA/ {
 	oid = $4
 	name = toupper($6)
+	adelim = $15
 	atypoid = $17
 	if (sub("^_", "", name)) {
 		arrays[oid] = atypoid
 		name = name "ARRAY"
 	}
+	delims[oid] = adelim
 	printf "#ifndef PHP_PQ_OID_%s\n", name
 	printf "# define PHP_PQ_OID_%s %d\n", name, oid
 	printf "#endif\n"
