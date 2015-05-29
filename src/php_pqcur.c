@@ -62,7 +62,8 @@ static void cur_close(php_pqcur_object_t *obj, zend_bool async, zend_bool silent
 static void cur_open(INTERNAL_FUNCTION_PARAMETERS, zend_bool async)
 {
 	zend_error_handling zeh;
-	STATUS rv;
+	ZEND_RESULT_CODE rv;
+	php_pqcur_object_t *obj;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
 	rv = zend_parse_parameters_none();
@@ -72,7 +73,7 @@ static void cur_open(INTERNAL_FUNCTION_PARAMETERS, zend_bool async)
 		return;
 	}
 
-	php_pqcur_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+	obj = zend_object_store_get_object(getThis() TSRMLS_CC);
 
 	if (!obj->intern) {
 		throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Cursor not initialized");
