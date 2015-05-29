@@ -131,7 +131,7 @@ $t = new pq\Types($c);
 
 $c->setConverter(new HStoreConverter($t));
 $c->setConverter(new IntVectorConverter($t));
-if (!defined("pq\\Types::JSON")) {
+if (!(defined("pq\\Types::JSON") && defined("pq\\Result::CONV_JSON"))) {
 	$c->setConverter(new JSONConverter($t));
 }
 $c->setConverter(new BoxConverter($t));
