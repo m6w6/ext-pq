@@ -445,7 +445,7 @@ PHP_MINIT_FUNCTION(pqcur)
 	php_pqcur_object_handlers.get_properties = php_pq_object_properties;
 	php_pqcur_object_handlers.get_debug_info = php_pq_object_debug_info;
 
-	zend_hash_init(&php_pqcur_object_prophandlers, 2, NULL, NULL, 1);
+	zend_hash_init(&php_pqcur_object_prophandlers, 4, NULL, NULL, 1);
 
 	zend_declare_class_constant_long(php_pqcur_class_entry, ZEND_STRL("BINARY"), PHP_PQ_DECLARE_BINARY TSRMLS_CC);
 	zend_declare_class_constant_long(php_pqcur_class_entry, ZEND_STRL("INSENSITIVE"), PHP_PQ_DECLARE_INSENSITIVE TSRMLS_CC);

@@ -1,5 +1,4 @@
 * COPY: getAsync & putAsync
-* CURSOR: *Async()
 * fetchInto/fetchCtor?
 * binary protocol?
 * parse explicit array dimension information in front of arrays
