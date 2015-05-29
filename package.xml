@@ -37,7 +37,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>daverandom@php.net</email>
   <active>yes</active>
  </developer>
- <date>2014-12-17</date>
+ <date>2015-05-29</date>
  <version>
   <release>0.6.0RC1</release>
   <api>0.6.0</api>
@@ -51,15 +51,20 @@ http://pear.php.net/dtd/package-2.0.xsd">
 * Fixed crash with result iterator when the iterator exists longer than the result
 * Fixed array parser compatibility with arrays of boxes 
 * Added pq\Statement::deallocate{,Async}() and pq\Statement::prepare{,Async}() methods
-* Added pq\Statement::$query and pq\Statment::$types readonly properties
+* Added pq\Statement::$query and pq\Statement::$types readonly properties
+* Added pq\Cursor::{open,close}Async() methods
+* Added pq\Cursor::$query and pq\Cursor::$flags readonly properties
 ]]></notes>
  <contents>
   <dir name="/">
    <file role="doc" name="CREDITS" />
    <file role="doc" name="LICENSE" />
+   <file role="doc" name="TODO" />
+   <file role="doc" name="README.md" />
    <file role="src" name="config.m4" />
    <file role="src" name="config9.m4" />
    <file role="src" name="php_pq.h" />
+   <file role="src" name="gen_pq_type.sh" />
    <file role="src" name="php_pq_type.awk" />
    <file role="src" name="php_pq_type.h" />
    <dir name="src">
@@ -104,12 +109,18 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file role="test" name="async006.phpt" />
     <file role="test" name="async007.phpt" />
     <file role="test" name="async008.phpt" />
+    <file role="test" name="async009.phpt" />
     <file role="test" name="basic001.phpt" />
     <file role="test" name="basic002.phpt" />
     <file role="test" name="bound002.phpt" />
     <file role="test" name="cancel001.phpt" />
     <file role="test" name="conv001.phpt" />
     <file role="test" name="copy001.phpt" />
+    <file role="test" name="crash_cur_reverse_dep.phpt" />
+    <file role="test" name="crash_result_iterator.phpt" />
+    <file role="test" name="crash_stm_reverse_dep.phpt" />
+    <file role="test" name="crash_txn_reverse_dep.phpt" />
+    <file role="test" name="crash_unbuffered_async_prepare.phpt" />
     <file role="test" name="cursor001.phpt" />
     <file role="test" name="encoding001.phpt" />
     <file role="test" name="exceptions001.phpt" />
@@ -128,8 +139,10 @@ http://pear.php.net/dtd/package-2.0.xsd">
     <file role="test" name="reset001.phpt" />
     <file role="test" name="savepoint001.phpt" />
     <file role="test" name="stm_bound001.phpt" />
+    <file role="test" name="stm_deallocate_prepare001.phpt" />
     <file role="test" name="stm_desc001.phpt" />
     <file role="test" name="stm_desc002.phpt" />
+    <file role="test" name="stm_props001.phpt" />
     <file role="test" name="trans001.phpt" />
     <file role="test" name="trans002.phpt" />
     <file role="test" name="types001.phpt" />
