@@ -1,36 +1,38 @@
-pecl/pq
-=======
+# pecl/pq
 
-[![Build Status](https://travis-ci.org/php/pecl-database-pq.svg?branch=master)](https://travis-ci.org/php/pecl-database-pq)
+[![Build Status](https://travis-ci.org/m6w6/ext-pq.svg?branch=master)](https://travis-ci.org/m6w6/ext-pq)
 
-About
------
+## About:
 
 This is a modern binding to the mature [libpq](http://www.postgresql.org/docs/current/static/libpq.html), the official PostgreSQL C-client library.
 
-Highlights:
+### Highlights:
 
-- Nearly 100% support for asynchronous usage.
-- Extended type support by pg_type.
-- Fetching simple multi-dimensional array maps.
-- Working [Gateway implementation](https://github.com/m6w6/pq-gateway).
+* Nearly 100% support for [asynchronous usage](http://devel-m6w6.rhcloud.com/mdref/pq/pq/Connection/: Asynchronous Usage).
+* Extended [type support by pg_type](http://devel-m6w6.rhcloud.com/mdref/pq/pq/Types/: Overview).
+* Fetching simple [multi-dimensional array maps](http://devel-m6w6.rhcloud.com/mdref/pq/pq/Result/map).
+* Working [Gateway implementation](https://github.com/m6w6/pq-gateway).
 
-Installation
-------------
+## Installation:
 
-This extension is hosted at [PECL](http://pecl.php.net/) and can be installed with [PEAR](http://pear.php.net/)'s `pecl` command:
+This extension is hosted at [PECL](http://pecl.php.net) and can be installed with [PEAR](http://pear.php.net)'s pecl command:
 
-    # pecl install pq
+	# pecl install pq
 
-Dependencies
-------------
+Also, watch out for self-installing [pharext](https://github.com/m6w6/pharext) packages attached to [releases](https://github.com/m6w6/ext-pq/releases).
+
+## Dependencies:
 
 This extension unconditionally depends on the pre-loaded presence of the following PHP extensions:
 
 - [raphf](http://pecl.php.net/package/raphf)
 - [spl](http://php.net/spl)
 
-Documentation
--------------
+It optionally depends on the following extensions:
 
-Documentation is available [here](http://devel-m6w6.rhcloud.com/mdref/pq).
+* [json](http://php.net/json)
+
+
+## Documentation:
+
+Documentation is available at http://devel-m6w6.rhcloud.com/mdref/pq/
