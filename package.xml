@@ -37,7 +37,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>daverandom@php.net</email>
   <active>yes</active>
  </developer>
- <date>2015-05-29</date>
+ <date>2015-06-08</date>
  <version>
   <release>0.6.0RC1</release>
   <api>0.6.0</api>
