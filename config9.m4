@@ -2,14 +2,14 @@ PHP_ARG_WITH(pq, [whether to enable libpq (PostgreSQL) support],
 [  --with-pq[=DIR]           Include libpq support])
 
 if test "$PHP_PQ" != "no"; then
-	SEARCH_PATH="/usr/local /usr /usr/include/postgresql /opt"
+	SEARCH_PATH="/usr/local /usr /opt"
 	if test "$PHP_PQ" != "yes"; then
 		SEARCH_PATH="$PHP_PQ $SEARCH_PATH"
 	fi
 	for i in $SEARCH_PATH; do
-		AC_MSG_CHECKING(for $i/libpq-events.h)
-		if test -f "$i/libpq-events.h"; then
-			PQ_DIR=$i
+		AC_MSG_CHECKING(for $i/include/postgresql/libpq-events.h)
+		if test -f "$i/include/postgresql/libpq-events.h"; then
+			PQ_INCDIR=$i
 			AC_MSG_RESULT(yep)
 			break
 		fi
@@ -17,17 +17,32 @@ if test "$PHP_PQ" != "no"; then
 
 		AC_MSG_CHECKING(for $i/include/libpq-events.h)
 		if test -f "$i/include/libpq-events.h"; then
-			PQ_DIR=$i/include
+			PQ_INCDIR=$i/include
 			AC_MSG_RESULT(yep)
 			break
 		fi
 		AC_MSG_RESULT(nope)
 	done
 
-	if test -z "$PQ_DIR"; then
+	if test -z "$PQ_INCDIR"; then
 		AC_MSG_ERROR(could not find include/libpq-events.h)
 	fi
-	PHP_ADD_INCLUDE($PQ_DIR)
+
+	for i in $SEARCH_PATH; do
+		AC_MSG_CHECKING(for $i/$PHP_LIBDIR/libpq.$SHLIB_SUFFIX_NAME)
+		if test -f "$i/$PHP_LIBDIR/libpq.$SHLIB_SUFFIX_NAME"; then
+			PQ_LIBDIR=$i/$PHP_LIBDIR
+			AC_MSG_RESULT(yep)
+			break
+		fi
+		AC_MSG_RESULT(nope)
+	done
+
+	if test -z "$PQ_LIBDIR"; then
+		AC_MSG_ERROR(could not find libpq.$SHLIB_SUFFIX_NAME)
+	fi
+
+	PHP_ADD_INCLUDE($PQ_INCDIR)
 
 	ifdef([AC_PROG_EGREP], [
 		AC_PROG_EGREP
@@ -40,7 +55,7 @@ if test "$PHP_PQ" != "no"; then
 	dnl
 	AC_DEFUN([PQ_CHECK_CONST], [
 		AC_MSG_CHECKING(for $1)
-		if $EGREP -q $1 $PQ_DIR/libpq-fe.h; then
+		if $EGREP -q $1 $PQ_INCDIR/libpq-fe.h; then
 			AC_DEFINE(HAVE_$1, 1, [Have $1])
 			AC_MSG_RESULT(yep)
 		else
@@ -67,12 +82,12 @@ if test "$PHP_PQ" != "no"; then
 				fi
 			fi
 		], [
-			-L$PQ_DIR/$PHP_LIBDIR
+			-L$PQ_LIBDIR
 		])
 	])
 
 	PQ_CHECK_FUNC(PQregisterEventProc, true)
-	PHP_ADD_LIBRARY_WITH_PATH(pq, $PQ_DIR/$PHP_LIBDIR, PQ_SHARED_LIBADD)
+	PHP_ADD_LIBRARY_WITH_PATH(pq, $PQ_LIBDIR, PQ_SHARED_LIBADD)
 	PHP_SUBST(PQ_SHARED_LIBADD)
 
 	PQ_CHECK_FUNC(PQlibVersion)
