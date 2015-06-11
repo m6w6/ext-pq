@@ -10,7 +10,7 @@ if test "$PHP_PQ" != "no"; then
 		dnl for Debian
 		AC_MSG_CHECKING(for $i/include/postgresql/libpq-events.h)
 		if test -f "$i/include/postgresql/libpq-events.h"; then
-			PQ_INCDIR=$i
+			PQ_INCDIR=$i/include/postgresql
 			AC_MSG_RESULT(yep)
 			break
 		fi
@@ -37,6 +37,7 @@ if test "$PHP_PQ" != "no"; then
 			break
 		fi
 		dnl for Debian
+		AC_MSG_CHECKING(for $i/$PHP_LIBDIR/x86_64-linux-gnu/libpq.$SHLIB_SUFFIX_NAME)
 		if test -f "$i/$PHP_LIBDIR/x86_64-linux-gnu/libpq.$SHLIB_SUFFIX_NAME"; then
 			PQ_LIBDIR=$i/$PHP_LIBDIR/x86_64-linux-gnu
 			AC_MSG_RESULT(yep)
