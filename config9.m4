@@ -36,6 +36,8 @@ if test "$PHP_PQ" != "no"; then
 			AC_MSG_RESULT(yep)
 			break
 		fi
+		AC_MSG_RESULT(nope)
+
 		dnl for Debian
 		AC_MSG_CHECKING(for $i/$PHP_LIBDIR/x86_64-linux-gnu/libpq.$SHLIB_SUFFIX_NAME)
 		if test -f "$i/$PHP_LIBDIR/x86_64-linux-gnu/libpq.$SHLIB_SUFFIX_NAME"; then
