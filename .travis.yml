@@ -3,8 +3,8 @@ language: c
 addons:
     postgresql: "9.3"
     apt:
-    	packages:
-    		- libpq-dev
+        packages:
+            - libpq-dev
 
 env:
     global:
