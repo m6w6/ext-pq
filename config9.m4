@@ -2,73 +2,46 @@ PHP_ARG_WITH(pq, [whether to enable libpq (PostgreSQL) support],
 [  --with-pq[=DIR]           Include libpq support])
 
 if test "$PHP_PQ" != "no"; then
-	AC_PATH_PROG(PG_CONFIG, pg_config, no)
 
-	dnl use pg_config output when no DIR given
-	if test -x "$PG_CONFIG" &&  test "$PHP_PQ" = "yes"; then
-		AC_MSG_CHECKING(libpq version)
-		PQ_INCDIR=`$PG_CONFIG --includedir`
-		PQ_LIBDIR=`$PG_CONFIG --libdir`
-		PQ_VERSION=`$PG_CONFIG --version`
+	SEARCH_PATH="/usr/local /usr /opt"
+	if test "$PHP_PQ" != "yes"; then
+		SEARCH_PATH="$PHP_PQ $SEARCH_PATH"
+	fi
+	
+	AC_MSG_CHECKING(for pg_config)
+	for i in $SEARCH_PATH; do
+		if test -x "$i/bin/pg_config"; then
+			PG_CONFIG="$i/bin/pg_config"
+			break
+		fi
+	done
+	
+	if test -z "$PG_CONFIG"; then
+		AC_PATH_PROG(PG_CONFIG, pg_config, no)
+	fi
+	
+	AC_MSG_RESULT($PG_CONFIG)
+	
+	if test "$PG_CONFIG" = "no"; then
+		AC_MSG_ERROR(could not find a usable pg_config in $SEARCH_PATH)
+	else
+		if test "$PHP_PQ" != "yes" -a "$PHP_PQ/bin/pg_config" != "$PG_CONFIG"; then
+			AC_MSG_WARN(Found pg_config is not in $PHP_PQ)
+		fi
+		
+		AC_MSG_CHECKING(for PostgreSQL version)
+		PQ_VERSION=$($PG_CONFIG --version | $SED 's/PostgreSQL //')
 
 		if test -z "$PQ_VERSION"; then
-			AC_MSG_RESULT(version not found)
-			AC_MSG_ERROR(Please reinstall libpq)
+			AC_MSG_RESULT(not found)
+			AC_MSG_ERROR(\`$PG_CONFIG --version\` did not provide any meaningful output, please reinstall postgresql/libpq)
 		else
 			AC_MSG_RESULT($PQ_VERSION)
+			AC_DEFINE_UNQUOTED(PHP_PQ_LIBVERSION, "$PQ_VERSION", [ ])
 		fi
-
-	else
-		SEARCH_PATH="/usr/local /usr /opt"
-		if test "$PHP_PQ" != "yes"; then
-			SEARCH_PATH="$PHP_PQ $SEARCH_PATH"
-		fi
-		for i in $SEARCH_PATH; do
-			dnl for Debian
-			AC_MSG_CHECKING(for $i/include/postgresql/libpq-events.h)
-			if test -f "$i/include/postgresql/libpq-events.h"; then
-				PQ_INCDIR=$i/include/postgresql
-				AC_MSG_RESULT(yep)
-				break
-			fi
-			AC_MSG_RESULT(nope)
-
-			AC_MSG_CHECKING(for $i/include/libpq-events.h)
-			if test -f "$i/include/libpq-events.h"; then
-				PQ_INCDIR=$i/include
-				AC_MSG_RESULT(yep)
-				break
-			fi
-			AC_MSG_RESULT(nope)
-		done
-
-		if test -z "$PQ_INCDIR"; then
-			AC_MSG_ERROR(could not find include/libpq-events.h)
-		fi
-
-		ARCH=`uname -i`
-		for i in $SEARCH_PATH; do
-			AC_MSG_CHECKING(for $i/$PHP_LIBDIR/libpq.$SHLIB_SUFFIX_NAME)
-			if test -f "$i/$PHP_LIBDIR/libpq.$SHLIB_SUFFIX_NAME"; then
-				PQ_LIBDIR=$i/$PHP_LIBDIR
-				AC_MSG_RESULT(yep)
-				break
-			fi
-			AC_MSG_RESULT(nope)
-
-			dnl for Debian
-			AC_MSG_CHECKING(for $i/$PHP_LIBDIR/$ARCH-linux-gnu/libpq.$SHLIB_SUFFIX_NAME)
-			if test -f "$i/$PHP_LIBDIR/$ARCH-linux-gnu/libpq.$SHLIB_SUFFIX_NAME"; then
-				PQ_LIBDIR=$i/$PHP_LIBDIR/$ARCH-linux-gnu
-				AC_MSG_RESULT(yep)
-				break
-			fi
-			AC_MSG_RESULT(nope)
-		done
-
-		if test -z "$PQ_LIBDIR"; then
-			AC_MSG_ERROR(could not find libpq.$SHLIB_SUFFIX_NAME)
-		fi
+		
+		PQ_INCDIR=$($PG_CONFIG --includedir)
+		PQ_LIBDIR=$($PG_CONFIG --libdir)
 	fi
 
 	PHP_ADD_INCLUDE($PQ_INCDIR)
