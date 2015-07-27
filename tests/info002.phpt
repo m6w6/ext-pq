@@ -19,6 +19,6 @@ pq
 PQ Support => enabled
 Extension Version => %s
 
-Used Library => Version
-libpq => %s
+Used Library => Compiled => Linked
+libpq => %s => %s
 Done
