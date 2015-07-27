@@ -31,3 +31,5 @@ before_script:
 
 script:
     - $HOME$BUILD_INSTALL_DIR/bin/php ./run-tests.php -q -p $HOME$BUILD_INSTALL_DIR/bin/php --show-diff
+
+sudo: false
