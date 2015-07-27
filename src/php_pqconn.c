@@ -684,7 +684,7 @@ static PHP_METHOD(pqconn, __construct) {
 
 			if (flags & PHP_PQCONN_PERSISTENT) {
 				php_persistent_handle_factory_t *phf = php_persistent_handle_concede(NULL, ZEND_STRL("pq\\Connection"), dsn_str, dsn_len, php_pqconn_wakeup, php_pqconn_retire TSRMLS_CC);
-				php_resource_factory_init(&obj->intern->factory, php_persistent_handle_get_resource_factory_ops(), phf, (void (*)(void*)) php_persistent_handle_abandon);
+				php_persistent_handle_resource_factory_init(&obj->intern->factory, phf);
 			} else {
 				php_resource_factory_init(&obj->intern->factory, &php_pqconn_resource_factory_ops, NULL, NULL);
 			}
