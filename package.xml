@@ -37,7 +37,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>daverandom@php.net</email>
   <active>yes</active>
  </developer>
- <date>2015-07-27</date>
+ <date>2015-07-28</date>
  <version>
   <release>0.6.0RC2</release>
   <api>0.6.0</api>
@@ -54,6 +54,10 @@ http://pear.php.net/dtd/package-2.0.xsd">
 + Added pq\Statement::$query and pq\Statement::$types readonly properties
 + Added pq\Cursor::{open,close}Async() methods
 + Added pq\Cursor::$query and pq\Cursor::$flags readonly properties
+
+Changes from RC1:
+* Fixed RTLD_LAZY compatibility with pecl/raphf
+* Simplified config.m4
 ]]></notes>
  <contents>
   <dir name="/">
