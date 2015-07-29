@@ -1,7 +1,6 @@
 language: c
 
 addons:
-    postgresql: "9.3"
     apt:
         packages:
             - libpq-dev
@@ -21,6 +20,15 @@ env:
         - PHP_TARGET_REF=PHP-5.5 PHP_CONFIGURE_OPTS="--enable-maintainer-zts"
         - PHP_TARGET_REF=PHP-5.6 PHP_CONFIGURE_OPTS=""
         - PHP_TARGET_REF=PHP-5.6 PHP_CONFIGURE_OPTS="--enable-maintainer-zts"
+        include:
+            - addons:
+                postgresql: 9.1
+            - addons:
+                postgresql: 9.2
+            - addons:
+                postgresql: 9.3
+            - addons:
+                postgresql: 9.4
 
 before_script:
     - ./travis/compile-php.sh
