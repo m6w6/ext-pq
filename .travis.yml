@@ -14,76 +14,40 @@ matrix:
     include:
         - env: PHP_TARGET_REF="PHP-5.4" PHP_CONFIGURE_OPTS=""
           addons:
-              postgresql: 9.2
-              apt: 
-                  packages: 
-                      - libpq-dev-9.2
+              postgresql: 9.4
         - env: PHP_TARGET_REF="PHP-5.4" PHP_CONFIGURE_OPTS="--enable-debug"
           addons:
-              postgresql: 9.2
-              apt: 
-                  packages: 
-                      - libpq-dev-9.2
+              postgresql: 9.4
         - env: PHP_TARGET_REF="PHP-5.4" PHP_CONFIGURE_OPTS="--enable-maintainer-zts"
           addons:
-              postgresql: 9.2
-              apt: 
-                  packages: 
-                      - libpq-dev-9.2
+              postgresql: 9.4
         - env: PHP_TARGET_REF="PHP-5.4" PHP_CONFIGURE_OPTS="--enable-debug --enable-maintainer-zts"
           addons:
-              postgresql: 9.2
-              apt: 
-                  packages: 
-                      - libpq-dev-9.2
+              postgresql: 9.4
         - env: PHP_TARGET_REF="PHP-5.5" PHP_CONFIGURE_OPTS=""
           addons:
-              postgresql: 9.2
-              apt: 
-                  packages: 
-                      - libpq-dev-9.2
+              postgresql: 9.4
         - env: PHP_TARGET_REF="PHP-5.5" PHP_CONFIGURE_OPTS="--enable-debug"
           addons:
-              postgresql: 9.2
-              apt: 
-                  packages: 
-                      - libpq-dev-9.2
+              postgresql: 9.4
         - env: PHP_TARGET_REF="PHP-5.5" PHP_CONFIGURE_OPTS="--enable-maintainer-zts"
           addons:
-              postgresql: 9.2
-              apt: 
-                  packages: 
-                      - libpq-dev-9.2
+              postgresql: 9.4
         - env: PHP_TARGET_REF="PHP-5.5" PHP_CONFIGURE_OPTS="--enable-debug --enable-maintainer-zts"
           addons:
-              postgresql: 9.2
-              apt: 
-                  packages: 
-                      - libpq-dev-9.2
+              postgresql: 9.4
         - env: PHP_TARGET_REF="PHP-5.6" PHP_CONFIGURE_OPTS=""
           addons:
-              postgresql: 9.2
-              apt: 
-                  packages: 
-                      - libpq-dev-9.2
+              postgresql: 9.4
         - env: PHP_TARGET_REF="PHP-5.6" PHP_CONFIGURE_OPTS="--enable-debug"
           addons:
-              postgresql: 9.2
-              apt: 
-                  packages: 
-                      - libpq-dev-9.2
+              postgresql: 9.4
         - env: PHP_TARGET_REF="PHP-5.6" PHP_CONFIGURE_OPTS="--enable-maintainer-zts"
           addons:
-              postgresql: 9.2
-              apt: 
-                  packages: 
-                      - libpq-dev-9.2
+              postgresql: 9.4
         - env: PHP_TARGET_REF="PHP-5.6" PHP_CONFIGURE_OPTS="--enable-debug --enable-maintainer-zts"
           addons:
-              postgresql: 9.2
-              apt: 
-                  packages: 
-                      - libpq-dev-9.2
+              postgresql: 9.4
 
 before_script:
     - ./travis/compile-php.sh
