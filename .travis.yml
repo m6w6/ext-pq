@@ -38,7 +38,7 @@ env:
 
 before_script:
  - make -f travis/pecl/Makefile php
- - make -f travis/pecl/Makefile pecl PECL=raphf
+ - make -df travis/pecl/Makefile pecl PECL=raphf
  - make -f travis/pecl/Makefile ext PECL=pq
 
 script:
