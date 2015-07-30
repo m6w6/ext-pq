@@ -18,9 +18,9 @@ with_php_config ?= $(bindir)/php-config
 extdir = $(shell test -x $(with_php_config) && $(with_php_config) --extension-dir)
 
 PECL_MIRROR ?= http://pecl.php.net/get/
-PECL_EXTENSION ?= $(shell cut -d: -f1 <<<"$(PECL)")
-PECL_SONAME ?= $(if $(shell cut -d: -f2 <<<"$(PECL)"),$(shell cut -d: -f2 <<<"$(PECL)"),$(PECL_EXTENSION))
-PECL_VERSION ?= $(shell cut -d: -f3 -s <<<"$(PECL)")
+PECL_EXTENSION ?= $(shell echo $(PECL) | cut -d: -f1)
+PECL_SONAME ?= $(if $(shell echo $(PECL) | cut -d: -f2),$(shell echo $(PECL) | cut -d: -f2),$(PECL_EXTENSION))
+PECL_VERSION ?= $(shell echo $(PECL) | cut -d: -f3 -s)
 PECL_INI = $(with_config_file_scan_dir)/pecl.ini
 
 PHP_VERSION ?= $(shell test -e $(srcdir)/php-versions.json && cat $(srcdir)/php-versions.json | php $(srcdir)/php-version.php $(PHP))
