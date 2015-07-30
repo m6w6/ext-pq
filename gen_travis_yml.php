@@ -31,10 +31,10 @@ foreach ($env as $e) {
 before_script:
  - make -f travis/pecl/Makefile php
  - make -f travis/pecl/Makefile pecl PECL=raphf
- - make -f travis/pecl/Makefile ext PECL=pq
  - psql -U postgres -c "CREATE DATABASE test"
 
 script:
+ - make -f travis/pecl/Makefile ext PECL=pq
  - make -f travis/pecl/Makefile test
 
 sudo: false
