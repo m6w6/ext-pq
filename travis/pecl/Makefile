@@ -23,7 +23,7 @@ PECL_SONAME ?= $(if $(shell echo $(PECL) | cut -d: -f2),$(shell echo $(PECL) | c
 PECL_VERSION ?= $(shell echo $(PECL) | cut -d: -f3 -s)
 PECL_INI = $(with_config_file_scan_dir)/pecl.ini
 
-PHP_VERSION ?= $(shell test -e $(srcdir)/php-versions.json && cat $(srcdir)/php-versions.json | php $(srcdir)/php-version.php $(PHP))
+PHP_VERSION ?= $(shell test -e $(srcdir)/php-versions.json && cat $(srcdir)/php-versions.json | /usr/bin/php $(srcdir)/php-version.php $(PHP))
 
 .PHONY: all php check clean reconf pecl ext test
 .SUFFIXES:
