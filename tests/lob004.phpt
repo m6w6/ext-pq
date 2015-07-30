@@ -2,8 +2,8 @@
 large object import/export 
 --SKIPIF--
 <?php include "_skipif.inc"; ?>
---CLEANUP--
-rm lob004.tmp
+--CLEAN--
+<?php unlink("lob004.tmp"); ?>
 --FILE--
 <?php
 echo "Test\n";
@@ -17,7 +17,7 @@ $oid = $t->importLOB(__FILE__);
 var_dump($oid);
 $t->exportLOB($oid, "lob004.tmp");
 
-var_dump(hash_file("md5",__FILE__)===hash_file("md5","lob004.tmp"));
+var_dump(md5_file(__FILE__)===md5_file("lob004.tmp"));
 
 ?>
 DONE

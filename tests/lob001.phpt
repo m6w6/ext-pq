@@ -20,7 +20,7 @@ var_dump($lob->tell());
 
 $lob->seek(0, SEEK_SET);
 $dat = $lob->read(filesize(__FILE__));
-var_dump(hash("md5", $dat)==hash_file("md5", __FILE__));
+var_dump(md5($dat)===md5_file(__FILE__));
 
 $lob->truncate(5);
 
@@ -35,7 +35,7 @@ DONE
 --EXPECTF--
 Test
 bool(true)
-int(489)
+int(474)
 bool(true)
 string(5) "%c?php"
 DONE
