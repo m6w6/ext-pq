@@ -15,7 +15,7 @@ enable_all ?= no
 with_config_file_scan_dir ?= $(prefix)/etc/php.d
 
 with_php_config ?= $(bindir)/php-config
-extdir = $(shell $(with_php_config) --extension-dir 2>/dev/null)
+extdir = $(shell test -x $(with_php_config) && $(with_php_config) --extension-dir)
 
 PECL_MIRROR ?= http://pecl.php.net/get/
 PECL_EXTENSION ?= $(shell cut -d: -f1 <<<"$(PECL)")
@@ -23,7 +23,7 @@ PECL_SONAME ?= $(if $(shell cut -d: -f2 <<<"$(PECL)"),$(shell cut -d: -f2 <<<"$(
 PECL_VERSION ?= $(shell cut -d: -f3 -s <<<"$(PECL)")
 PECL_INI = $(with_config_file_scan_dir)/pecl.ini
 
-PHP_VERSION ?= $(shell php $(srcdir)/php-version.php $(PHP) < $(srcdir)/php-versions.json 2>/dev/null)
+PHP_VERSION ?= $(shell test -e $(srcdir)/php-versions.json && cat $(srcdir)/php-versions.json | php $(srcdir)/php-version.php $(PHP))
 
 .PHONY: all php check clean reconf pecl ext test
 .SUFFIXES:
