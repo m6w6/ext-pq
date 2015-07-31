@@ -7,6 +7,7 @@ addons:
  apt:
   packages:
    - php5-cli
+   - php-pear
 
 env:
  global:
