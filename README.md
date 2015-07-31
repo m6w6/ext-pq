@@ -8,9 +8,9 @@ This is a modern binding to the mature [libpq](http://www.postgresql.org/docs/cu
 
 ### Highlights:
 
-* Nearly 100% support for [asynchronous usage](http://devel-m6w6.rhcloud.com/mdref/pq/pq/Connection/: Asynchronous Usage).
-* Extended [type support by pg_type](http://devel-m6w6.rhcloud.com/mdref/pq/pq/Types/: Overview).
-* Fetching simple [multi-dimensional array maps](http://devel-m6w6.rhcloud.com/mdref/pq/pq/Result/map).
+* Nearly 100% support for [asynchronous usage](http://devel-m6w6.rhcloud.com/mdref/pq/Connection/: Asynchronous Usage).
+* Extended [type support by pg_type](http://devel-m6w6.rhcloud.com/mdref/pq/Types/: Overview).
+* Fetching simple [multi-dimensional array maps](http://devel-m6w6.rhcloud.com/mdref/pq/Result/map).
 * Working [Gateway implementation](https://github.com/m6w6/pq-gateway).
 
 ## Installation:
