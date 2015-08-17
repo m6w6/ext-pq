@@ -35,8 +35,14 @@ zend_class_entry *php_pqconn_class_entry;
 static zend_object_handlers php_pqconn_object_handlers;
 static HashTable php_pqconn_object_prophandlers;
 
+static void php_pq_callback_hash_dtor(zval *p)
+{
+	php_pq_callback_dtor(Z_PTR_P(p));
+	efree(Z_PTR_P(p));
+}
+
 /*
-static void php_pqconn_del_eventhandler(php_pqconn_object_t *obj, const char *type_str, size_t type_len, ulong id TSRMLS_DC)
+static void php_pqconn_del_eventhandler(php_pqconn_object_t *obj, const char *type_str, size_t type_len, ulong id)
 {
 	zval **evhs;
 
@@ -46,21 +52,25 @@ static void php_pqconn_del_eventhandler(php_pqconn_object_t *obj, const char *ty
 }
 */
 
-static ulong php_pqconn_add_eventhandler(php_pqconn_object_t *obj, const char *type_str, size_t type_len, php_pq_callback_t *cb TSRMLS_DC)
+static zend_long php_pqconn_add_eventhandler(php_pqconn_object_t *obj, const char *type_str, size_t type_len, php_pq_callback_t *cb)
 {
-	ulong h;
-	HashTable *evhs;
+	zend_long h;
+	zval *zevhs;
 
-	if (!(evhs = zend_hash_str_find_ptr(&obj->intern->eventhandlers, type_str, type_len))) {
-		HashTable evh;
+	if (!(zevhs = zend_hash_str_find(&obj->intern->eventhandlers, type_str, type_len))) {
+		HashTable *evhs;
+		zval tmp;
 
-		zend_hash_init(&evh, 1, NULL, (dtor_func_t) php_pq_callback_dtor, 0);
-		evhs = zend_hash_str_add_mem(&obj->intern->eventhandlers, type_str, type_len, (void *) &evh, sizeof(evh));
+		ALLOC_HASHTABLE(evhs);
+		zend_hash_init(evhs, 1, NULL, php_pq_callback_hash_dtor, 0);
+
+		ZVAL_ARR(&tmp, evhs);
+		zevhs = zend_hash_str_add(&obj->intern->eventhandlers, type_str, type_len, &tmp);
 	}
 
 	php_pq_callback_addref(cb);
-	h = zend_hash_next_free_element(evhs);
-	zend_hash_index_update_ptr(evhs, h, (void *) cb);
+	h = zend_hash_next_free_element(Z_ARRVAL_P(zevhs));
+	zend_hash_index_update_mem(Z_ARRVAL_P(zevhs), h, (void *) cb, sizeof(*cb));
 
 	return h;
 }
@@ -69,7 +79,7 @@ static void php_pqconn_object_free(zend_object *o)
 {
 	php_pqconn_object_t *obj = PHP_PQ_OBJ(NULL, o);
 #if DBG_GC
-	fprintf(stderr, "FREE conn(#%d) %p\n", obj->zv.handle, obj);
+	fprintf(stderr, "FREE conn(#%d) %p\n", obj->zo.handle, obj);
 #endif
 	if (obj->intern) {
 		php_pq_callback_dtor(&obj->intern->onevent);
@@ -81,27 +91,14 @@ static void php_pqconn_object_free(zend_object *o)
 		efree(obj->intern);
 		obj->intern = NULL;
 	}
-	zend_object_std_dtor(o);
-	efree(obj);
+	php_pq_object_dtor(o);
 }
 
 
 php_pqconn_object_t *php_pqconn_create_object_ex(zend_class_entry *ce, php_pqconn_t *intern)
 {
-	php_pqconn_object_t *o;
-
-	o = ecalloc(1, sizeof(*o) + zend_object_properties_size(ce));
-	zend_object_std_init(&o->zo, ce);
-	object_properties_init(&o->zo, ce);
-	o->prophandler = &php_pqconn_object_prophandlers;
-
-	if (intern) {
-		o->intern = intern;
-	}
-
-	o->zo.handlers = &php_pqconn_object_handlers;
-
-	return o;
+	return php_pq_object_create(ce, intern, sizeof(php_pqconn_object_t),
+			&php_pqconn_object_handlers, &php_pqconn_object_prophandlers);
 }
 
 static zend_object *php_pqconn_create_object(zend_class_entry *class_type)
@@ -147,6 +144,7 @@ static int apply_notify_listener(zval *p, void *arg)
 
 	zend_fcall_info_argn(&listener->fci, 3, &zchannel, &zmessage, &zpid);
 	zend_fcall_info_call(&listener->fci, &listener->fcc, NULL, NULL);
+	zend_fcall_info_args_clear(&listener->fci, 0);
 
 	zval_ptr_dtor(&zchannel);
 	zval_ptr_dtor(&zmessage);
@@ -310,7 +308,7 @@ static void php_pqconn_object_read_options(zval *object, void *o, zval *return_v
 	}
 }
 
-static int apply_read_event_handler_ex(zval *p, void *arg)
+static int apply_read_callback_ex(zval *p, void *arg)
 {
 	HashTable *rv = arg;
 	zval zcb;
@@ -320,9 +318,9 @@ static int apply_read_event_handler_ex(zval *p, void *arg)
 	return ZEND_HASH_APPLY_KEEP;
 }
 
-static int apply_read_event_handlers(zval *p, int argc, va_list argv, zend_hash_key *key)
+static int apply_read_callbacks(zval *p, int argc, va_list argv, zend_hash_key *key)
 {
-	HashTable *evhs = Z_PTR_P(p), *rv = va_arg(argv, HashTable *);
+	HashTable *evhs = Z_ARRVAL_P(p), *rv = va_arg(argv, HashTable *);
 	zval entry, *entry_ptr;
 
 	array_init_size(&entry, zend_hash_num_elements(evhs));
@@ -333,7 +331,7 @@ static int apply_read_event_handlers(zval *p, int argc, va_list argv, zend_hash_
 		entry_ptr = zend_hash_index_update(rv, key->h, &entry);
 	}
 
-	zend_hash_apply_with_argument(evhs, apply_read_event_handler_ex, Z_ARRVAL_P(entry_ptr));
+	zend_hash_apply_with_argument(evhs, apply_read_callback_ex, Z_ARRVAL_P(entry_ptr));
 
 	return ZEND_HASH_APPLY_KEEP;
 }
@@ -342,7 +340,75 @@ static void php_pqconn_object_read_event_handlers(zval *object, void *o, zval *r
 	php_pqconn_object_t *obj = o;
 
 	array_init(return_value);
-	zend_hash_apply_with_arguments(&obj->intern->eventhandlers, apply_read_event_handlers, 1, Z_ARRVAL_P(return_value) TSRMLS_CC);
+	zend_hash_apply_with_arguments(&obj->intern->eventhandlers, apply_read_callbacks, 1, Z_ARRVAL_P(return_value));
+}
+
+static void php_pqconn_object_gc_event_handlers(zval *object, void *o, zval *return_value)
+{
+	php_pqconn_object_t *obj = o;
+	zval *evhs;
+
+	ZEND_HASH_FOREACH_VAL(&obj->intern->eventhandlers, evhs)
+	{
+		zval *evh;
+
+		ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(evhs), evh)
+		{
+			zval zcb;
+
+			add_next_index_zval(return_value, php_pq_callback_to_zval_no_addref(Z_PTR_P(evh), &zcb));
+		}
+		ZEND_HASH_FOREACH_END();
+	}
+	ZEND_HASH_FOREACH_END();
+}
+
+static void php_pqconn_object_read_listeners(zval *object, void *o, zval *return_value)
+{
+	php_pqconn_object_t *obj = o;
+
+	array_init(return_value);
+	zend_hash_apply_with_arguments(&obj->intern->listeners, apply_read_callbacks, 1, Z_ARRVAL_P(return_value));
+}
+
+static void php_pqconn_object_gc_listeners(zval *object, void *o, zval *return_value)
+{
+	php_pqconn_object_t *obj = o;
+	zval *listeners;
+
+	ZEND_HASH_FOREACH_VAL(&obj->intern->listeners, listeners)
+	{
+		zval *listener;
+
+		ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(listeners), listener)
+		{
+			zval zcb;
+
+			add_next_index_zval(return_value, php_pq_callback_to_zval_no_addref(Z_PTR_P(listener), &zcb));
+		}
+		ZEND_HASH_FOREACH_END();
+	}
+	ZEND_HASH_FOREACH_END();
+}
+
+static void php_pqconn_object_read_converters(zval *object, void *o, zval *return_value)
+{
+	php_pqconn_object_t *obj = o;
+
+	array_init(return_value);
+	zend_hash_copy(Z_ARRVAL_P(return_value), &obj->intern->converters, zval_add_ref);
+}
+
+static void php_pqconn_object_gc_converters(zval *object, void *o, zval *return_value)
+{
+	php_pqconn_object_t *obj = o;
+	zval *converter;
+
+	ZEND_HASH_FOREACH_VAL(&obj->intern->converters, converter)
+	{
+		add_next_index_zval(return_value, converter);
+	}
+	ZEND_HASH_FOREACH_END();
 }
 
 static void php_pqconn_object_read_def_fetch_type(zval *object, void *o, zval *return_value)
@@ -435,6 +501,7 @@ static ZEND_RESULT_CODE php_pqconn_update_socket(zval *zobj, php_pqconn_object_t
 	}
 	zend_get_std_object_handlers()->write_property(zobj, &zmember, &zsocket, NULL);
 	zval_ptr_dtor(&zsocket);
+	zval_ptr_dtor(&zmember);
 
 	return retval;
 }
@@ -602,7 +669,7 @@ static PHP_METHOD(pqconn, __construct) {
 
 			zend_hash_init(&obj->intern->listeners, 0, NULL, ZVAL_PTR_DTOR, 0);
 			zend_hash_init(&obj->intern->converters, 0, NULL, ZVAL_PTR_DTOR, 0);
-			zend_hash_init(&obj->intern->eventhandlers, 0, NULL, (dtor_func_t) zend_hash_destroy, 0);
+			zend_hash_init(&obj->intern->eventhandlers, 0, NULL, ZVAL_PTR_DTOR, 0);
 
 			if (flags & PHP_PQCONN_PERSISTENT) {
 				zend_string *dsn = zend_string_init(dsn_str, dsn_len, 0);
@@ -760,15 +827,21 @@ static PHP_METHOD(pqconn, unlistenAsync) {
 
 static void php_pqconn_add_listener(php_pqconn_object_t *obj, const char *channel_str, size_t channel_len, php_pq_callback_t *listener)
 {
-	zval *existing, tmp;
+	zval *existing;
 
 	php_pq_callback_addref(listener);
 
 	if ((existing = zend_hash_str_find(&obj->intern->listeners, channel_str, channel_len))) {
 		zend_hash_next_index_insert_mem(Z_ARRVAL_P(existing), (void *) listener, sizeof(*listener));
 	} else {
-		ZVAL_NEW_ARR(&tmp);
-		zend_hash_next_index_insert_mem(Z_ARRVAL(tmp), (void *) listener, sizeof(*listener));
+		zval tmp;
+		HashTable *ht;
+
+		ALLOC_HASHTABLE(ht);
+		zend_hash_init(ht, 0, NULL, php_pq_callback_hash_dtor, 0);
+		zend_hash_next_index_insert_mem(ht, (void *) listener, sizeof(*listener));
+
+		ZVAL_ARR(&tmp, ht);
 		zend_hash_str_add(&obj->intern->listeners, channel_str, channel_len, &tmp);
 	}
 }
@@ -1880,11 +1953,11 @@ PHP_MINIT_FUNCTION(pqconn)
 	php_pqconn_object_handlers.write_property = php_pq_object_write_prop;
 	php_pqconn_object_handlers.clone_obj = NULL;
 	php_pqconn_object_handlers.get_property_ptr_ptr = NULL;
-	php_pqconn_object_handlers.get_gc = NULL;
+	php_pqconn_object_handlers.get_gc = php_pq_object_get_gc;
 	php_pqconn_object_handlers.get_properties = php_pq_object_properties;
 	php_pqconn_object_handlers.get_debug_info = php_pq_object_debug_info;
 
-	zend_hash_init(&php_pqconn_object_prophandlers, 20, NULL, NULL, 1);
+	zend_hash_init(&php_pqconn_object_prophandlers, 22, NULL, php_pq_object_prophandler_dtor, 1);
 
 	zend_declare_property_long(php_pqconn_class_entry, ZEND_STRL("status"), CONNECTION_BAD, ZEND_ACC_PUBLIC);
 	ph.read = php_pqconn_object_read_status;
@@ -1950,7 +2023,21 @@ PHP_MINIT_FUNCTION(pqconn)
 
 	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("eventHandlers"), ZEND_ACC_PUBLIC);
 	ph.read = php_pqconn_object_read_event_handlers;
+	ph.gc = php_pqconn_object_gc_event_handlers;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "eventHandlers", sizeof("eventHandlers")-1, (void *) &ph, sizeof(ph));
+	ph.gc = NULL;
+
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("listeners"), ZEND_ACC_PUBLIC);
+	ph.read = php_pqconn_object_read_listeners;
+	ph.gc = php_pqconn_object_gc_listeners;
+	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "listeners", sizeof("listeners")-1, (void *) &ph, sizeof(ph));
+	ph.gc = NULL;
+
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("converters"), ZEND_ACC_PUBLIC);
+	ph.read = php_pqconn_object_read_converters;
+	ph.gc = php_pqconn_object_gc_converters;
+	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "converters", sizeof("converters")-1, (void *) &ph, sizeof(ph));
+	ph.gc = NULL;
 
 	zend_declare_property_long(php_pqconn_class_entry, ZEND_STRL("defaultFetchType"), 0, ZEND_ACC_PUBLIC);
 	ph.read = php_pqconn_object_read_def_fetch_type;

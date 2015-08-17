@@ -24,22 +24,22 @@ DONE
 Test
 array(3) {
   [0]=>
-  &int(2)
+  int(2)
   [1]=>
-  &int(4)
+  int(4)
   [2]=>
-  &int(6)
+  int(6)
 }
 int(2)
 int(4)
 int(6)
 array(3) {
   [0]=>
-  &int(3)
+  int(3)
   [1]=>
-  &int(6)
+  int(6)
   [2]=>
-  &int(9)
+  int(9)
 }
 int(3)
 int(6)

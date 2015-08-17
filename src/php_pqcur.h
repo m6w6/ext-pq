@@ -32,9 +32,7 @@ typedef struct php_pqcur {
 } php_pqcur_t;
 
 typedef struct php_pqcur_object {
-	php_pqcur_t *intern;
-	HashTable *prophandler;
-	zend_object zo;
+	PHP_PQ_OBJ_DECL(php_pqcur_t *)
 } php_pqcur_object_t;
 
 extern zend_class_entry *php_pqcur_class_entry;

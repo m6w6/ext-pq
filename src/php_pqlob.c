@@ -32,7 +32,7 @@ static void php_pqlob_object_free(zend_object *o)
 {
 	php_pqlob_object_t *obj = PHP_PQ_OBJ(NULL, o);
 #if DBG_GC
-	fprintf(stderr, "FREE lob(#%d) %p (txn(#%d): %p)\n", obj->zv.handle, obj, obj->intern->txn->zv.handle, obj->intern->txn);
+	fprintf(stderr, "FREE lob(#%d) %p (txn(#%d): %p)\n", obj->zo.handle, obj, obj->intern->txn->zo.handle, obj->intern->txn);
 #endif
 	if (obj->intern) {
 		if (obj->intern->lofd) {
@@ -47,26 +47,13 @@ static void php_pqlob_object_free(zend_object *o)
 		efree(obj->intern);
 		obj->intern = NULL;
 	}
-	zend_object_std_dtor(o);
-	efree(obj);
+	php_pq_object_dtor(o);
 }
 
 php_pqlob_object_t *php_pqlob_create_object_ex(zend_class_entry *ce, php_pqlob_t *intern)
 {
-	php_pqlob_object_t *o;
-
-	o = ecalloc(1, sizeof(*o) + zend_object_properties_size(ce));
-	zend_object_std_init(&o->zo, ce);
-	object_properties_init(&o->zo, ce);
-	o->prophandler = &php_pqlob_object_prophandlers;
-
-	if (intern) {
-		o->intern = intern;
-	}
-
-	o->zo.handlers = &php_pqlob_object_handlers;
-
-	return o;
+	return php_pq_object_create(ce, intern, sizeof(php_pqlob_object_t),
+			&php_pqlob_object_handlers, &php_pqlob_object_prophandlers);
 }
 
 static zend_object *php_pqlob_create_object(zend_class_entry *class_type)
@@ -79,6 +66,15 @@ static void php_pqlob_object_read_transaction(zval *object, void *o, zval *retur
 	php_pqlob_object_t *obj = o;
 
 	php_pq_object_to_zval(obj->intern->txn, return_value);
+}
+
+static void php_pqlob_object_gc_transaction(zval *object, void *o, zval *return_value)
+{
+	php_pqlob_object_t *obj = o;
+	zval ztxn;
+
+	php_pq_object_to_zval_no_addref(obj->intern->txn, &ztxn);
+	add_next_index_zval(return_value, &ztxn);
 }
 
 static void php_pqlob_object_read_oid(zval *object, void *o, zval *return_value)
@@ -101,7 +97,7 @@ static void php_pqlob_object_read_stream(zval *object, void *o, zval *return_val
 		php_stream_to_zval(obj->intern->stream, &zstream);
 	}
 
-	RETVAL_ZVAL(&zstream, 1, 1);
+	RETVAL_ZVAL(&zstream, 1, 0);
 }
 
 static size_t php_pqlob_stream_write(php_stream *stream, const char *buffer, size_t length TSRMLS_DC)
@@ -209,6 +205,7 @@ static void php_pqlob_object_update_stream(zval *zpqlob, php_pqlob_object_t *obj
 	php_stream_to_zval(obj->intern->stream, zstream);
 
 	zend_get_std_object_handlers()->write_property(zpqlob, &zmember, zstream, NULL);
+	zval_ptr_dtor(&zmember);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqlob_construct, 0, 0, 1)
@@ -457,23 +454,25 @@ PHP_MINIT_FUNCTION(pqlob)
 	php_pqlob_object_handlers.write_property = php_pq_object_write_prop;
 	php_pqlob_object_handlers.clone_obj = NULL;
 	php_pqlob_object_handlers.get_property_ptr_ptr = NULL;
-	php_pqlob_object_handlers.get_gc = NULL;
+	php_pqlob_object_handlers.get_gc = php_pq_object_get_gc;
 	php_pqlob_object_handlers.get_properties = php_pq_object_properties;
 	php_pqlob_object_handlers.get_debug_info = php_pq_object_debug_info;
 
-	zend_hash_init(&php_pqlob_object_prophandlers, 3, NULL, NULL, 1);
+	zend_hash_init(&php_pqlob_object_prophandlers, 3, NULL, php_pq_object_prophandler_dtor, 1);
 
 	zend_declare_property_null(php_pqlob_class_entry, ZEND_STRL("transaction"), ZEND_ACC_PUBLIC);
 	ph.read = php_pqlob_object_read_transaction;
+	ph.gc = php_pqlob_object_gc_transaction;
 	zend_hash_str_add_mem(&php_pqlob_object_prophandlers, "transaction", sizeof("transaction")-1, (void *) &ph, sizeof(ph));
+	ph.gc = NULL;
 
 	zend_declare_property_long(php_pqlob_class_entry, ZEND_STRL("oid"), InvalidOid, ZEND_ACC_PUBLIC);
 	ph.read = php_pqlob_object_read_oid;
-	zend_hash_str_add_mem(&php_pqlob_object_prophandlers, "oid", sizeof("oid"), (void *) &ph, sizeof(ph));
+	zend_hash_str_add_mem(&php_pqlob_object_prophandlers, "oid", sizeof("oid")-1, (void *) &ph, sizeof(ph));
 
 	zend_declare_property_null(php_pqlob_class_entry, ZEND_STRL("stream"), ZEND_ACC_PUBLIC);
 	ph.read = php_pqlob_object_read_stream;
-	zend_hash_str_add_mem(&php_pqlob_object_prophandlers, "stream", sizeof("stream"), (void *) &ph, sizeof(ph));
+	zend_hash_str_add_mem(&php_pqlob_object_prophandlers, "stream", sizeof("stream")-1, (void *) &ph, sizeof(ph));
 
 	zend_declare_class_constant_long(php_pqlob_class_entry, ZEND_STRL("INVALID_OID"), InvalidOid);
 	zend_declare_class_constant_long(php_pqlob_class_entry, ZEND_STRL("R"), INV_READ);

@@ -40,6 +40,7 @@ function complete($c) {
 				break 2;
 		}
 	}
+	$s[] = $c->status;
 	printf("\n%s\n", implode(",", $s));
 }
 
@@ -54,7 +55,7 @@ DONE
 --EXPECTREGEX--
 Test
 (WP(RP)*)+S
-(2,)*3(,\d)*,4
+2(,\d)*,0
 (WP(RP)*)+S
-(2,)*3(,\d)*,4
+2(,\d)*,0
 DONE

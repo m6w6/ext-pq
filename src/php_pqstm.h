@@ -26,9 +26,7 @@ typedef struct php_pqstm {
 } php_pqstm_t;
 
 typedef struct php_pqstm_object {
-	php_pqstm_t *intern;
-	HashTable *prophandler;
-	zend_object zo;
+	PHP_PQ_OBJ_DECL(php_pqstm_t *)
 } php_pqstm_object_t;
 
 extern zend_class_entry *php_pqstm_class_entry;

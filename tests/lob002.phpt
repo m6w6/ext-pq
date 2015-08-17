@@ -35,7 +35,7 @@ int(488)
 bool(true)
 
 Warning: ftruncate(): Can't truncate this stream! in %s on line %d
-string(123) "<?php
+string(123) "%c?php
 echo "Test\n";
 
 include "_setup.inc";

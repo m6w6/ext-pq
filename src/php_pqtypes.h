@@ -22,9 +22,7 @@ typedef struct php_pqtypes {
 } php_pqtypes_t;
 
 typedef struct php_pqtypes_object {
-	php_pqtypes_t *intern;
-	HashTable *prophandler;
-	zend_object zo;
+	PHP_PQ_OBJ_DECL(php_pqtypes_t *)
 } php_pqtypes_object_t;
 
 extern zend_class_entry *php_pqtypes_class_entry;

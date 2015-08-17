@@ -130,10 +130,16 @@ static int apply_to_param_from_array(zval *zparam, void *arg_ptr)
 		ZVAL_LONG(&ztype, arg->type);
 		zend_call_method_with_2_params(arg->zconv, NULL, NULL, "converttostring", &rv, zparam, &ztype);
 		str = zval_get_string(&rv);
+		zval_ptr_dtor(&rv);
 		goto append_string;
 
 	} else {
+		again:
 		switch (Z_TYPE_P(zparam)) {
+		case IS_REFERENCE:
+			ZVAL_DEREF(zparam);
+			goto again;
+
 		case IS_NULL:
 			smart_str_appends(arg->buffer, "NULL");
 			break;
@@ -209,7 +215,6 @@ static zend_string *array_param_to_string(php_pq_params_t *p, zval *zarr, Oid ty
 		smart_str_appendc(arg.buffer, '{');
 		SEPARATE_ZVAL(zarr);
 		zend_hash_apply_with_argument(Z_ARRVAL_P(zarr), apply_to_param_from_array, &arg);
-		zval_ptr_dtor(zarr);
 		smart_str_appendc(arg.buffer, '}');
 		break;
 	}
@@ -238,7 +243,12 @@ static void php_pq_params_set_param(php_pq_params_t *p, unsigned index, zval *zp
 		char tmp_str[64];
 		size_t tmp_len = 0;
 
+		again:
 		switch (Z_TYPE_P(zpp)) {
+		case IS_REFERENCE:
+			ZVAL_DEREF(zpp);
+			goto again;
+
 		case IS_NULL:
 			p->param.strings[index] = NULL;
 			return;
@@ -257,7 +267,7 @@ static void php_pq_params_set_param(php_pq_params_t *p, unsigned index, zval *zp
 			break;
 
 		case IS_ARRAY:
-			str = array_param_to_string(p, &tmp, type);
+			str = array_param_to_string(p, zpp, type);
 			break;
 
 		case IS_OBJECT:
@@ -265,7 +275,6 @@ static void php_pq_params_set_param(php_pq_params_t *p, unsigned index, zval *zp
 				break;
 			}
 			/* no break */
-
 		default:
 			str = zval_get_string(zpp);
 			break;

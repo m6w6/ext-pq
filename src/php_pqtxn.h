@@ -32,9 +32,7 @@ typedef struct php_pqtxn {
 } php_pqtxn_t;
 
 typedef struct php_pqtxn_object {
-	php_pqtxn_t *intern;
-	HashTable *prophandler;
-	zend_object zo;
+	PHP_PQ_OBJ_DECL(php_pqtxn_t *)
 } php_pqtxn_object_t;
 
 extern const char *php_pq_isolation_level(long *isolation);

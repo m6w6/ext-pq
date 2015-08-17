@@ -152,7 +152,7 @@ static void php_pqcur_object_free(zend_object *o)
 {
 	php_pqcur_object_t *obj = PHP_PQ_OBJ(NULL, o);
 #if DBG_GC
-	fprintf(stderr, "FREE cur(#%d) %p (conn: %p)\n", obj->zv.handle, obj, obj->intern->conn);
+	fprintf(stderr, "FREE cur(#%d) %p (conn: %p)\n", obj->zo.handle, obj, obj->intern->conn);
 #endif
 	if (obj->intern) {
 		cur_close(obj, 0, 1);
@@ -162,26 +162,13 @@ static void php_pqcur_object_free(zend_object *o)
 		efree(obj->intern);
 		obj->intern = NULL;
 	}
-	zend_object_std_dtor(o);
-	efree(obj);
+	php_pq_object_dtor(o);
 }
 
 php_pqcur_object_t *php_pqcur_create_object_ex(zend_class_entry *ce, php_pqcur_t *intern)
 {
-	php_pqcur_object_t *o;
-
-	o = ecalloc(1, sizeof(*o) + zend_object_properties_size(ce));
-	zend_object_std_init(&o->zo, ce);
-	object_properties_init(&o->zo, ce);
-	o->prophandler = &php_pqcur_object_prophandlers;
-
-	if (intern) {
-		o->intern = intern;
-	}
-
-	o->zo.handlers = &php_pqcur_object_handlers;
-
-	return o;
+	return php_pq_object_create(ce, intern, sizeof(php_pqcur_object_t),
+			&php_pqcur_object_handlers, &php_pqcur_object_prophandlers);
 }
 
 static zend_object *php_pqcur_create_object(zend_class_entry *class_type)
@@ -201,6 +188,15 @@ static void php_pqcur_object_read_connection(zval *object, void *o, zval *return
 	php_pqcur_object_t *obj = o;
 
 	php_pq_object_to_zval(obj->intern->conn, return_value);
+}
+
+static void php_pqcur_object_gc_connection(zval *object, void *o, zval *return_value)
+{
+	php_pqcur_object_t *obj = o;
+	zval zconn;
+
+	php_pq_object_to_zval_no_addref(obj->intern->conn, &zconn);
+	add_next_index_zval(return_value, &zconn);
 }
 
 static void php_pqcur_object_read_query(zval *object, void *o, zval *return_value)
@@ -438,11 +434,11 @@ PHP_MINIT_FUNCTION(pqcur)
 	php_pqcur_object_handlers.write_property = php_pq_object_write_prop;
 	php_pqcur_object_handlers.clone_obj = NULL;
 	php_pqcur_object_handlers.get_property_ptr_ptr = NULL;
-	php_pqcur_object_handlers.get_gc = NULL;
+	php_pqcur_object_handlers.get_gc = php_pq_object_get_gc;
 	php_pqcur_object_handlers.get_properties = php_pq_object_properties;
 	php_pqcur_object_handlers.get_debug_info = php_pq_object_debug_info;
 
-	zend_hash_init(&php_pqcur_object_prophandlers, 4, NULL, NULL, 1);
+	zend_hash_init(&php_pqcur_object_prophandlers, 4, NULL, php_pq_object_prophandler_dtor, 1);
 
 	zend_declare_class_constant_long(php_pqcur_class_entry, ZEND_STRL("BINARY"), PHP_PQ_DECLARE_BINARY);
 	zend_declare_class_constant_long(php_pqcur_class_entry, ZEND_STRL("INSENSITIVE"), PHP_PQ_DECLARE_INSENSITIVE);
@@ -456,7 +452,9 @@ PHP_MINIT_FUNCTION(pqcur)
 
 	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("connection"), ZEND_ACC_PUBLIC);
 	ph.read = php_pqcur_object_read_connection;
+	ph.gc = php_pqcur_object_gc_connection;
 	zend_hash_str_add_mem(&php_pqcur_object_prophandlers, "connection", sizeof("connection")-1, (void *) &ph, sizeof(ph));
+	ph.gc = NULL;
 
 	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("query"), ZEND_ACC_PUBLIC);
 	ph.read = php_pqcur_object_read_query;

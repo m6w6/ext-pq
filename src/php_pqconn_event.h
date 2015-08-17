@@ -17,9 +17,11 @@
 #include <libpq-events.h>
 
 #include "php_pqconn.h"
+#include "php_pqres.h"
 
 typedef struct php_pqconn_event_data {
 	php_pqconn_object_t *obj;
+	php_pqres_object_t *res;
 } php_pqconn_event_data_t;
 
 extern php_pqconn_event_data_t *php_pqconn_event_data_init(php_pqconn_object_t *obj);

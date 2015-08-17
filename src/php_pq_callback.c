@@ -30,7 +30,10 @@ void php_pq_callback_dtor(php_pq_callback_t *cb)
 		zend_fcall_info_args_clear(&cb->fci, 1);
 		zval_ptr_dtor(&cb->fci.function_name);
 		if (cb->fci.object) {
-			zend_objects_store_del(cb->fci.object);
+			zval tmp;
+
+			ZVAL_OBJ(&tmp, cb->fci.object);
+			zval_ptr_dtor(&tmp);
 		}
 		cb->fci.size = 0;
 	}
@@ -48,6 +51,22 @@ zval *php_pq_callback_to_zval(php_pq_callback_t *cb, zval *tmp)
 {
 	php_pq_callback_addref(cb);
 
+	if (cb->fci.object) {
+		zval zo;
+
+		array_init_size(tmp, 2);
+		ZVAL_OBJ(&zo, cb->fci.object);
+		add_next_index_zval(tmp, &zo);
+		add_next_index_zval(tmp, &cb->fci.function_name);
+
+		return tmp;
+	}
+
+	return &cb->fci.function_name;
+}
+
+zval *php_pq_callback_to_zval_no_addref(php_pq_callback_t *cb, zval *tmp)
+{
 	if (cb->fci.object) {
 		zval zo;
 

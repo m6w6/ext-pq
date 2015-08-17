@@ -16,7 +16,7 @@ do {
 	while ($c->busy) {
 		$r = array($c->socket);
 		$w = $e = null;
-		if (stream_select($r, $w, $e, null)) {
+		if (stream_select($r, $w, $e, 1, 1000)) {
 			$c->poll();
 		}
 	}

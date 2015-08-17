@@ -43,31 +43,48 @@ static zend_object_iterator *php_pqres_iterator_init(zend_class_entry *ce, zval 
 
 	iter = ecalloc(1, sizeof(*iter));
 	iter->zi.funcs = &php_pqres_iterator_funcs;
-	iter->zi.data = PHP_PQ_OBJ(object, NULL);
-	php_pq_object_addref(iter->zi.data);
+	ZVAL_COPY(&iter->zi.data, object);
+
+	zend_iterator_init(&iter->zi);
 
 	zfetch_type = zend_read_property(ce, object, ZEND_STRL("fetchType"), 0, &tmp);
 	iter->fetch_type = zval_get_long(zfetch_type);
-
+#if DBG_GC
+	fprintf(stderr, "INIT iter(#%d) %p res(#%d) %p\n", iter->zi.std.handle, iter, Z_OBJ_HANDLE_P(object), PHP_PQ_OBJ(object, NULL));
+#endif
 	return (zend_object_iterator *) iter;
+}
+
+static void php_pqres_internal_iterator_init(zval *zobj)
+{
+	php_pqres_object_t *obj = PHP_PQ_OBJ(zobj, NULL);
+
+	obj->intern->iter = (php_pqres_iterator_t *) php_pqres_iterator_init(Z_OBJCE_P(zobj), zobj, 0);
+	/* prevent cyclic dep */
+	Z_DELREF_P(zobj);
+	obj->intern->iter->zi.funcs->rewind((zend_object_iterator *) obj->intern->iter);
+
 }
 
 static void php_pqres_iterator_dtor(zend_object_iterator *i)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
-	php_pqres_object_t *obj = i->data;
 
-	if (!Z_IS_UNDEF(&iter->current_val)) {
+#if DBG_GC
+	fprintf(stderr, "FREE iter(#%d) %p\n", iter->zi.std.handle, iter);
+#endif
+	if (!Z_ISUNDEF(iter->current_val)) {
 		zval_ptr_dtor(&iter->current_val);
+		ZVAL_UNDEF(&iter->current_val);
 	}
-	php_pq_object_delref(obj);
-	efree(iter);
+	zval_ptr_dtor(&i->data);
+	zend_iterator_dtor(i);
 }
 
 static ZEND_RESULT_CODE php_pqres_iterator_valid(zend_object_iterator *i)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
-	php_pqres_object_t *obj = i->data;
+	php_pqres_object_t *obj = PHP_PQ_OBJ(&i->data, NULL);
 
 	switch (PQresultStatus(obj->intern->res)) {
 	case PGRES_TUPLES_OK:
@@ -101,7 +118,8 @@ zval *php_pqres_typed_zval(php_pqres_t *res, Oid typ, zval *zv)
 		ZVAL_LONG(&ztype, typ);
 		zend_call_method_with_2_params(zconv, NULL, NULL, "convertfromstring", &rv, zv, &ztype);
 
-		ZVAL_ZVAL(&rv, zv, 1, 1);
+		zval_ptr_dtor(zv);
+		ZVAL_ZVAL(zv, &rv, 0, 0);
 
 		return zv;
 	}
@@ -203,7 +221,7 @@ zval *php_pqres_typed_zval(php_pqres_t *res, Oid typ, zval *zv)
 		break;
 	}
 
-	zend_sring_release(str);
+	zend_string_release(str);
 	return zv;
 
 	noconversion:
@@ -264,19 +282,19 @@ static inline void php_pqres_add_col_to_zval(php_pqres_t *r, unsigned row, unsig
 
 zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch_type, zval *data)
 {
-	int c, cols;
+	int c, cols = PQnfields(res);
 	php_pqres_object_t *res_obj = PQresultInstanceData(res, php_pqconn_event);
 
 	if (Z_TYPE_P(data) != IS_OBJECT && Z_TYPE_P(data) != IS_ARRAY) {
 		if (PHP_PQRES_FETCH_OBJECT == fetch_type) {
 			object_init(data);
 		} else {
-			array_init(data);
+			array_init_size(data, cols);
 		}
 	}
 
 	if (PQntuples(res) > row) {
-		for (c = 0, cols = PQnfields(res); c < cols; ++c) {
+		for (c = 0; c < cols; ++c) {
 			php_pqres_add_col_to_zval(res_obj->intern, row, c, fetch_type, data);
 		}
 	}
@@ -284,58 +302,47 @@ zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch
 	return data;
 }
 
-static void php_pqres_iterator_current(zend_object_iterator *i, zval ***data_ptr TSRMLS_DC)
+static zval *php_pqres_iterator_current(zend_object_iterator *i)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
-	php_pqres_object_t *obj = i->data;
+	php_pqres_object_t *obj = PHP_PQ_OBJ(&i->data, NULL);
 
-	if (!iter->current_val) {
-		iter->current_val = php_pqres_row_to_zval(obj->intern->res, iter->index, iter->fetch_type, NULL TSRMLS_CC);
+	if (Z_ISUNDEF(iter->current_val)) {
+		php_pqres_row_to_zval(obj->intern->res, iter->index, iter->fetch_type, &iter->current_val);
 	}
-	*data_ptr = &iter->current_val;
+	return &iter->current_val;
 }
 
-#if PHP_VERSION_ID >= 50500
-static void php_pqres_iterator_key(zend_object_iterator *i, zval *key TSRMLS_DC)
+static void php_pqres_iterator_key(zend_object_iterator *i, zval *key)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
 
 	ZVAL_LONG(key, iter->index);
 }
-#else
-static int php_pqres_iterator_key(zend_object_iterator *i, char **key_str, uint *key_len, ulong *key_num TSRMLS_DC)
+
+static void php_pqres_iterator_invalidate(zend_object_iterator *i)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
 
-	*key_num = (ulong) iter->index;
-
-	return HASH_KEY_IS_LONG;
-}
-#endif
-
-static void php_pqres_iterator_invalidate(zend_object_iterator *i TSRMLS_DC)
-{
-	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
-
-	if (iter->current_val) {
+	if (!Z_ISUNDEF(iter->current_val)) {
 		zval_ptr_dtor(&iter->current_val);
-		iter->current_val = NULL;
+		ZVAL_UNDEF(&iter->current_val);
 	}
 }
 
-static void php_pqres_iterator_next(zend_object_iterator *i TSRMLS_DC)
+static void php_pqres_iterator_next(zend_object_iterator *i)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
 
-	php_pqres_iterator_invalidate(i TSRMLS_CC);
+	php_pqres_iterator_invalidate(i);
 	++iter->index;
 }
 
-static void php_pqres_iterator_rewind(zend_object_iterator *i TSRMLS_DC)
+static void php_pqres_iterator_rewind(zend_object_iterator *i)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
 
-	php_pqres_iterator_invalidate(i TSRMLS_CC);
+	php_pqres_iterator_invalidate(i);
 	iter->index = 0;
 }
 
@@ -355,9 +362,9 @@ static zend_object_iterator_funcs php_pqres_iterator_funcs = {
 	php_pqres_iterator_invalidate
 };
 
-static int php_pqres_count_elements(zval *object, long *count TSRMLS_DC)
+static ZEND_RESULT_CODE php_pqres_count_elements(zval *object, long *count)
 {
-	php_pqres_object_t *obj = zend_object_store_get_object(object TSRMLS_CC);
+	php_pqres_object_t *obj = PHP_PQ_OBJ(object, NULL);
 
 	if (!obj->intern) {
 		return FAILURE;
@@ -369,39 +376,37 @@ static int php_pqres_count_elements(zval *object, long *count TSRMLS_DC)
 
 ZEND_RESULT_CODE php_pqres_success(PGresult *res TSRMLS_DC)
 {
-	zval *zexc;
+	zval zexc;
 
 	switch (PQresultStatus(res)) {
 	case PGRES_BAD_RESPONSE:
 	case PGRES_NONFATAL_ERROR:
 	case PGRES_FATAL_ERROR:
-		zexc = throw_exce(EX_SQL TSRMLS_CC, "%s", PHP_PQresultErrorMessage(res));
-		zend_update_property_string(Z_OBJCE_P(zexc), zexc, ZEND_STRL("sqlstate"), PQresultErrorField(res, PG_DIAG_SQLSTATE) TSRMLS_CC);
+		ZVAL_OBJ(&zexc, throw_exce(EX_SQL, "%s", PHP_PQresultErrorMessage(res)));
+		zend_update_property_string(Z_OBJCE(zexc), &zexc, ZEND_STRL("sqlstate"), PQresultErrorField(res, PG_DIAG_SQLSTATE));
 		return FAILURE;
 	default:
 		return SUCCESS;
 	}
 }
 
-void php_pqres_init_instance_data(PGresult *res, php_pqconn_object_t *conn_obj, php_pqres_object_t **ptr TSRMLS_DC)
+php_pqres_object_t *php_pqres_init_instance_data(PGresult *res, php_pqconn_object_t *conn_obj)
 {
 	php_pqres_object_t *obj;
 	php_pqres_t *r = ecalloc(1, sizeof(*r));
 
 	r->res = res;
 	zend_hash_init(&r->bound, 0, 0, ZVAL_PTR_DTOR, 0);
-	zend_hash_init(&r->converters, 0, 0, ZVAL_PTR_DTOR, 0);
-	zend_hash_copy(&r->converters, &conn_obj->intern->converters, (copy_ctor_func_t) zval_add_ref, NULL, sizeof(zval *));
+	zend_hash_init(&r->converters, zend_hash_num_elements(&conn_obj->intern->converters), 0, ZVAL_PTR_DTOR, 0);
+	zend_hash_copy(&r->converters, &conn_obj->intern->converters, (copy_ctor_func_t) zval_add_ref);
 
 	r->auto_convert = conn_obj->intern->default_auto_convert;
 	r->default_fetch_type = conn_obj->intern->default_fetch_type;
 
-	php_pqres_create_object_ex(php_pqres_class_entry, r, &obj TSRMLS_CC);
+	obj = php_pqres_create_object_ex(php_pqres_class_entry, r);
 	PQresultSetInstanceData(res, php_pqconn_event, obj);
 
-	if (ptr) {
-		*ptr = obj;
-	}
+	return obj;
 }
 
 php_pqres_fetch_t php_pqres_fetch_type(php_pqres_t *res)
@@ -409,12 +414,10 @@ php_pqres_fetch_t php_pqres_fetch_type(php_pqres_t *res)
 	return res->iter ? res->iter->fetch_type : res->default_fetch_type;
 }
 
-static void php_pqres_object_free(void *o TSRMLS_DC)
+static void php_pqres_object_free(zend_object *o)
 {
-	php_pqres_object_t *obj = o;
-#if DBG_GC
-	fprintf(stderr, "FREE res(#%d) %p\n", obj->zv.handle, obj);
-#endif
+	php_pqres_object_t *obj = PHP_PQ_OBJ(NULL, o);
+
 	if (obj->intern) {
 		if (obj->intern->res) {
 			PQresultSetInstanceData(obj->intern->res, php_pqconn_event, NULL);
@@ -423,7 +426,8 @@ static void php_pqres_object_free(void *o TSRMLS_DC)
 		}
 
 		if (obj->intern->iter) {
-			php_pqres_iterator_dtor((zend_object_iterator *) obj->intern->iter TSRMLS_CC);
+			ZVAL_NULL(&obj->intern->iter->zi.data);
+			php_pqres_iterator_dtor((zend_object_iterator *) obj->intern->iter);
 			obj->intern->iter = NULL;
 		}
 
@@ -433,170 +437,117 @@ static void php_pqres_object_free(void *o TSRMLS_DC)
 		efree(obj->intern);
 		obj->intern = NULL;
 	}
-	zend_object_std_dtor((zend_object *) o TSRMLS_CC);
-	efree(obj);
+	php_pq_object_dtor(o);
 }
 
-zend_object_value php_pqres_create_object_ex(zend_class_entry *ce, php_pqres_t *intern, php_pqres_object_t **ptr TSRMLS_DC)
+php_pqres_object_t *php_pqres_create_object_ex(zend_class_entry *ce, php_pqres_t *intern)
 {
-	php_pqres_object_t *o;
-
-	o = ecalloc(1, sizeof(*o));
-	zend_object_std_init((zend_object *) o, ce TSRMLS_CC);
-	object_properties_init((zend_object *) o, ce);
-	o->prophandler = &php_pqres_object_prophandlers;
-
-	if (ptr) {
-		*ptr = o;
-	}
-
-	if (intern) {
-		o->intern = intern;
-	}
-
-	o->zv.handle = zend_objects_store_put((zend_object *) o, NULL, php_pqres_object_free, NULL TSRMLS_CC);
-	o->zv.handlers = &php_pqres_object_handlers;
-
-	return o->zv;
+	return php_pq_object_create(ce, intern, sizeof(php_pqres_object_t),
+			&php_pqres_object_handlers, &php_pqres_object_prophandlers);
 }
 
-static zend_object_value php_pqres_create_object(zend_class_entry *class_type TSRMLS_DC)
+static zend_object *php_pqres_create_object(zend_class_entry *class_type)
 {
-	return php_pqres_create_object_ex(class_type, NULL, NULL TSRMLS_CC);
+	return &php_pqres_create_object_ex(class_type, NULL)->zo;
 }
 
-static void php_pqres_object_read_status(zval *object, void *o, zval *return_value TSRMLS_DC)
+static void php_pqres_object_read_status(zval *object, void *o, zval *return_value)
 {
 	php_pqres_object_t *obj = o;
 
 	RETVAL_LONG(PQresultStatus(obj->intern->res));
 }
 
-static void php_pqres_object_read_status_message(zval *object, void *o, zval *return_value TSRMLS_DC)
+static void php_pqres_object_read_status_message(zval *object, void *o, zval *return_value)
 {
 	php_pqres_object_t *obj = o;
 
-	RETVAL_STRING(PQresStatus(PQresultStatus(obj->intern->res))+sizeof("PGRES"), 1);
+	RETVAL_STRING(PQresStatus(PQresultStatus(obj->intern->res))+sizeof("PGRES"));
 }
 
-static void php_pqres_object_read_error_message(zval *object, void *o, zval *return_value TSRMLS_DC)
+static void php_pqres_object_read_error_message(zval *object, void *o, zval *return_value)
 {
 	php_pqres_object_t *obj = o;
 	char *error = PHP_PQresultErrorMessage(obj->intern->res);
 
 	if (error) {
-		RETVAL_STRING(error, 1);
+		RETVAL_STRING(error);
 	} else {
 		RETVAL_NULL();
 	}
 }
 
-static void php_pqres_object_read_num_rows(zval *object, void *o, zval *return_value TSRMLS_DC)
+static void php_pqres_object_read_num_rows(zval *object, void *o, zval *return_value)
 {
 	php_pqres_object_t *obj = o;
 
 	RETVAL_LONG(PQntuples(obj->intern->res));
 }
 
-static void php_pqres_object_read_num_cols(zval *object, void *o, zval *return_value TSRMLS_DC)
+static void php_pqres_object_read_num_cols(zval *object, void *o, zval *return_value)
 {
 	php_pqres_object_t *obj = o;
 
 	RETVAL_LONG(PQnfields(obj->intern->res));
 }
 
-static void php_pqres_object_read_affected_rows(zval *object, void *o, zval *return_value TSRMLS_DC)
+static void php_pqres_object_read_affected_rows(zval *object, void *o, zval *return_value)
 {
 	php_pqres_object_t *obj = o;
 
 	RETVAL_LONG(atoi(PQcmdTuples(obj->intern->res)));
 }
 
-static void php_pqres_object_read_fetch_type(zval *object, void *o, zval *return_value TSRMLS_DC)
+static void php_pqres_object_read_fetch_type(zval *object, void *o, zval *return_value)
 {
 	php_pqres_object_t *obj = o;
 
 	RETVAL_LONG(php_pqres_fetch_type(obj->intern));
 }
 
-static void php_pqres_object_write_fetch_type(zval *object, void *o, zval *value TSRMLS_DC)
+static void php_pqres_object_write_fetch_type(zval *object, void *o, zval *value)
 {
 	php_pqres_object_t *obj = o;
-	zval *zfetch_type = value;
-
-	if (Z_TYPE_P(value) != IS_LONG) {
-		if (Z_REFCOUNT_P(value) > 1) {
-			zval *tmp;
-			MAKE_STD_ZVAL(tmp);
-			ZVAL_ZVAL(tmp, zfetch_type, 1, 0);
-			convert_to_long(tmp);
-			zfetch_type = tmp;
-		} else {
-			convert_to_long_ex(&zfetch_type);
-		}
-	}
 
 	if (!obj->intern->iter) {
-		obj->intern->iter = (php_pqres_iterator_t *) php_pqres_iterator_init(Z_OBJCE_P(object), object, 0 TSRMLS_CC);
-		obj->intern->iter->zi.funcs->rewind((zend_object_iterator *) obj->intern->iter TSRMLS_CC);
+		php_pqres_internal_iterator_init(object);
 	}
-	obj->intern->iter->fetch_type = Z_LVAL_P(zfetch_type);
-
-	if (zfetch_type != value) {
-		zval_ptr_dtor(&zfetch_type);
-	}
+	obj->intern->iter->fetch_type = zval_get_long(value);
 }
 
-static void php_pqres_object_read_auto_conv(zval *object, void *o, zval *return_value TSRMLS_DC)
+static void php_pqres_object_read_auto_conv(zval *object, void *o, zval *return_value)
 {
 	php_pqres_object_t *obj = o;
 
 	RETVAL_LONG(obj->intern->auto_convert);
 }
 
-static void php_pqres_object_write_auto_conv(zval *object, void *o, zval *value TSRMLS_DC)
+static void php_pqres_object_write_auto_conv(zval *object, void *o, zval *value)
 {
 	php_pqres_object_t *obj = o;
-	zval *zauto_conv = value;
 
-	if (Z_TYPE_P(value) != IS_LONG) {
-		if (Z_REFCOUNT_P(value) > 1) {
-			zval *tmp;
-			MAKE_STD_ZVAL(tmp);
-			ZVAL_ZVAL(tmp, zauto_conv, 1, 0);
-			convert_to_long(tmp);
-			zauto_conv = tmp;
-		} else {
-			convert_to_long_ex(&zauto_conv);
-		}
-	}
-
-	obj->intern->auto_convert = Z_LVAL_P(zauto_conv);
-
-	if (zauto_conv != value) {
-		zval_ptr_dtor(&zauto_conv);
-	}
+	obj->intern->auto_convert = zval_get_long(value);
 }
 
-static ZEND_RESULT_CODE php_pqres_iteration(zval *this_ptr, php_pqres_object_t *obj, php_pqres_fetch_t fetch_type, zval ***row TSRMLS_DC)
+static ZEND_RESULT_CODE php_pqres_iteration(zval *zobj, php_pqres_object_t *obj, php_pqres_fetch_t fetch_type, zval *row TSRMLS_DC)
 {
 	ZEND_RESULT_CODE rv;
 	php_pqres_fetch_t orig_fetch;
 
 	if (!obj) {
-	 obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+		obj = PHP_PQ_OBJ(zobj, NULL);
 	}
 
 	if (obj->intern->iter) {
-		obj->intern->iter->zi.funcs->move_forward((zend_object_iterator *) obj->intern->iter TSRMLS_CC);
+		obj->intern->iter->zi.funcs->move_forward((zend_object_iterator *) obj->intern->iter);
 	} else {
-		obj->intern->iter = (php_pqres_iterator_t *) php_pqres_iterator_init(Z_OBJCE_P(getThis()), getThis(), 0 TSRMLS_CC);
-		obj->intern->iter->zi.funcs->rewind((zend_object_iterator *) obj->intern->iter TSRMLS_CC);
+		php_pqres_internal_iterator_init(zobj);
 	}
 	orig_fetch = obj->intern->iter->fetch_type;
 	obj->intern->iter->fetch_type = fetch_type;
-	if (SUCCESS == (rv = obj->intern->iter->zi.funcs->valid((zend_object_iterator *) obj->intern->iter TSRMLS_CC))) {
-		obj->intern->iter->zi.funcs->get_current_data((zend_object_iterator *) obj->intern->iter, row TSRMLS_CC);
+	if (SUCCESS == (rv = obj->intern->iter->zi.funcs->valid((zend_object_iterator *) obj->intern->iter))) {
+		zval *tmp = obj->intern->iter->zi.funcs->get_current_data((zend_object_iterator *) obj->intern->iter);
+		ZVAL_COPY_VALUE(row, tmp);
 	}
 	obj->intern->iter->fetch_type = orig_fetch;
 
@@ -608,7 +559,7 @@ typedef struct php_pqres_col {
 	int num;
 } php_pqres_col_t;
 
-static ZEND_RESULT_CODE column_nn(php_pqres_object_t *obj, zval *zcol, php_pqres_col_t *col TSRMLS_DC)
+static ZEND_RESULT_CODE column_nn(php_pqres_object_t *obj, zval *zcol, php_pqres_col_t *col)
 {
 	long index = -1;
 	char *name = NULL;
@@ -646,11 +597,11 @@ static ZEND_RESULT_CODE column_nn(php_pqres_object_t *obj, zval *zcol, php_pqres
 	}
 
 	if (!col->name) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to find column at index %ld", index);
+		php_error_docref(NULL, E_WARNING, "Failed to find column at index %ld", index);
 		return FAILURE;
 	}
 	if (col->num == -1) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to find column with name '%s'", name);
+		php_error_docref(NULL, E_WARNING, "Failed to find column with name '%s'", name);
 		return FAILURE;
 	}
 	return SUCCESS;
@@ -665,28 +616,28 @@ static PHP_METHOD(pqres, bind) {
 	zend_error_handling zeh;
 	ZEND_RESULT_CODE rv;
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z/z", &zcol, &zref);
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS(), "z/z", &zcol, &zref);
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
-		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+		php_pqres_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
 
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Result not initialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\Result not initialized");
 		} else {
 			php_pqres_col_t col;
 
-			if (SUCCESS != column_nn(obj, zcol, &col TSRMLS_CC)) {
+			if (SUCCESS != column_nn(obj, zcol, &col)) {
 				RETVAL_FALSE;
 			} else {
-				Z_ADDREF_P(zref);
+				Z_TRY_ADDREF_P(zref);
 
-				if (SUCCESS != zend_hash_index_update(&obj->intern->bound, col.num, (void *) &zref, sizeof(zval *), NULL)) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to bind column %s@%d", col.name, col.num);
+				if (!zend_hash_index_update(&obj->intern->bound, col.num, zref)) {
+					php_error_docref(NULL, E_WARNING, "Failed to bind column %s@%d", col.name, col.num);
 					RETVAL_FALSE;
 				} else {
-					zend_hash_sort(&obj->intern->bound, zend_qsort, php_pq_compare_index, 0 TSRMLS_CC);
+					zend_hash_sort(&obj->intern->bound, php_pq_compare_index, 0);
 					RETVAL_TRUE;
 				}
 			}
@@ -694,23 +645,20 @@ static PHP_METHOD(pqres, bind) {
 	}
 }
 
-static int apply_bound(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
+static int apply_bound(zval *zbound, int argc, va_list argv, zend_hash_key *key)
 {
-	zval **zvalue, **zbound = p;
-	zval **zrow = va_arg(argv, zval **);
+	zval *zvalue;
+	zval *zrow = va_arg(argv, zval *);
 	ZEND_RESULT_CODE *rv = va_arg(argv, ZEND_RESULT_CODE *);
 
-	if (SUCCESS != zend_hash_index_find(Z_ARRVAL_PP(zrow), key->h, (void *) &zvalue)) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to find column ad index %lu", key->h);
+	if (!(zvalue = zend_hash_index_find(Z_ARRVAL_P(zrow), key->h))) {
+		php_error_docref(NULL, E_WARNING, "Failed to find column ad index %lu", key->h);
 		*rv = FAILURE;
 		return ZEND_HASH_APPLY_STOP;
 	} else {
-		zval_dtor(*zbound);
-		ZVAL_COPY_VALUE(*zbound, *zvalue);
-		ZVAL_NULL(*zvalue);
-		zval_ptr_dtor(zvalue);
-		Z_ADDREF_P(*zbound);
-		*zvalue = *zbound;
+		ZVAL_DEREF(zbound);
+		zval_dtor(zbound);
+		ZVAL_COPY(zbound, zvalue);
 		*rv = SUCCESS;
 		return ZEND_HASH_APPLY_KEEP;
 	}
@@ -722,29 +670,27 @@ static PHP_METHOD(pqres, fetchBound) {
 	zend_error_handling zeh;
 	ZEND_RESULT_CODE rv;
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
 	rv = zend_parse_parameters_none();
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
-		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+		php_pqres_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
 
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Result not initialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\Result not initialized");
 		} else {
-			zval **row = NULL;
+			zval row;
 
-			if (SUCCESS == php_pqres_iteration(getThis(), obj, PHP_PQRES_FETCH_ARRAY, &row TSRMLS_CC) && row) {
-				zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh TSRMLS_CC);
-				zend_hash_apply_with_arguments(&obj->intern->bound TSRMLS_CC, apply_bound, 2, row, &rv);
-				zend_restore_error_handling(&zeh TSRMLS_CC);
+			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh);
+			if (SUCCESS == php_pqres_iteration(getThis(), obj, PHP_PQRES_FETCH_ARRAY, &row)) {
+				zend_hash_apply_with_arguments(&obj->intern->bound, apply_bound, 2, &row, &rv);
 
-				if (SUCCESS != rv) {
-					zval_ptr_dtor(row);
-				} else {
-					RETVAL_ZVAL(*row, 1, 0);
+				if (SUCCESS == rv) {
+					RETVAL_ZVAL(&row, 1, 0);
 				}
 			}
+			zend_restore_error_handling(&zeh);
 		}
 	}
 }
@@ -754,49 +700,47 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_row, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, fetchRow) {
 	zend_error_handling zeh;
-	php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
-	long fetch_type = -1;
+	php_pqres_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
+	zend_long fetch_type = -1;
 	ZEND_RESULT_CODE rv;
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &fetch_type);
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS(), "|l", &fetch_type);
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Result not initialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\Result not initialized");
 		} else {
-			zval **row = NULL;
+			zval row;
 
 			if (fetch_type == -1) {
 				 fetch_type = php_pqres_fetch_type(obj->intern);
 			}
 
-			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh TSRMLS_CC);
-			php_pqres_iteration(getThis(), obj, fetch_type, &row TSRMLS_CC);
-			zend_restore_error_handling(&zeh TSRMLS_CC);
-
-			if (row) {
-				RETVAL_ZVAL(*row, 1, 0);
+			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh);
+			if (SUCCESS == php_pqres_iteration(getThis(), obj, fetch_type, &row)) {
+				RETVAL_ZVAL(&row, 1, 0);
 			}
+			zend_restore_error_handling(&zeh);
 		}
 	}
 }
 
-static zval **column_at(zval *row, int col TSRMLS_DC)
+static zval *column_at(zval *row, int col)
 {
-	zval **data = NULL;
+	zval *data = NULL;
 	HashTable *ht = HASH_OF(row);
 	int count = zend_hash_num_elements(ht);
 
 	if (col >= count) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Column index %d exceeds column count %d", col, count);
+		php_error_docref(NULL, E_WARNING, "Column index %d exceeds column count %d", col, count);
 	} else {
 		zend_hash_internal_pointer_reset(ht);
 		while (col-- > 0) {
 			zend_hash_move_forward(ht);
 		}
-		zend_hash_get_current_data(ht, (void *) &data);
+		data = zend_hash_get_current_data(ht);
 	}
 	return data;
 }
@@ -810,38 +754,38 @@ static PHP_METHOD(pqres, fetchCol) {
 	zval *zcol = NULL, *zref;
 	ZEND_RESULT_CODE rv;
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z|z/!", &zref, &zcol);
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS(), "z|z/!", &zref, &zcol);
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
-		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+		php_pqres_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
 
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Result not initialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\Result not initialized");
 		} else {
-			zval **row = NULL;
+			zval row;
 
-			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh TSRMLS_CC);
-			php_pqres_iteration(getThis(), obj, php_pqres_fetch_type(obj->intern), &row TSRMLS_CC);
-			if (row) {
+			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh);
+			if (SUCCESS == php_pqres_iteration(getThis(), obj, php_pqres_fetch_type(obj->intern), &row)) {
 				php_pqres_col_t col;
 
-				if (SUCCESS != column_nn(obj, zcol, &col TSRMLS_CC)) {
+				if (SUCCESS != column_nn(obj, zcol, &col)) {
 					RETVAL_FALSE;
 				} else {
-					zval **zres = column_at(*row, col.num TSRMLS_CC);
+					zval *zres = column_at(&row, col.num);
 
 					if (!zres) {
 						RETVAL_FALSE;
 					} else {
+						ZVAL_DEREF(zref);
 						zval_dtor(zref);
-						ZVAL_ZVAL(zref, *zres, 1, 0);
+						ZVAL_ZVAL(zref, zres, 1, 0);
 						RETVAL_TRUE;
 					}
 				}
 			}
-			zend_restore_error_handling(&zeh TSRMLS_CC);
+			zend_restore_error_handling(&zeh);
 		}
 	}
 }
@@ -854,28 +798,29 @@ static PHP_METHOD(pqres, fetchAllCols) {
 	zval *zcol = NULL;
 	ZEND_RESULT_CODE rv;
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|z!", &zcol);
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS(), "|z!", &zcol);
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
-		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+		php_pqres_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
 
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Result not initialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\Result not initialized");
 		} else {
 			php_pqres_col_t col;
 
-			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh TSRMLS_CC);
-			if (SUCCESS == column_nn(obj, zcol, &col TSRMLS_CC)) {
+			zend_replace_error_handling(EH_THROW, exce(EX_RUNTIME), &zeh);
+			if (SUCCESS == column_nn(obj, zcol, &col)) {
 				int r, rows = PQntuples(obj->intern->res);
+				zval tmp;
 
 				array_init(return_value);
 				for (r = 0; r < rows; ++r) {
-					add_next_index_zval(return_value, php_pqres_get_col(obj->intern, r, col.num TSRMLS_CC));
+					add_next_index_zval(return_value, php_pqres_get_col(obj->intern, r, col.num, &tmp));
 				}
 			}
-			zend_restore_error_handling(&zeh TSRMLS_CC);
+			zend_restore_error_handling(&zeh);
 		}
 	}
 }
@@ -886,12 +831,11 @@ struct apply_to_col_arg {
 	ZEND_RESULT_CODE status;
 };
 
-static int apply_to_col(void *p, void *a TSRMLS_DC)
+static int apply_to_col(zval *c, void *a)
 {
-	zval **c = p;
 	struct apply_to_col_arg *arg = a;
 
-	if (SUCCESS != column_nn(arg->obj, *c, arg->cols TSRMLS_CC)) {
+	if (SUCCESS != column_nn(arg->obj, c, arg->cols)) {
 		arg->status = FAILURE;
 		return ZEND_HASH_APPLY_STOP;
 	} else {
@@ -901,7 +845,7 @@ static int apply_to_col(void *p, void *a TSRMLS_DC)
 	}
 }
 
-static php_pqres_col_t *php_pqres_convert_to_cols(php_pqres_object_t *obj, HashTable *ht TSRMLS_DC)
+static php_pqres_col_t *php_pqres_convert_to_cols(php_pqres_object_t *obj, HashTable *ht)
 {
 	struct apply_to_col_arg arg = {NULL};
 	php_pqres_col_t *tmp;
@@ -909,7 +853,7 @@ static php_pqres_col_t *php_pqres_convert_to_cols(php_pqres_object_t *obj, HashT
 	arg.obj = obj;
 	arg.cols = ecalloc(zend_hash_num_elements(ht), sizeof(*tmp));
 	tmp = arg.cols;
-	zend_hash_apply_with_argument(ht, apply_to_col, &arg TSRMLS_CC);
+	zend_hash_apply_with_argument(ht, apply_to_col, &arg);
 
 	if (SUCCESS == arg.status) {
 		return tmp;
@@ -927,18 +871,18 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, map) {
 	zend_error_handling zeh;
 	zval *zkeys = 0, *zvals = 0;
-	long fetch_type = -1;
+	zend_long fetch_type = -1;
 	ZEND_RESULT_CODE rv;
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|z/!z/!l", &zkeys, &zvals, &fetch_type);
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS(), "|z/!z/!l", &zkeys, &zvals, &fetch_type);
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
-		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+		php_pqres_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
 
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Result not initialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\Result not initialized");
 		} else {
 			int ks = 0, vs = 0;
 			php_pqres_col_t def = {PQfname(obj->intern->res, 0), 0}, *keys = NULL, *vals = NULL;
@@ -947,7 +891,7 @@ static PHP_METHOD(pqres, map) {
 				convert_to_array(zkeys);
 
 				if ((ks = zend_hash_num_elements(Z_ARRVAL_P(zkeys)))) {
-					keys = php_pqres_convert_to_cols(obj, Z_ARRVAL_P(zkeys) TSRMLS_CC);
+					keys = php_pqres_convert_to_cols(obj, Z_ARRVAL_P(zkeys));
 				} else {
 					ks = 1;
 					keys = &def;
@@ -960,7 +904,7 @@ static PHP_METHOD(pqres, map) {
 				convert_to_array(zvals);
 
 				if ((vs = zend_hash_num_elements(Z_ARRVAL_P(zvals)))) {
-					vals = php_pqres_convert_to_cols(obj, Z_ARRVAL_P(zvals) TSRMLS_CC);
+					vals = php_pqres_convert_to_cols(obj, Z_ARRVAL_P(zvals));
 				}
 			}
 
@@ -970,7 +914,7 @@ static PHP_METHOD(pqres, map) {
 
 			if (keys) {
 				int rows, r;
-				zval **cur;
+				zval *cur;
 
 				switch (fetch_type) {
 				case PHP_PQRES_FETCH_ARRAY:
@@ -983,30 +927,32 @@ static PHP_METHOD(pqres, map) {
 				}
 				for (r = 0, rows = PQntuples(obj->intern->res); r < rows; ++r) {
 					int k, v;
+					zval *ptr;
 
-					cur = &return_value;
+					cur = return_value;
 					for (k = 0; k < ks; ++k) {
 						char *key = PQgetvalue(obj->intern->res, r, keys[k].num);
 						int len = PQgetlength(obj->intern->res, r, keys[k].num);
 
-						if (SUCCESS != zend_symtable_find(HASH_OF(*cur), key, len + 1, (void *) &cur)) {
-							zval *tmp;
+						if (!(ptr = zend_symtable_str_find(HASH_OF(cur), key, len))) {
+							zval tmp;
 
-							MAKE_STD_ZVAL(tmp);
 							switch (fetch_type) {
 							case PHP_PQRES_FETCH_ARRAY:
 							case PHP_PQRES_FETCH_ASSOC:
-								array_init(tmp);
+								array_init(&tmp);
 								break;
 							case PHP_PQRES_FETCH_OBJECT:
-								object_init(tmp);
+								object_init(&tmp);
 								break;
 							}
-							if (SUCCESS != zend_symtable_update(HASH_OF(*cur), key, len + 1, (void *) &tmp, sizeof(zval *), (void *) &cur)) {
-								throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to create map");
+							if (!(ptr = zend_symtable_str_update(HASH_OF(cur), key, len, &tmp))) {
+								throw_exce(EX_RUNTIME, "Failed to create map");
 								goto err;
 							}
+							cur = ptr;
 						}
+						cur = ptr;
 					}
 					if (vals && vs) {
 						for (v = 0; v < vs; ++v) {
@@ -1015,18 +961,18 @@ static PHP_METHOD(pqres, map) {
 
 							switch (fetch_type) {
 							case PHP_PQRES_FETCH_ARRAY:
-								add_index_stringl(*cur, vals[v].num, val, len, 1);
+								add_index_stringl(cur, vals[v].num, val, len);
 								break;
 							case PHP_PQRES_FETCH_ASSOC:
-								add_assoc_stringl(*cur, vals[v].name, val, len, 1);
+								add_assoc_stringl(cur, vals[v].name, val, len);
 								break;
 							case PHP_PQRES_FETCH_OBJECT:
-								add_property_stringl(*cur, vals[v].name, val, len, 1);
+								add_property_stringl(cur, vals[v].name, val, len);
 								break;
 							}
 						}
 					} else {
-						php_pqres_row_to_zval(obj->intern->res, r, fetch_type, cur TSRMLS_CC);
+						php_pqres_row_to_zval(obj->intern->res, r, fetch_type, cur);
 					}
 				}
 			}
@@ -1047,19 +993,21 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqres_fetch_all, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, fetchAll) {
 	zend_error_handling zeh;
-	long fetch_type = -1;
+	zend_long fetch_type = -1;
 	ZEND_RESULT_CODE rv;
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &fetch_type);
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS(), "|l", &fetch_type);
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
-		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+		php_pqres_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
+
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Result not initialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\Result not initialized");
 		} else {
 			int r, rows = PQntuples(obj->intern->res);
+			zval tmp;
 
 			if (fetch_type == -1) {
 				 fetch_type = php_pqres_fetch_type(obj->intern);
@@ -1067,7 +1015,8 @@ static PHP_METHOD(pqres, fetchAll) {
 
 			array_init(return_value);
 			for (r = 0; r < rows; ++r) {
-				add_next_index_zval(return_value, php_pqres_row_to_zval(obj->intern->res, r, fetch_type, NULL TSRMLS_CC));
+				ZVAL_NULL(&tmp);
+				add_next_index_zval(return_value, php_pqres_row_to_zval(obj->intern->res, r, fetch_type, &tmp));
 			}
 		}
 	}
@@ -1079,15 +1028,15 @@ static PHP_METHOD(pqres, count) {
 	zend_error_handling zeh;
 	ZEND_RESULT_CODE rv;
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
 	rv = zend_parse_parameters_none();
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
 		long count;
 
-		if (SUCCESS != php_pqres_count_elements(getThis(), &count TSRMLS_CC)) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Result not initialized");
+		if (SUCCESS != php_pqres_count_elements(getThis(), &count)) {
+			throw_exce(EX_UNINITIALIZED, "pq\\Result not initialized");
 		} else {
 			RETVAL_LONG(count);
 		}
@@ -1100,15 +1049,15 @@ static PHP_METHOD(pqres, desc) {
 	zend_error_handling zeh;
 	ZEND_RESULT_CODE rv;
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
 	rv = zend_parse_parameters_none();
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
-		php_pqres_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+		php_pqres_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
 
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Result not initialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\Result not initialized");
 		} else {
 			int p, params;
 
@@ -1145,89 +1094,90 @@ PHP_MINIT_FUNCTION(pqres)
 	php_pq_object_prophandler_t ph = {0};
 
 	INIT_NS_CLASS_ENTRY(ce, "pq", "Result", php_pqres_methods);
-	php_pqres_class_entry = zend_register_internal_class_ex(&ce, NULL, NULL TSRMLS_CC);
+	php_pqres_class_entry = zend_register_internal_class_ex(&ce, NULL);
 	php_pqres_class_entry->create_object = php_pqres_create_object;
-	php_pqres_class_entry->iterator_funcs.funcs = &php_pqres_iterator_funcs;
 	php_pqres_class_entry->get_iterator = php_pqres_iterator_init;
-	zend_class_implements(php_pqres_class_entry TSRMLS_CC, 2, zend_ce_traversable, spl_ce_Countable);
+	zend_class_implements(php_pqres_class_entry, 2, zend_ce_traversable, spl_ce_Countable);
 
 	memcpy(&php_pqres_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
+	php_pqres_object_handlers.offset = XtOffsetOf(php_pqres_object_t, zo);
+	php_pqres_object_handlers.free_obj = php_pqres_object_free;
 	php_pqres_object_handlers.read_property = php_pq_object_read_prop;
 	php_pqres_object_handlers.write_property = php_pq_object_write_prop;
 	php_pqres_object_handlers.clone_obj = NULL;
 	php_pqres_object_handlers.get_property_ptr_ptr = NULL;
-	php_pqres_object_handlers.get_gc = NULL;
+	php_pqres_object_handlers.get_gc = php_pq_object_get_gc;
 	php_pqres_object_handlers.get_debug_info = php_pq_object_debug_info;
 	php_pqres_object_handlers.get_properties = php_pq_object_properties;
 	php_pqres_object_handlers.count_elements = php_pqres_count_elements;
 
-	zend_hash_init(&php_pqres_object_prophandlers, 8, NULL, NULL, 1);
+	zend_hash_init(&php_pqres_object_prophandlers, 8, NULL, php_pq_object_prophandler_dtor, 1);
 
-	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("status"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("status"), ZEND_ACC_PUBLIC);
 	ph.read = php_pqres_object_read_status;
-	zend_hash_add(&php_pqres_object_prophandlers, "status", sizeof("status"), (void *) &ph, sizeof(ph), NULL);
+	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "status", sizeof("status")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("statusMessage"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("statusMessage"), ZEND_ACC_PUBLIC);
 	ph.read = php_pqres_object_read_status_message;
-	zend_hash_add(&php_pqres_object_prophandlers, "statusMessage", sizeof("statusMessage"), (void *) &ph, sizeof(ph), NULL);
+	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "statusMessage", sizeof("statusMessage")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("errorMessage"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("errorMessage"), ZEND_ACC_PUBLIC);
 	ph.read = php_pqres_object_read_error_message;
-	zend_hash_add(&php_pqres_object_prophandlers, "errorMessage", sizeof("errorMessage"), (void *) &ph, sizeof(ph), NULL);
+	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "errorMessage", sizeof("errorMessage")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("numRows"), 0, ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("numRows"), 0, ZEND_ACC_PUBLIC);
 	ph.read = php_pqres_object_read_num_rows;
-	zend_hash_add(&php_pqres_object_prophandlers, "numRows", sizeof("numRows"), (void *) &ph, sizeof(ph), NULL);
+	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "numRows", sizeof("numRows")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("numCols"), 0, ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("numCols"), 0, ZEND_ACC_PUBLIC);
 	ph.read = php_pqres_object_read_num_cols;
-	zend_hash_add(&php_pqres_object_prophandlers, "numCols", sizeof("numCols"), (void *) &ph, sizeof(ph), NULL);
+	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "numCols", sizeof("numCols")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("affectedRows"), 0, ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("affectedRows"), 0, ZEND_ACC_PUBLIC);
 	ph.read = php_pqres_object_read_affected_rows;
-	zend_hash_add(&php_pqres_object_prophandlers, "affectedRows", sizeof("affectedRows"), (void *) &ph, sizeof(ph), NULL);
+	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "affectedRows", sizeof("affectedRows")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("fetchType"), PHP_PQRES_FETCH_ARRAY, ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("fetchType"), PHP_PQRES_FETCH_ARRAY, ZEND_ACC_PUBLIC);
 	ph.read = php_pqres_object_read_fetch_type;
 	ph.write = php_pqres_object_write_fetch_type;
-	zend_hash_add(&php_pqres_object_prophandlers, "fetchType", sizeof("fetchType"), (void *) &ph, sizeof(ph), NULL);
+	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "fetchType", sizeof("fetchType")-1, (void *) &ph, sizeof(ph));
 	ph.write = NULL;
 
-	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("autoConvert"), PHP_PQRES_CONV_ALL, ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("autoConvert"), PHP_PQRES_CONV_ALL, ZEND_ACC_PUBLIC);
 	ph.read = php_pqres_object_read_auto_conv;
 	ph.write = php_pqres_object_write_auto_conv;
-	zend_hash_add(&php_pqres_object_prophandlers, "autoConvert", sizeof("autoConvert"), (void *) &ph, sizeof(ph), NULL);
+	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "autoConvert", sizeof("autoConvert")-1, (void *) &ph, sizeof(ph));
 	ph.write = NULL;
 
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("EMPTY_QUERY"), PGRES_EMPTY_QUERY TSRMLS_CC);
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("COMMAND_OK"), PGRES_COMMAND_OK TSRMLS_CC);
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("TUPLES_OK"), PGRES_TUPLES_OK TSRMLS_CC);
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("COPY_OUT"), PGRES_COPY_OUT TSRMLS_CC);
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("COPY_IN"), PGRES_COPY_IN TSRMLS_CC);
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("BAD_RESPONSE"), PGRES_BAD_RESPONSE TSRMLS_CC);
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("NONFATAL_ERROR"), PGRES_NONFATAL_ERROR TSRMLS_CC);
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("FATAL_ERROR"), PGRES_FATAL_ERROR TSRMLS_CC);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("EMPTY_QUERY"), PGRES_EMPTY_QUERY);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("COMMAND_OK"), PGRES_COMMAND_OK);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("TUPLES_OK"), PGRES_TUPLES_OK);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("COPY_OUT"), PGRES_COPY_OUT);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("COPY_IN"), PGRES_COPY_IN);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("BAD_RESPONSE"), PGRES_BAD_RESPONSE);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("NONFATAL_ERROR"), PGRES_NONFATAL_ERROR);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("FATAL_ERROR"), PGRES_FATAL_ERROR);
 #ifdef HAVE_PGRES_COPY_BOTH
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("COPY_BOTH"), PGRES_COPY_BOTH TSRMLS_CC);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("COPY_BOTH"), PGRES_COPY_BOTH);
 #endif
 #ifdef HAVE_PGRES_SINGLE_TUPLE
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("SINGLE_TUPLE"), PGRES_SINGLE_TUPLE TSRMLS_CC);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("SINGLE_TUPLE"), PGRES_SINGLE_TUPLE);
 #endif
 
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("FETCH_ARRAY"), PHP_PQRES_FETCH_ARRAY TSRMLS_CC);
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("FETCH_ASSOC"), PHP_PQRES_FETCH_ASSOC TSRMLS_CC);
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("FETCH_OBJECT"), PHP_PQRES_FETCH_OBJECT TSRMLS_CC);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("FETCH_ARRAY"), PHP_PQRES_FETCH_ARRAY);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("FETCH_ASSOC"), PHP_PQRES_FETCH_ASSOC);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("FETCH_OBJECT"), PHP_PQRES_FETCH_OBJECT);
 
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_BOOL"), PHP_PQRES_CONV_BOOL TSRMLS_CC);
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_INT"), PHP_PQRES_CONV_INT TSRMLS_CC);
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_FLOAT"), PHP_PQRES_CONV_FLOAT TSRMLS_CC);
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_SCALAR"), PHP_PQRES_CONV_SCALAR TSRMLS_CC);
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_ARRAY"), PHP_PQRES_CONV_ARRAY TSRMLS_CC);
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_DATETIME"), PHP_PQRES_CONV_DATETIME TSRMLS_CC);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_BOOL"), PHP_PQRES_CONV_BOOL);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_INT"), PHP_PQRES_CONV_INT);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_FLOAT"), PHP_PQRES_CONV_FLOAT);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_SCALAR"), PHP_PQRES_CONV_SCALAR);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_ARRAY"), PHP_PQRES_CONV_ARRAY);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_DATETIME"), PHP_PQRES_CONV_DATETIME);
 #if PHP_PQ_HAVE_PHP_JSON_H
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_JSON"), PHP_PQRES_CONV_JSON TSRMLS_CC);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_JSON"), PHP_PQRES_CONV_JSON);
 #endif
-	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_ALL"), PHP_PQRES_CONV_ALL TSRMLS_CC);
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_ALL"), PHP_PQRES_CONV_ALL);
 
 	return SUCCESS;
 }

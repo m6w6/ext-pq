@@ -48,14 +48,12 @@ typedef struct php_pqres {
 } php_pqres_t;
 
 typedef struct php_pqres_object {
-	php_pqres_t *intern;
-	HashTable *prophandler;
-	zend_object zo;
+	PHP_PQ_OBJ_DECL(php_pqres_t *)
 } php_pqres_object_t;
 
 extern ZEND_RESULT_CODE php_pqres_success(PGresult *res);
-extern void php_pqres_init_instance_data(PGresult *res, php_pqconn_object_t *obj, php_pqres_object_t **ptr);
-extern zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch_type, zval **data_ptr);
+extern php_pqres_object_t *php_pqres_init_instance_data(PGresult *res, php_pqconn_object_t *obj);
+extern zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch_type, zval *data);
 extern zval *php_pqres_typed_zval(php_pqres_t *res, Oid typ, zval *zv);
 extern php_pqres_fetch_t php_pqres_fetch_type(php_pqres_t *res);
 

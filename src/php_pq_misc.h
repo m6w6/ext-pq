@@ -41,6 +41,9 @@ extern const char *php_pq_strmode(long mode);
 /* compare array index */
 extern int php_pq_compare_index(const void *lptr, const void *rptr);
 
+/* free zval ptr values (as hash dtor) */
+extern void php_pq_hash_ptr_dtor(zval *p);
+
 #define PHP_PQerrorMessage(c) php_pq_rtrim(PQerrorMessage((c)))
 #define PHP_PQresultErrorMessage(r) php_pq_rtrim(PQresultErrorMessage((r)))
 

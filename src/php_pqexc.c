@@ -53,10 +53,10 @@ zend_class_entry *exce(php_pqexc_type_t type)
 	}
 }
 
-zval *throw_exce(php_pqexc_type_t type, const char *fmt, ...)
+zend_object *throw_exce(php_pqexc_type_t type, const char *fmt, ...)
 {
 	char *msg;
-	zval *zexc;
+	zend_object *zexc;
 	va_list argv;
 
 	va_start(argv, fmt);
@@ -75,6 +75,7 @@ PHP_MINIT_FUNCTION(pqexc)
 
 	INIT_NS_CLASS_ENTRY(ce, "pq", "Exception", php_pqexc_methods);
 	php_pqexc_interface_class_entry = zend_register_internal_interface(&ce);
+	zend_class_implements(php_pqexc_interface_class_entry, 1, zend_ce_throwable);
 
 	zend_declare_class_constant_long(php_pqexc_interface_class_entry, ZEND_STRL("INVALID_ARGUMENT"), EX_INVALID_ARGUMENT);
 	zend_declare_class_constant_long(php_pqexc_interface_class_entry, ZEND_STRL("RUNTIME"), EX_RUNTIME);
@@ -104,7 +105,7 @@ PHP_MINIT_FUNCTION(pqexc)
 	memset(&ce, 0, sizeof(ce));
 	INIT_NS_CLASS_ENTRY(ce, "pq\\Exception", "DomainException", php_pqexc_methods);
 	php_pqexc_domain_class_entry = zend_register_internal_class_ex(&ce, spl_ce_DomainException);
-	zend_class_implements(php_pqexc_domain_class_entry TSRMLS_CC, 1, php_pqexc_interface_class_entry);
+	zend_class_implements(php_pqexc_domain_class_entry, 1, php_pqexc_interface_class_entry);
 	zend_declare_property_null(php_pqexc_domain_class_entry, ZEND_STRL("sqlstate"), ZEND_ACC_PUBLIC);
 
 	return SUCCESS;

@@ -54,16 +54,21 @@ const char *php_pq_strmode(long mode)
 
 int php_pq_compare_index(const void *lptr, const void *rptr)
 {
-	const Bucket *l = *(const Bucket **) lptr;
-	const Bucket *r = *(const Bucket **) rptr;
+	zend_ulong l = ((const Bucket *) lptr)->h;
+	zend_ulong r = ((const Bucket *) rptr)->h;
 
-	if (l->h < r->h) {
+	if (l < r) {
 		return -1;
 	}
-	if (l->h > r->h) {
+	if (l > r) {
 		return 1;
 	}
 	return 0;
+}
+
+void php_pq_hash_ptr_dtor(zval *p)
+{
+	efree(Z_PTR_P(p));
 }
 
 zend_class_entry *php_pqdt_class_entry;
@@ -89,7 +94,7 @@ static PHP_METHOD(pqdt, createFromFormat)
 {
 	zend_error_handling zeh;
 	char *fmt_str, *dt_str;
-	int fmt_len, dt_len;
+	size_t fmt_len, dt_len;
 	zval *ztz = NULL;
 	ZEND_RESULT_CODE rv;
 
@@ -338,7 +343,7 @@ static ZEND_RESULT_CODE parse_array(ArrayParserState *a)
 	}
 
 	list = ecalloc(1, sizeof(*list));
-	ZVAL_NEW_ARR(&list->arr);
+	array_init(&list->arr);
 
 	if (a->list) {
 		add_next_index_zval(&a->list->arr, &list->arr);
@@ -354,8 +359,12 @@ static ZEND_RESULT_CODE parse_array(ArrayParserState *a)
 		return FAILURE;
 	}
 
+	/* step one level back up */
 	if (a->list->parent) {
-		a->list = a->list->parent;
+		HashTableList *l = a->list->parent;
+
+		efree(a->list);
+		a->list = l;
 	}
 
 	return SUCCESS;
@@ -386,9 +395,13 @@ HashTable *php_pq_parse_array(php_pqres_t *res, const char *val_str, size_t val_
 		php_error_docref(NULL, E_NOTICE, "Trailing input: '%s'", a.ptr);
 	}
 
-	do {
+	while (a.list) {
+		HashTableList *l = a.list->parent;
+
 		ht = Z_ARRVAL(a.list->arr);
-	} while ((a.list = a.list->parent));
+		efree(a.list);
+		a.list = l;
+	}
 
 	return ht;
 }

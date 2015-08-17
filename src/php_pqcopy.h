@@ -35,9 +35,7 @@ typedef struct php_pqcopy {
 } php_pqcopy_t;
 
 typedef struct php_pqcopy_object {
-	php_pqcopy_t *intern;
-	HashTable *prophandler;
-	zend_object zo;
+	PHP_PQ_OBJ_DECL(php_pqcopy_t *)
 } php_pqcopy_object_t;
 
 extern zend_class_entry *php_pqcopy_class_entry;

@@ -22,9 +22,7 @@ typedef struct php_pqcancel {
 } php_pqcancel_t;
 
 typedef struct php_pqcancel_object {
-	php_pqcancel_t *intern;
-	HashTable *prophandler;
-	zend_object zo;
+	PHP_PQ_OBJ_DECL(php_pqcancel_t *)
 } php_pqcancel_object_t;
 
 extern zend_class_entry *php_pqcancel_class_entry;

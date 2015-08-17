@@ -18,6 +18,7 @@
 #define PHP_PQCONN_PERSISTENT 0x02
 
 #include <ext/raphf/php_raphf.h>
+#include "php_pq_object.h"
 #include "php_pq_callback.h"
 #include "php_pq_params.h"
 
@@ -38,9 +39,7 @@ typedef struct php_pqconn {
 } php_pqconn_t;
 
 typedef struct php_pqconn_object {
-	php_pqconn_t *intern;
-	HashTable *prophandler;
-	zend_object zo;
+	PHP_PQ_OBJ_DECL(php_pqconn_t *)
 } php_pqconn_object_t;
 
 typedef struct php_pqconn_resource_factory_data {

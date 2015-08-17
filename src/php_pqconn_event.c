@@ -33,6 +33,7 @@ static int apply_event(zval *p, void *a)
 	ZVAL_NULL(&rv);
 	zend_fcall_info_args(&cb->fci, args);
 	zend_fcall_info_call(&cb->fci, &cb->fcc, &rv, NULL);
+	zend_fcall_info_args_clear(&cb->fci, 0);
 	zval_ptr_dtor(&rv);
 
 	return ZEND_HASH_APPLY_KEEP;
@@ -43,15 +44,15 @@ static void php_pqconn_event_connreset(PGEventConnReset *event)
 	php_pqconn_event_data_t *data = PQinstanceData(event->conn, php_pqconn_event);
 
 	if (data) {
-		HashTable *evhs;
+		zval *zevhs;
 
-		if ((evhs = zend_hash_str_find_ptr(&data->obj->intern->eventhandlers, ZEND_STRS("reset")))) {
+		if ((zevhs = zend_hash_str_find(&data->obj->intern->eventhandlers, ZEND_STRL("reset")))) {
 			zval args, connection;
 
 			array_init(&args);
 			php_pq_object_to_zval(data->obj, &connection);
 			add_next_index_zval(&args, &connection);
-			zend_hash_apply_with_argument(evhs, apply_event, &args);
+			zend_hash_apply_with_argument(Z_ARRVAL_P(zevhs), apply_event, &args);
 			zval_ptr_dtor(&args);
 		}
 	}
@@ -62,13 +63,11 @@ static void php_pqconn_event_resultcreate(PGEventResultCreate *event)
 	php_pqconn_event_data_t *data = PQinstanceData(event->conn, php_pqconn_event);
 
 	if (data) {
-		php_pqres_object_t *obj;
-		HashTable *evhs;
-
-		php_pqres_init_instance_data(event->result, data->obj, &obj);
+		php_pqres_object_t *obj = php_pqres_init_instance_data(event->result, data->obj);
+		zval *zevhs;
 
 		/* event listener */
-		if ((evhs = zend_hash_str_find_ptr(&data->obj->intern->eventhandlers, ZEND_STRL("result")))) {
+		if ((zevhs = zend_hash_str_find(&data->obj->intern->eventhandlers, ZEND_STRL("result")))) {
 			zval args, connection, res;
 
 			array_init(&args);
@@ -76,7 +75,7 @@ static void php_pqconn_event_resultcreate(PGEventResultCreate *event)
 			add_next_index_zval(&args, &connection);
 			php_pq_object_to_zval(obj, &res);
 			add_next_index_zval(&args, &res);
-			zend_hash_apply_with_argument(evhs, apply_event, &args);
+			zend_hash_apply_with_argument(Z_ARRVAL_P(zevhs), apply_event, &args);
 			zval_ptr_dtor(&args);
 		}
 
@@ -99,6 +98,8 @@ static void php_pqconn_event_resultdestroy(PGEventResultDestroy *event)
 
 	if (obj) {
 		obj->intern->res = NULL;
+		assert(GC_REFCOUNT(&obj->zo));
+		php_pq_object_delref(obj);
 	}
 }
 
@@ -126,6 +127,7 @@ php_pqconn_event_data_t *php_pqconn_event_data_init(php_pqconn_object_t *obj)
 	php_pqconn_event_data_t *data = emalloc(sizeof(*data));
 
 	data->obj = obj;
+	data->res = NULL;
 
 	return data;
 }
@@ -135,16 +137,16 @@ void php_pqconn_notice_recv(void *p, const PGresult *res)
 	php_pqconn_event_data_t *data = p;
 
 	if (data) {
-		HashTable *evhs;
+		zval *zevhs;
 
-		if ((evhs = zend_hash_str_find_ptr(&data->obj->intern->eventhandlers, ZEND_STRL("notice")))) {
+		if ((zevhs = zend_hash_str_find(&data->obj->intern->eventhandlers, ZEND_STRL("notice")))) {
 			zval args, connection;
 
 			array_init(&args);
 			php_pq_object_to_zval(data->obj, &connection);
 			add_next_index_zval(&args, &connection);
 			add_next_index_string(&args, PHP_PQresultErrorMessage(res));
-			zend_hash_apply_with_argument(evhs, apply_event, &args);
+			zend_hash_apply_with_argument(Z_ARRVAL_P(zevhs), apply_event, &args);
 			zval_ptr_dtor(&args);
 		}
 	}
