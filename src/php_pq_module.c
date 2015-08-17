@@ -33,14 +33,23 @@
 #include "php_pqtxn.h"
 #include "php_pqtypes.h"
 
+ZEND_DECLARE_MODULE_GLOBALS(php_pq);
+
+static void php_pq_globals_init_once(zend_php_pq_globals *G)
+{
+	memset(G, 0, sizeof(*G));
+}
+
 #define PHP_MINIT_CALL(i) do { \
-	if (SUCCESS != PHP_MINIT(i)(type, module_number TSRMLS_CC)) { \
+	if (SUCCESS != PHP_MINIT(i)(type, module_number)) { \
 		return FAILURE; \
 	} \
 } while(0)
 
 static PHP_MINIT_FUNCTION(pq)
 {
+	ZEND_INIT_MODULE_GLOBALS(php_pq, php_pq_globals_init_once, NULL);
+
 	PHP_MINIT_CALL(pq_misc);
 	PHP_MINIT_CALL(pqexc);
 
@@ -56,19 +65,17 @@ static PHP_MINIT_FUNCTION(pq)
 	PHP_MINIT_CALL(pqcopy);
 	PHP_MINIT_CALL(pqlob);
 
-	return php_persistent_handle_provide(ZEND_STRL("pq\\Connection"), php_pqconn_get_resource_factory_ops(), NULL, NULL TSRMLS_CC);
+	return SUCCESS;
 }
 
 #define PHP_MSHUT_CALL(i) do { \
-	if (SUCCESS != PHP_MSHUTDOWN(i)(type, module_number TSRMLS_CC)) { \
+	if (SUCCESS != PHP_MSHUTDOWN(i)(type, module_number)) { \
 		return FAILURE; \
 	} \
 } while(0)
 
 static PHP_MSHUTDOWN_FUNCTION(pq)
 {
-	php_persistent_handle_cleanup(ZEND_STRL("pq\\Connection"), NULL, 0 TSRMLS_CC);
-
 	PHP_MSHUT_CALL(pqlob);
 	PHP_MSHUT_CALL(pqcopy);
 	PHP_MSHUT_CALL(pqcur);

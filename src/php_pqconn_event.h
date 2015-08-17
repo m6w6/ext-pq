@@ -20,12 +20,9 @@
 
 typedef struct php_pqconn_event_data {
 	php_pqconn_object_t *obj;
-#ifdef ZTS
-	void ***ts;
-#endif
 } php_pqconn_event_data_t;
 
-extern php_pqconn_event_data_t *php_pqconn_event_data_init(php_pqconn_object_t *obj TSRMLS_DC);
+extern php_pqconn_event_data_t *php_pqconn_event_data_init(php_pqconn_object_t *obj);
 extern void php_pqconn_notice_recv(void *p, const PGresult *res);
 extern void php_pqconn_notice_ignore(void *p, const PGresult *res);
 extern int php_pqconn_event(PGEventId id, void *e, void *data);

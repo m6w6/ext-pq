@@ -26,15 +26,14 @@ typedef struct php_pqstm {
 } php_pqstm_t;
 
 typedef struct php_pqstm_object {
-	zend_object zo;
-	zend_object_value zv;
-	HashTable *prophandler;
 	php_pqstm_t *intern;
+	HashTable *prophandler;
+	zend_object zo;
 } php_pqstm_object_t;
 
 extern zend_class_entry *php_pqstm_class_entry;
-extern zend_object_value php_pqstm_create_object_ex(zend_class_entry *ce, php_pqstm_t *intern, php_pqstm_object_t **ptr TSRMLS_DC);
-extern php_pqstm_t *php_pqstm_init(php_pqconn_object_t *conn, const char *name, const char *query, php_pq_params_t *params TSRMLS_DC);
+extern php_pqstm_object_t *php_pqstm_create_object_ex(zend_class_entry *ce, php_pqstm_t *intern);
+extern php_pqstm_t *php_pqstm_init(php_pqconn_object_t *conn, const char *name, const char *query, php_pq_params_t *params);
 
 extern PHP_MINIT_FUNCTION(pqstm);
 extern PHP_MSHUTDOWN_FUNCTION(pqstm);

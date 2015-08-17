@@ -28,55 +28,50 @@ zend_class_entry *php_pqcancel_class_entry;
 static zend_object_handlers php_pqcancel_object_handlers;
 static HashTable php_pqcancel_object_prophandlers;
 
-static void php_pqcancel_object_free(void *o TSRMLS_DC)
+static void php_pqcancel_object_free(zend_object *o)
 {
-	php_pqcancel_object_t *obj = o;
+	php_pqcancel_object_t *obj = PHP_PQ_OBJ(NULL, o);
 #if DBG_GC
 	fprintf(stderr, "FREE cancel(#%d) %p (conn(#%d): %p)\n", obj->zv.handle, obj, obj->intern->conn->zv.handle, obj->intern->conn);
 #endif
 	if (obj->intern) {
 		PQfreeCancel(obj->intern->cancel);
-		php_pq_object_delref(obj->intern->conn TSRMLS_CC);
+		php_pq_object_delref(obj->intern->conn);
 		efree(obj->intern);
 		obj->intern = NULL;
 	}
-	zend_object_std_dtor((zend_object *) o TSRMLS_CC);
+	zend_object_std_dtor(o);
 	efree(obj);
 }
 
-zend_object_value php_pqcancel_create_object_ex(zend_class_entry *ce, php_pqcancel_t *intern, php_pqcancel_object_t **ptr TSRMLS_DC)
+php_pqcancel_object_t *php_pqcancel_create_object_ex(zend_class_entry *ce, php_pqcancel_t *intern)
 {
 	php_pqcancel_object_t *o;
 
-	o = ecalloc(1, sizeof(*o));
-	zend_object_std_init((zend_object *) o, ce TSRMLS_CC);
-	object_properties_init((zend_object *) o, ce);
+	o = ecalloc(1, sizeof(*o) + zend_object_properties_size(ce));
+	zend_object_std_init(&o->zo, ce);
+	object_properties_init(&o->zo, ce);
 	o->prophandler = &php_pqcancel_object_prophandlers;
-
-	if (ptr) {
-		*ptr = o;
-	}
 
 	if (intern) {
 		o->intern = intern;
 	}
 
-	o->zv.handle = zend_objects_store_put((zend_object *) o, NULL, php_pqcancel_object_free, NULL TSRMLS_CC);
-	o->zv.handlers = &php_pqcancel_object_handlers;
+	o->zo.handlers = &php_pqcancel_object_handlers;
 
-	return o->zv;
+	return o;
 }
 
-static zend_object_value php_pqcancel_create_object(zend_class_entry *class_type TSRMLS_DC)
+static zend_object *php_pqcancel_create_object(zend_class_entry *class_type TSRMLS_DC)
 {
-	return php_pqcancel_create_object_ex(class_type, NULL, NULL TSRMLS_CC);
+	return &php_pqcancel_create_object_ex(class_type, NULL)->zo;
 }
 
-static void php_pqcancel_object_read_connection(zval *object, void *o, zval *return_value TSRMLS_DC)
+static void php_pqcancel_object_read_connection(zval *object, void *o, zval *return_value)
 {
 	php_pqcancel_object_t *obj = o;
 
-	php_pq_object_to_zval(obj->intern->conn, &return_value TSRMLS_CC);
+	php_pq_object_to_zval(obj->intern->conn, return_value);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqcancel_construct, 0, 0, 1)
@@ -87,26 +82,26 @@ static PHP_METHOD(pqcancel, __construct) {
 	zval *zconn;
 	ZEND_RESULT_CODE rv;
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &zconn, php_pqconn_class_entry);
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS(), "O", &zconn, php_pqconn_class_entry);
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
-		php_pqconn_object_t *conn_obj = zend_object_store_get_object(zconn TSRMLS_CC);
+		php_pqconn_object_t *conn_obj = PHP_PQ_OBJ(zconn, NULL);
 
 		if (!conn_obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\Connection not initialized");
 		} else {
 			PGcancel *cancel = PQgetCancel(conn_obj->intern->conn);
 
 			if (!cancel) {
-				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to acquire cancel (%s)", PHP_PQerrorMessage(conn_obj->intern->conn));
+				throw_exce(EX_RUNTIME, "Failed to acquire cancel (%s)", PHP_PQerrorMessage(conn_obj->intern->conn));
 			} else {
-				php_pqcancel_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+				php_pqcancel_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
 
 				obj->intern = ecalloc(1, sizeof(*obj->intern));
 				obj->intern->cancel = cancel;
-				php_pq_object_addref(conn_obj TSRMLS_CC);
+				php_pq_object_addref(conn_obj);
 				obj->intern->conn = conn_obj;
 			}
 		}
@@ -119,20 +114,20 @@ static PHP_METHOD(pqcancel, cancel) {
 	zend_error_handling zeh;
 	ZEND_RESULT_CODE rv;
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
 	rv = zend_parse_parameters_none();
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
-		php_pqcancel_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+		php_pqcancel_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
 
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Cancel not initialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\Cancel not initialized");
 		} else {
 			char err[256] = {0};
 
 			if (!PQcancel(obj->intern->cancel, err, sizeof(err))) {
-				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to request cancellation (%s)", err);
+				throw_exce(EX_RUNTIME, "Failed to request cancellation (%s)", err);
 			}
 		}
 	}
@@ -156,10 +151,12 @@ PHP_MINIT_FUNCTION(pqcancel)
 	php_pq_object_prophandler_t ph = {0};
 
 	INIT_NS_CLASS_ENTRY(ce, "pq", "Cancel", php_pqcancel_methods);
-	php_pqcancel_class_entry = zend_register_internal_class_ex(&ce, NULL, NULL TSRMLS_CC);
+	php_pqcancel_class_entry = zend_register_internal_class_ex(&ce, NULL);
 	php_pqcancel_class_entry->create_object = php_pqcancel_create_object;
 
 	memcpy(&php_pqcancel_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
+	php_pqcancel_object_handlers.offset = XtOffsetOf(php_pqcancel_object_t, zo);
+	php_pqcancel_object_handlers.free_obj = php_pqcancel_object_free;
 	php_pqcancel_object_handlers.read_property = php_pq_object_read_prop;
 	php_pqcancel_object_handlers.write_property = php_pq_object_write_prop;
 	php_pqcancel_object_handlers.clone_obj = NULL;
@@ -172,7 +169,7 @@ PHP_MINIT_FUNCTION(pqcancel)
 
 	zend_declare_property_null(php_pqcancel_class_entry, ZEND_STRL("connection"), ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqcancel_object_read_connection;
-	zend_hash_add(&php_pqcancel_object_prophandlers, "connection", sizeof("connection"), (void *) &ph, sizeof(ph), NULL);
+	zend_hash_str_add_mem(&php_pqcancel_object_prophandlers, ZEND_STRL("connection"), (void *) &ph, sizeof(ph));
 
 	return SUCCESS;
 }

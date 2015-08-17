@@ -35,14 +35,13 @@ typedef struct php_pqcopy {
 } php_pqcopy_t;
 
 typedef struct php_pqcopy_object {
-	zend_object zo;
-	zend_object_value zv;
-	HashTable *prophandler;
 	php_pqcopy_t *intern;
+	HashTable *prophandler;
+	zend_object zo;
 } php_pqcopy_object_t;
 
 extern zend_class_entry *php_pqcopy_class_entry;
-extern zend_object_value php_pqcopy_create_object_ex(zend_class_entry *ce, php_pqcopy_t *intern, php_pqcopy_object_t **ptr TSRMLS_DC);
+extern php_pqcopy_object_t *php_pqcopy_create_object_ex(zend_class_entry *ce, php_pqcopy_t *intern);
 
 extern PHP_MINIT_FUNCTION(pqcopy);
 extern PHP_MSHUTDOWN_FUNCTION(pqcopy);

@@ -29,8 +29,8 @@ void php_pq_callback_dtor(php_pq_callback_t *cb)
 	if (cb->fci.size > 0) {
 		zend_fcall_info_args_clear(&cb->fci, 1);
 		zval_ptr_dtor(&cb->fci.function_name);
-		if (cb->fci.object_ptr) {
-			zval_ptr_dtor(&cb->fci.object_ptr);
+		if (cb->fci.object) {
+			zend_objects_store_del(cb->fci.object);
 		}
 		cb->fci.size = 0;
 	}
@@ -38,34 +38,35 @@ void php_pq_callback_dtor(php_pq_callback_t *cb)
 
 void php_pq_callback_addref(php_pq_callback_t *cb)
 {
-	Z_ADDREF_P(cb->fci.function_name);
-	if (cb->fci.object_ptr) {
-		Z_ADDREF_P(cb->fci.object_ptr);
+	Z_TRY_ADDREF(cb->fci.function_name);
+	if (cb->fci.object) {
+		++GC_REFCOUNT(cb->fci.object);
 	}
 }
 
-zval *php_pq_callback_to_zval(php_pq_callback_t *cb)
+zval *php_pq_callback_to_zval(php_pq_callback_t *cb, zval *tmp)
 {
-	zval *zcb;
-
 	php_pq_callback_addref(cb);
 
-	if (cb->fci.object_ptr) {
-		MAKE_STD_ZVAL(zcb);
-		array_init_size(zcb, 2);
-		add_next_index_zval(zcb, cb->fci.object_ptr);
-		add_next_index_zval(zcb, cb->fci.function_name);
-	} else {
-		zcb = cb->fci.function_name;
+	if (cb->fci.object) {
+		zval zo;
+
+		array_init_size(tmp, 2);
+		ZVAL_OBJ(&zo, cb->fci.object);
+		add_next_index_zval(tmp, &zo);
+		add_next_index_zval(tmp, &cb->fci.function_name);
+
+		return tmp;
 	}
 
-	return zcb;
+	return &cb->fci.function_name;
 }
 
-zend_bool php_pq_callback_is_locked(php_pq_callback_t *cb TSRMLS_DC)
+zend_bool php_pq_callback_is_locked(php_pq_callback_t *cb)
 {
+	/* TODO: fixed in php7?
 	if (cb->fci.size > 0 && Z_TYPE_P(cb->fci.function_name) == IS_OBJECT) {
-		const zend_function *closure = zend_get_closure_method_def(cb->fci.function_name TSRMLS_CC);
+		const zend_function *closure = zend_get_closure_method_def(cb->fci.function_name);
 
 		if (closure->type == ZEND_USER_FUNCTION) {
 			zend_execute_data *ex = EG(current_execute_data);
@@ -78,6 +79,7 @@ zend_bool php_pq_callback_is_locked(php_pq_callback_t *cb TSRMLS_DC)
 			}
 		}
 	}
+	*/
 	return 0;
 }
 

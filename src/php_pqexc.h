@@ -27,7 +27,7 @@ typedef enum php_pqexc_type {
 } php_pqexc_type_t;
 
 extern zend_class_entry *exce(php_pqexc_type_t type);
-extern zval *throw_exce(php_pqexc_type_t type TSRMLS_DC, const char *fmt, ...);
+extern zval *throw_exce(php_pqexc_type_t type, const char *fmt, ...);
 
 extern PHP_MINIT_FUNCTION(pqexc);
 

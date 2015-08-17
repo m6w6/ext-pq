@@ -22,14 +22,13 @@ typedef struct php_pqtypes {
 } php_pqtypes_t;
 
 typedef struct php_pqtypes_object {
-	zend_object zo;
-	zend_object_value zv;
-	HashTable *prophandler;
 	php_pqtypes_t *intern;
+	HashTable *prophandler;
+	zend_object zo;
 } php_pqtypes_object_t;
 
 extern zend_class_entry *php_pqtypes_class_entry;
-extern zend_object_value php_pqtypes_create_object_ex(zend_class_entry *ce, php_pqtypes_t *intern, php_pqtypes_object_t **ptr TSRMLS_DC);
+extern php_pqtypes_object_t *php_pqtypes_create_object_ex(zend_class_entry *ce, php_pqtypes_t *intern);
 
 extern PHP_MINIT_FUNCTION(pqtypes);
 extern PHP_MSHUTDOWN_FUNCTION(pqtypes);

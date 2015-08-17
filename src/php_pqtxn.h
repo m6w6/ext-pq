@@ -32,16 +32,15 @@ typedef struct php_pqtxn {
 } php_pqtxn_t;
 
 typedef struct php_pqtxn_object {
-	zend_object zo;
-	zend_object_value zv;
-	HashTable *prophandler;
 	php_pqtxn_t *intern;
+	HashTable *prophandler;
+	zend_object zo;
 } php_pqtxn_object_t;
 
 extern const char *php_pq_isolation_level(long *isolation);
 
 extern zend_class_entry *php_pqtxn_class_entry;
-extern zend_object_value php_pqtxn_create_object_ex(zend_class_entry *ce, php_pqtxn_t *intern, php_pqtxn_object_t **ptr TSRMLS_DC);
+extern php_pqtxn_object_t *php_pqtxn_create_object_ex(zend_class_entry *ce, php_pqtxn_t *intern);
 
 extern PHP_MINIT_FUNCTION(pqtxn);
 extern PHP_MSHUTDOWN_FUNCTION(pqtxn);

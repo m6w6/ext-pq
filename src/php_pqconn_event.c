@@ -24,17 +24,16 @@
 #include "php_pqconn_event.h"
 #include "php_pqres.h"
 
-static int apply_event(void *p, void *a TSRMLS_DC)
+static int apply_event(zval *p, void *a)
 {
-	php_pq_callback_t *cb = p;
+	php_pq_callback_t *cb = Z_PTR_P(p);
 	zval *args = a;
-	zval *retval = NULL;
+	zval rv;
 
-	zend_fcall_info_args(&cb->fci, args TSRMLS_CC);
-	zend_fcall_info_call(&cb->fci, &cb->fcc, &retval, NULL TSRMLS_CC);
-	if (retval) {
-		zval_ptr_dtor(&retval);
-	}
+	ZVAL_NULL(&rv);
+	zend_fcall_info_args(&cb->fci, args);
+	zend_fcall_info_call(&cb->fci, &cb->fcc, &rv, NULL);
+	zval_ptr_dtor(&rv);
 
 	return ZEND_HASH_APPLY_KEEP;
 }
@@ -45,16 +44,14 @@ static void php_pqconn_event_connreset(PGEventConnReset *event)
 
 	if (data) {
 		HashTable *evhs;
-		TSRMLS_DF(data);
 
-		if (SUCCESS == zend_hash_find(&data->obj->intern->eventhandlers, ZEND_STRS("reset"), (void *) &evhs)) {
-			zval *args, *connection = NULL;
+		if ((evhs = zend_hash_str_find_ptr(&data->obj->intern->eventhandlers, ZEND_STRS("reset")))) {
+			zval args, connection;
 
-			MAKE_STD_ZVAL(args);
-			array_init(args);
-			php_pq_object_to_zval(data->obj, &connection TSRMLS_CC);
-			add_next_index_zval(args, connection);
-			zend_hash_apply_with_argument(evhs, apply_event, args TSRMLS_CC);
+			array_init(&args);
+			php_pq_object_to_zval(data->obj, &connection);
+			add_next_index_zval(&args, &connection);
+			zend_hash_apply_with_argument(evhs, apply_event, &args);
 			zval_ptr_dtor(&args);
 		}
 	}
@@ -67,31 +64,29 @@ static void php_pqconn_event_resultcreate(PGEventResultCreate *event)
 	if (data) {
 		php_pqres_object_t *obj;
 		HashTable *evhs;
-		TSRMLS_DF(data);
 
-		php_pqres_init_instance_data(event->result, data->obj, &obj TSRMLS_CC);
+		php_pqres_init_instance_data(event->result, data->obj, &obj);
 
 		/* event listener */
-		if (SUCCESS == zend_hash_find(&data->obj->intern->eventhandlers, ZEND_STRS("result"), (void *) &evhs)) {
-			zval *args, *connection = NULL, *res = NULL;
+		if ((evhs = zend_hash_str_find_ptr(&data->obj->intern->eventhandlers, ZEND_STRL("result")))) {
+			zval args, connection, res;
 
-			MAKE_STD_ZVAL(args);
-			array_init(args);
-			php_pq_object_to_zval(data->obj, &connection TSRMLS_CC);
-			add_next_index_zval(args, connection);
-			php_pq_object_to_zval(obj, &res TSRMLS_CC);
-			add_next_index_zval(args, res);
-			zend_hash_apply_with_argument(evhs, apply_event, args TSRMLS_CC);
+			array_init(&args);
+			php_pq_object_to_zval(data->obj, &connection);
+			add_next_index_zval(&args, &connection);
+			php_pq_object_to_zval(obj, &res);
+			add_next_index_zval(&args, &res);
+			zend_hash_apply_with_argument(evhs, apply_event, &args);
 			zval_ptr_dtor(&args);
 		}
 
 		/* async callback */
 		if (data->obj->intern->onevent.fci.size > 0) {
-			zval *res = NULL;
+			zval res;
 
-			php_pq_object_to_zval(obj, &res TSRMLS_CC);
-			zend_fcall_info_argn(&data->obj->intern->onevent.fci TSRMLS_CC, 1, &res);
-			zend_fcall_info_call(&data->obj->intern->onevent.fci, &data->obj->intern->onevent.fcc, NULL, NULL TSRMLS_CC);
+			php_pq_object_to_zval(obj, &res);
+			zend_fcall_info_argn(&data->obj->intern->onevent.fci, 1, &res);
+			zend_fcall_info_call(&data->obj->intern->onevent.fci, &data->obj->intern->onevent.fcc, NULL, NULL);
 			zval_ptr_dtor(&res);
 		}
 
@@ -126,12 +121,11 @@ int php_pqconn_event(PGEventId id, void *e, void *data)
 	return 1;
 }
 
-php_pqconn_event_data_t *php_pqconn_event_data_init(php_pqconn_object_t *obj TSRMLS_DC)
+php_pqconn_event_data_t *php_pqconn_event_data_init(php_pqconn_object_t *obj)
 {
 	php_pqconn_event_data_t *data = emalloc(sizeof(*data));
 
 	data->obj = obj;
-	TSRMLS_CF(data);
 
 	return data;
 }
@@ -142,17 +136,15 @@ void php_pqconn_notice_recv(void *p, const PGresult *res)
 
 	if (data) {
 		HashTable *evhs;
-		TSRMLS_DF(data);
 
-		if (SUCCESS == zend_hash_find(&data->obj->intern->eventhandlers, ZEND_STRS("notice"), (void *) &evhs)) {
-			zval *args, *connection = NULL;
+		if ((evhs = zend_hash_str_find_ptr(&data->obj->intern->eventhandlers, ZEND_STRL("notice")))) {
+			zval args, connection;
 
-			MAKE_STD_ZVAL(args);
-			array_init(args);
-			php_pq_object_to_zval(data->obj, &connection TSRMLS_CC);
-			add_next_index_zval(args, connection);
-			add_next_index_string(args, PHP_PQresultErrorMessage(res), 1);
-			zend_hash_apply_with_argument(evhs, apply_event, args TSRMLS_CC);
+			array_init(&args);
+			php_pq_object_to_zval(data->obj, &connection);
+			add_next_index_zval(&args, &connection);
+			add_next_index_string(&args, PHP_PQresultErrorMessage(res));
+			zend_hash_apply_with_argument(evhs, apply_event, &args);
 			zval_ptr_dtor(&args);
 		}
 	}

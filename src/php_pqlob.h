@@ -19,19 +19,18 @@
 typedef struct php_pqlob {
 	int lofd;
 	Oid loid;
-	int stream;
+	php_stream *stream;
 	php_pqtxn_object_t *txn;
 } php_pqlob_t;
 
 typedef struct php_pqlob_object {
-	zend_object zo;
-	zend_object_value zv;
-	HashTable *prophandler;
 	php_pqlob_t *intern;
+	HashTable *prophandler;
+	zend_object zo;
 } php_pqlob_object_t;
 
 extern zend_class_entry *php_pqlob_class_entry;
-extern zend_object_value php_pqlob_create_object_ex(zend_class_entry *ce, php_pqlob_t *intern, php_pqlob_object_t **ptr TSRMLS_DC);
+extern php_pqlob_object_t *php_pqlob_create_object_ex(zend_class_entry *ce, php_pqlob_t *intern);
 
 extern PHP_MINIT_FUNCTION(pqlob);
 extern PHP_MSHUTDOWN_FUNCTION(pqlob);

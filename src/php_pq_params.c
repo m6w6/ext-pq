@@ -16,11 +16,11 @@
 
 #include <php.h>
 #include <ext/standard/php_string.h>
-#include <ext/standard/php_smart_str.h>
 #if PHP_PQ_HAVE_PHP_JSON_H
 #include <php_json.h> /* we've added the include directory to INCLUDES */
 #endif
 
+#include <Zend/zend_smart_str.h>
 #include <Zend/zend_interfaces.h>
 
 #include <libpq-fe.h>
@@ -34,31 +34,22 @@
 void php_pq_params_set_type_conv(php_pq_params_t *p, HashTable *conv)
 {
 	zend_hash_clean(&p->type.conv);
-	zend_hash_copy(&p->type.conv, conv, (copy_ctor_func_t) zval_add_ref, NULL, sizeof(zval *));
+	zend_hash_copy(&p->type.conv, conv, (copy_ctor_func_t) zval_add_ref);
 }
 
-static int apply_to_oid(void *p, void *arg TSRMLS_DC)
+static int apply_to_oid(zval *ztype, void *arg)
 {
 	Oid **types = arg;
-	zval **ztype = p;
 
-	if (Z_TYPE_PP(ztype) != IS_LONG) {
-		convert_to_long_ex(ztype);
-	}
-
-	**types = Z_LVAL_PP(ztype);
+	**types = zval_get_long(ztype);
 	++*types;
 
-	if (*ztype != *(zval **)p) {
-		zval_ptr_dtor(ztype);
-	}
 	return ZEND_HASH_APPLY_KEEP;
 }
 
 unsigned php_pq_params_set_type_oids(php_pq_params_t *p, HashTable *oids)
 {
 	p->type.count = oids ? zend_hash_num_elements(oids) : 0;
-	TSRMLS_DF(p);
 
 	if (p->type.oids) {
 		efree(p->type.oids);
@@ -68,7 +59,7 @@ unsigned php_pq_params_set_type_oids(php_pq_params_t *p, HashTable *oids)
 		Oid *ptr = ecalloc(p->type.count + 1, sizeof(*p->type.oids));
 		/* +1 for when less types than params are specified */
 		p->type.oids = ptr;
-		zend_hash_apply_with_argument(oids, apply_to_oid, &ptr TSRMLS_CC);
+		zend_hash_apply_with_argument(oids, apply_to_oid, &ptr);
 	}
 	return p->type.count;
 }
@@ -82,9 +73,8 @@ unsigned php_pq_params_add_type_oid(php_pq_params_t *p, Oid type)
 }
 
 
-static zval *object_param_to_string(php_pq_params_t *p, zval *zobj, Oid type TSRMLS_DC)
+static zend_string *object_param_to_string(php_pq_params_t *p, zval *zobj, Oid type)
 {
-	zval *return_value = NULL;
 	smart_str str = {0};
 
 	switch (type) {
@@ -93,40 +83,25 @@ static zval *object_param_to_string(php_pq_params_t *p, zval *zobj, Oid type TSR
 	case PHP_PQ_OID_JSONB:
 #	endif
 	case PHP_PQ_OID_JSON:
-		php_json_encode(&str, zobj, PHP_JSON_UNESCAPED_UNICODE TSRMLS_CC);
+		php_json_encode(&str, zobj, PHP_JSON_UNESCAPED_UNICODE);
 		smart_str_0(&str);
-		break;
+		return str.s;
 #endif
 
 	case PHP_PQ_OID_DATE:
-		php_pqdt_to_string(zobj, "Y-m-d", &str.c, &str.len TSRMLS_CC);
-		break;
+		return php_pqdt_to_string(zobj, "Y-m-d");
 
 	case PHP_PQ_OID_ABSTIME:
-		php_pqdt_to_string(zobj, "Y-m-d H:i:s", &str.c, &str.len TSRMLS_CC);
-		break;
+		return php_pqdt_to_string(zobj, "Y-m-d H:i:s");
 
 	case PHP_PQ_OID_TIMESTAMP:
-		php_pqdt_to_string(zobj, "Y-m-d H:i:s.u", &str.c, &str.len TSRMLS_CC);
-		break;
+		return php_pqdt_to_string(zobj, "Y-m-d H:i:s.u");
 
 	case PHP_PQ_OID_TIMESTAMPTZ:
-		php_pqdt_to_string(zobj, "Y-m-d H:i:s.uO", &str.c, &str.len TSRMLS_CC);
-		break;
-
-	default:
-		MAKE_STD_ZVAL(return_value);
-		MAKE_COPY_ZVAL(&zobj, return_value);
-		convert_to_string(return_value);
-		break;
+		return php_pqdt_to_string(zobj, "Y-m-d H:i:s.uO");
 	}
 
-	if (str.c) {
-		MAKE_STD_ZVAL(return_value);
-		RETVAL_STRINGL(str.c, str.len, 0);
-	}
-
-	return return_value;
+	return zval_get_string(zobj);
 }
 
 struct apply_to_param_from_array_arg {
@@ -135,54 +110,48 @@ struct apply_to_param_from_array_arg {
 	smart_str *buffer;
 	Oid type;
 	char delim;
-	zval **zconv;
+	zval *zconv;
 };
 
-static int apply_to_param_from_array(void *ptr, void *arg_ptr TSRMLS_DC)
+static int apply_to_param_from_array(zval *zparam, void *arg_ptr)
 {
 	struct apply_to_param_from_array_arg subarg, *arg = arg_ptr;
-	zval *ztmp, **zparam = ptr, *zcopy = *zparam;
 	char *tmp;
 	size_t len;
-	int tmp_len;
+	zend_string *str;
 
 	if (arg->index++) {
 		smart_str_appendc(arg->buffer, arg->delim);
 	}
 
 	if (arg->zconv) {
-		zval *ztype, *rv = NULL;
+		zval ztype, rv;
 
-		MAKE_STD_ZVAL(ztype);
-		ZVAL_LONG(ztype, arg->type);
-		zend_call_method_with_2_params(arg->zconv, NULL, NULL, "converttostring", &rv, zcopy, ztype);
-		zval_ptr_dtor(&ztype);
-
-		if (rv) {
-			convert_to_string(rv);
-			zcopy = rv;
-		} else {
-			return ZEND_HASH_APPLY_STOP;
-		}
-
+		ZVAL_LONG(&ztype, arg->type);
+		zend_call_method_with_2_params(arg->zconv, NULL, NULL, "converttostring", &rv, zparam, &ztype);
+		str = zval_get_string(&rv);
 		goto append_string;
 
 	} else {
-		switch (Z_TYPE_P(zcopy)) {
+		switch (Z_TYPE_P(zparam)) {
 		case IS_NULL:
 			smart_str_appends(arg->buffer, "NULL");
 			break;
 
-		case IS_BOOL:
-			smart_str_appends(arg->buffer, Z_BVAL_P(zcopy) ? "t" : "f");
+		case IS_TRUE:
+			smart_str_appends(arg->buffer, "t");
+			break;
+
+		case IS_FALSE:
+			smart_str_appends(arg->buffer, "f");
 			break;
 
 		case IS_LONG:
-			smart_str_append_long(arg->buffer, Z_LVAL_P(zcopy));
+			smart_str_append_long(arg->buffer, Z_LVAL_P(zparam));
 			break;
 
 		case IS_DOUBLE:
-			len = spprintf(&tmp, 0, "%F", Z_DVAL_P(zcopy));
+			len = spprintf(&tmp, 0, "%F", Z_DVAL_P(zparam));
 			smart_str_appendl(arg->buffer, tmp, len);
 			efree(tmp);
 			break;
@@ -191,29 +160,24 @@ static int apply_to_param_from_array(void *ptr, void *arg_ptr TSRMLS_DC)
 			subarg = *arg;
 			subarg.index = 0;
 			smart_str_appendc(arg->buffer, '{');
-			zend_hash_apply_with_argument(Z_ARRVAL_P(zcopy), apply_to_param_from_array, &subarg TSRMLS_CC);
+			zend_hash_apply_with_argument(Z_ARRVAL_P(zparam), apply_to_param_from_array, &subarg);
 			smart_str_appendc(arg->buffer, '}');
 			break;
 
 		case IS_OBJECT:
-			if ((ztmp = object_param_to_string(arg->params, zcopy, arg->type TSRMLS_CC))) {
-				zcopy = ztmp;
+			if ((str = object_param_to_string(arg->params, zparam, arg->type))) {
+				goto append_string;
 			}
 			/* no break */
 		default:
-			SEPARATE_ZVAL(&zcopy);
-			convert_to_string(zcopy);
+			str = zval_get_string(zparam);
 
 			append_string:
-			tmp = php_addslashes(Z_STRVAL_P(zcopy), Z_STRLEN_P(zcopy), &tmp_len, 0 TSRMLS_CC);
+			str = php_addslashes(str, 1);
 			smart_str_appendc(arg->buffer, '"');
-			smart_str_appendl(arg->buffer, tmp, tmp_len);
+			smart_str_appendl(arg->buffer, str->val, str->len);
 			smart_str_appendc(arg->buffer, '"');
-
-			if (zcopy != *zparam) {
-				zval_ptr_dtor(&zcopy);
-			}
-			efree(tmp);
+			zend_string_release(str);
 			break;
 		}
 	}
@@ -221,9 +185,8 @@ static int apply_to_param_from_array(void *ptr, void *arg_ptr TSRMLS_DC)
 	return ZEND_HASH_APPLY_KEEP;
 }
 
-static zval *array_param_to_string(php_pq_params_t *p, zval *zarr, Oid type TSRMLS_DC)
+static zend_string *array_param_to_string(php_pq_params_t *p, zval *zarr, Oid type)
 {
-	zval *zcopy, *return_value;
 	smart_str s = {0};
 	struct apply_to_param_from_array_arg arg = {NULL};
 
@@ -233,8 +196,7 @@ static zval *array_param_to_string(php_pq_params_t *p, zval *zarr, Oid type TSRM
 	case PHP_PQ_OID_JSONB:
 #	endif
 	case PHP_PQ_OID_JSON:
-		php_json_encode(&s, zarr, PHP_JSON_UNESCAPED_UNICODE TSRMLS_CC);
-		smart_str_0(&s);
+		php_json_encode(&s, zarr, PHP_JSON_UNESCAPED_UNICODE);
 		break;
 #endif
 
@@ -243,90 +205,76 @@ static zval *array_param_to_string(php_pq_params_t *p, zval *zarr, Oid type TSRM
 		arg.buffer = &s;
 		arg.type = PHP_PQ_TYPE_OF_ARRAY(type);
 		arg.delim = PHP_PQ_DELIM_OF_ARRAY(type);
-		zend_hash_index_find(&p->type.conv, PHP_PQ_TYPE_OF_ARRAY(type), (void *) &arg.zconv);
+		arg.zconv = zend_hash_index_find(&p->type.conv, PHP_PQ_TYPE_OF_ARRAY(type));
 		smart_str_appendc(arg.buffer, '{');
-		MAKE_STD_ZVAL(zcopy);
-		MAKE_COPY_ZVAL(&zarr, zcopy);
-		zend_hash_apply_with_argument(Z_ARRVAL_P(zcopy), apply_to_param_from_array, &arg TSRMLS_CC);
-		zval_ptr_dtor(&zcopy);
+		SEPARATE_ZVAL(zarr);
+		zend_hash_apply_with_argument(Z_ARRVAL_P(zarr), apply_to_param_from_array, &arg);
+		zval_ptr_dtor(zarr);
 		smart_str_appendc(arg.buffer, '}');
-		smart_str_0(&s);
 		break;
 	}
 
-	/* must not return NULL */
-	MAKE_STD_ZVAL(return_value);
-
-	if (s.c) {
-		RETVAL_STRINGL(s.c, s.len, 0);
-	} else {
-		RETVAL_EMPTY_STRING();
-	}
-
-	return return_value;
+	smart_str_0(&s);
+	return s.s;
 }
 
-static void php_pq_params_set_param(php_pq_params_t *p, unsigned index, zval **zpp)
+static void php_pq_params_set_param(php_pq_params_t *p, unsigned index, zval *zpp)
 {
-	zval **zconv = NULL;
+	zval *zconv = NULL;
 	Oid type = p->type.count > index ? p->type.oids[index] : 0;
-	TSRMLS_DF(p);
 
-	if (type && SUCCESS == zend_hash_index_find(&p->type.conv, type, (void *) &zconv)) {
-		zval *ztype, *rv = NULL;
+	if (type && (zconv = zend_hash_index_find(&p->type.conv, type))) {
+		zval ztype, rv;
 
-		MAKE_STD_ZVAL(ztype);
-		ZVAL_LONG(ztype, type);
-		zend_call_method_with_2_params(zconv, NULL, NULL, "converttostring", &rv, *zpp, ztype);
-		zval_ptr_dtor(&ztype);
-		if (rv) {
-			convert_to_string(rv);
-			p->param.strings[index] = Z_STRVAL_P(rv);
-			zend_hash_next_index_insert(&p->param.dtor, (void *) &rv, sizeof(zval *), NULL);
-		}
+		ZVAL_NULL(&rv);
+		ZVAL_LONG(&ztype, type);
+		zend_call_method_with_2_params(zconv, NULL, NULL, "converttostring", &rv, zpp, &ztype);
+		convert_to_string(&rv);
+		p->param.strings[index] = Z_STRVAL_P(&rv);
+		zend_hash_next_index_insert(&p->param.dtor, &rv);
 	} else {
-		zval *tmp, *zcopy = *zpp;
+		zval tmp;
+		zend_string *str = NULL;
+		char tmp_str[64];
+		size_t tmp_len = 0;
 
-		switch (Z_TYPE_P(zcopy)) {
+		switch (Z_TYPE_P(zpp)) {
 		case IS_NULL:
 			p->param.strings[index] = NULL;
 			return;
 
-		case IS_BOOL:
-			p->param.strings[index] = Z_BVAL_P(zcopy) ? "t" : "f";
+		case IS_TRUE:
+			p->param.strings[index] = "t";
+			break;
+
+		case IS_FALSE:
+			p->param.strings[index] = "f";
 			return;
 
 		case IS_DOUBLE:
-			MAKE_STD_ZVAL(zcopy);
-			MAKE_COPY_ZVAL(zpp, zcopy);
-			Z_TYPE_P(zcopy) = IS_STRING;
-			Z_STRLEN_P(zcopy) = spprintf(&Z_STRVAL_P(zcopy), 0, "%F", Z_DVAL_PP(zpp));
+			tmp_len = slprintf(tmp_str, sizeof(tmp_str), "%F", Z_DVAL_P(zpp));
+			str = zend_string_init(tmp_str, tmp_len, 0);
 			break;
 
 		case IS_ARRAY:
-			MAKE_STD_ZVAL(zcopy);
-			MAKE_COPY_ZVAL(zpp, zcopy);
-			tmp = array_param_to_string(p, zcopy, type TSRMLS_CC);
-			zval_ptr_dtor(&zcopy);
-			zcopy = tmp;
+			str = array_param_to_string(p, &tmp, type);
 			break;
 
 		case IS_OBJECT:
-			if ((tmp = object_param_to_string(p, zcopy, type TSRMLS_CC))) {
-				zcopy = tmp;
+			if ((str = object_param_to_string(p, zpp, type))) {
 				break;
 			}
 			/* no break */
 
 		default:
-			convert_to_string_ex(&zcopy);
+			str = zval_get_string(zpp);
 			break;
 		}
 
-		p->param.strings[index] = Z_STRVAL_P(zcopy);
-
-		if (zcopy != *zpp) {
-			zend_hash_next_index_insert(&p->param.dtor, (void *) &zcopy, sizeof(zval *), NULL);
+		if (str) {
+			ZVAL_STR(&tmp, str);
+			p->param.strings[index] = Z_STRVAL(tmp);
+			zend_hash_next_index_insert(&p->param.dtor, &tmp);
 		}
 	}
 }
@@ -336,11 +284,11 @@ struct apply_to_params_arg {
 	unsigned index;
 };
 
-static int apply_to_params(void *zp, void *arg_ptr TSRMLS_DC)
+static int apply_to_params(zval *zp, void *arg_ptr)
 {
 	struct apply_to_params_arg *arg = arg_ptr;
 
-	SEPARATE_ZVAL_IF_NOT_REF((zval **) zp);
+	SEPARATE_ZVAL_IF_NOT_REF(zp);
 	php_pq_params_set_param(arg->params, arg->index++, zp);
 	return ZEND_HASH_APPLY_KEEP;
 }
@@ -348,14 +296,13 @@ static int apply_to_params(void *zp, void *arg_ptr TSRMLS_DC)
 unsigned php_pq_params_add_param(php_pq_params_t *p, zval *param)
 {
 	p->param.strings = safe_erealloc(p->param.strings, ++p->param.count, sizeof(*p->param.strings), 0);
-	php_pq_params_set_param(p, p->param.count-1, &param);
+	php_pq_params_set_param(p, p->param.count-1, param);
 	return p->type.count;
 }
 
 unsigned php_pq_params_set_params(php_pq_params_t *p, HashTable *params)
 {
 	p->param.count = params ? zend_hash_num_elements(params) : 0;
-	TSRMLS_DF(p);
 
 	if (p->param.strings) {
 		efree(p->param.strings);
@@ -365,7 +312,7 @@ unsigned php_pq_params_set_params(php_pq_params_t *p, HashTable *params)
 	if (p->param.count) {
 		struct apply_to_params_arg arg = {p, 0};
 		p->param.strings = ecalloc(p->param.count, sizeof(*p->param.strings));
-		zend_hash_apply_with_argument(params, apply_to_params, &arg TSRMLS_CC);
+		zend_hash_apply_with_argument(params, apply_to_params, &arg);
 	}
 	return p->param.count;
 }
@@ -384,11 +331,10 @@ void php_pq_params_free(php_pq_params_t **p)
 	}
 }
 
-php_pq_params_t *php_pq_params_init(HashTable *conv, HashTable *oids, HashTable *params TSRMLS_DC)
+php_pq_params_t *php_pq_params_init(HashTable *conv, HashTable *oids, HashTable *params)
 {
 	php_pq_params_t *p = ecalloc(1, sizeof(*p));
 
-	TSRMLS_CF(p);
 	zend_hash_init(&p->type.conv, 0, NULL, ZVAL_PTR_DTOR, 0);
 	zend_hash_init(&p->param.dtor, 0, NULL, ZVAL_PTR_DTOR, 0);
 

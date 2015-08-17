@@ -24,12 +24,9 @@ typedef struct php_pq_params {
 		unsigned count;
 		char **strings;
 	} param;
-#ifdef ZTS
-	void ***ts;
-#endif
 } php_pq_params_t;
 
-extern php_pq_params_t *php_pq_params_init(HashTable *conv, HashTable *oids, HashTable *params TSRMLS_DC);
+extern php_pq_params_t *php_pq_params_init(HashTable *conv, HashTable *oids, HashTable *params);
 extern void php_pq_params_free(php_pq_params_t **p);
 extern unsigned php_pq_params_set_params(php_pq_params_t *p, HashTable *params);
 extern unsigned php_pq_params_set_type_oids(php_pq_params_t *p, HashTable *oids);

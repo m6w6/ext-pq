@@ -22,14 +22,13 @@ typedef struct php_pqcancel {
 } php_pqcancel_t;
 
 typedef struct php_pqcancel_object {
-	zend_object zo;
-	zend_object_value zv;
-	HashTable *prophandler;
 	php_pqcancel_t *intern;
+	HashTable *prophandler;
+	zend_object zo;
 } php_pqcancel_object_t;
 
 extern zend_class_entry *php_pqcancel_class_entry;
-extern zend_object_value php_pqcancel_create_object_ex(zend_class_entry *ce, php_pqcancel_t *intern, php_pqcancel_object_t **ptr TSRMLS_DC);
+extern php_pqcancel_object_t *php_pqcancel_create_object_ex(zend_class_entry *ce, php_pqcancel_t *intern);
 
 extern PHP_MINIT_FUNCTION(pqcancel);
 extern PHP_MSHUTDOWN_FUNCTION(pqcancel);

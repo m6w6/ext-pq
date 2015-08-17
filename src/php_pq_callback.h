@@ -23,9 +23,9 @@ typedef struct php_pq_callback {
 
 extern void php_pq_callback_dtor(php_pq_callback_t *cb);
 extern void php_pq_callback_addref(php_pq_callback_t *cb);
-extern zval *php_pq_callback_to_zval(php_pq_callback_t *cb);
-extern zend_bool php_pq_callback_is_locked(php_pq_callback_t *cb TSRMLS_DC);
-extern void php_pq_callback_recurse(php_pq_callback_t *old, php_pq_callback_t *new TSRMLS_DC);
+extern zval *php_pq_callback_to_zval(php_pq_callback_t *cb, zval *tmp);
+extern zend_bool php_pq_callback_is_locked(php_pq_callback_t *cb);
+extern void php_pq_callback_recurse(php_pq_callback_t *old, php_pq_callback_t *new);
 
 #endif
 

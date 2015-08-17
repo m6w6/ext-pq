@@ -15,7 +15,7 @@
 #endif
 
 #include <php.h>
-#include <ext/standard/php_smart_str.h>
+#include <Zend/zend_smart_str.h>
 
 #include <libpq-events.h>
 
@@ -31,77 +31,72 @@ zend_class_entry *php_pqcopy_class_entry;
 static zend_object_handlers php_pqcopy_object_handlers;
 static HashTable php_pqcopy_object_prophandlers;
 
-static void php_pqcopy_object_free(void *o TSRMLS_DC)
+static void php_pqcopy_object_free(zend_object *o)
 {
-	php_pqcopy_object_t *obj = o;
+	php_pqcopy_object_t *obj = PHP_PQ_OBJ(NULL, o);
 #if DBG_GC
 	fprintf(stderr, "FREE copy(#%d) %p (conn(#%d): %p)\n", obj->zv.handle, obj, obj->intern->conn->zv.handle, obj->intern->conn);
 #endif
 	if (obj->intern) {
 		efree(obj->intern->expression);
 		efree(obj->intern->options);
-		php_pq_object_delref(obj->intern->conn TSRMLS_CC);
+		php_pq_object_delref(obj->intern->conn);
 		efree(obj->intern);
 		obj->intern = NULL;
 	}
-	zend_object_std_dtor((zend_object *) o TSRMLS_CC);
+	zend_object_std_dtor(o);
 	efree(obj);
 }
 
-zend_object_value php_pqcopy_create_object_ex(zend_class_entry *ce, php_pqcopy_t *intern, php_pqcopy_object_t **ptr TSRMLS_DC)
+php_pqcopy_object_t *php_pqcopy_create_object_ex(zend_class_entry *ce, php_pqcopy_t *intern)
 {
 	php_pqcopy_object_t *o;
 
-	o = ecalloc(1, sizeof(*o));
-	zend_object_std_init((zend_object *) o, ce TSRMLS_CC);
-	object_properties_init((zend_object *) o, ce);
+	o = ecalloc(1, sizeof(*o) + zend_object_properties_size(ce));
+	zend_object_std_init(&o->zo, ce);
+	object_properties_init(&o->zo, ce);
 	o->prophandler = &php_pqcopy_object_prophandlers;
-
-	if (ptr) {
-		*ptr = o;
-	}
 
 	if (intern) {
 		o->intern = intern;
 	}
 
-	o->zv.handle = zend_objects_store_put((zend_object *) o, NULL, php_pqcopy_object_free, NULL TSRMLS_CC);
-	o->zv.handlers = &php_pqcopy_object_handlers;
+	o->zo.handlers = &php_pqcopy_object_handlers;
 
-	return o->zv;
+	return o;
 }
 
-static zend_object_value php_pqcopy_create_object(zend_class_entry *class_type TSRMLS_DC)
+static zend_object *php_pqcopy_create_object(zend_class_entry *class_type)
 {
-	return php_pqcopy_create_object_ex(class_type, NULL, NULL TSRMLS_CC);
+	return &php_pqcopy_create_object_ex(class_type, NULL)->zo;
 }
 
-static void php_pqcopy_object_read_connection(zval *object, void *o, zval *return_value TSRMLS_DC)
+static void php_pqcopy_object_read_connection(zval *object, void *o, zval *return_value)
 {
 	php_pqcopy_object_t *obj = o;
 
-	php_pq_object_to_zval(obj->intern->conn, &return_value TSRMLS_CC);
+	php_pq_object_to_zval(obj->intern->conn, return_value);
 }
 
-static void php_pqcopy_object_read_direction(zval *object, void *o, zval *return_value TSRMLS_DC)
+static void php_pqcopy_object_read_direction(zval *object, void *o, zval *return_value)
 {
 	php_pqcopy_object_t *obj = o;
 
 	RETVAL_LONG(obj->intern->direction);
 }
 
-static void php_pqcopy_object_read_expression(zval *object, void *o, zval *return_value TSRMLS_DC)
+static void php_pqcopy_object_read_expression(zval *object, void *o, zval *return_value)
 {
 	php_pqcopy_object_t *obj = o;
 
-	RETURN_STRING(obj->intern->expression, 1);
+	RETURN_STRING(obj->intern->expression);
 }
 
-static void php_pqcopy_object_read_options(zval *object, void *o, zval *return_value TSRMLS_DC)
+static void php_pqcopy_object_read_options(zval *object, void *o, zval *return_value)
 {
 	php_pqcopy_object_t *obj = o;
 
-	RETURN_STRING(obj->intern->options, 1);
+	RETURN_STRING(obj->intern->options);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqcopy_construct, 0, 0, 3)
@@ -114,21 +109,21 @@ static PHP_METHOD(pqcopy, __construct) {
 	zend_error_handling zeh;
 	zval *zconn;
 	char *expr_str, *opt_str = "";
-	int expr_len, opt_len = 0;
-	long direction;
+	size_t expr_len, opt_len = 0;
+	zend_long direction;
 	ZEND_RESULT_CODE rv;
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Osl|s", &zconn, php_pqconn_class_entry, &expr_str, &expr_len, &direction, &opt_str, &opt_len);
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS(), "Osl|s", &zconn, php_pqconn_class_entry, &expr_str, &expr_len, &direction, &opt_str, &opt_len);
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
-		php_pqconn_object_t *conn_obj = zend_object_store_get_object(zconn TSRMLS_CC);
+		php_pqconn_object_t *conn_obj = PHP_PQ_OBJ(zconn, NULL);
 
 		if (!conn_obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\Connection not initialized");
 		} else {
-			php_pqcopy_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+			php_pqcopy_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
 			smart_str cmd = {0};
 			PGresult *res;
 
@@ -143,32 +138,32 @@ static PHP_METHOD(pqcopy, __construct) {
 				smart_str_appends(&cmd, " TO STDOUT ");
 				break;
 			default:
-				throw_exce(EX_RUNTIME TSRMLS_CC, "Invalid COPY direction, expected one of FROM_STDIN (%d) TO_STDOUT (%d), got %ld", PHP_PQCOPY_FROM_STDIN, PHP_PQCOPY_TO_STDOUT, direction);
+				throw_exce(EX_RUNTIME, "Invalid COPY direction, expected one of FROM_STDIN (%d) TO_STDOUT (%d), got %ld", PHP_PQCOPY_FROM_STDIN, PHP_PQCOPY_TO_STDOUT, direction);
 				smart_str_free(&cmd);
 				return;
 			}
 			smart_str_appendl(&cmd, opt_str, opt_len);
 			smart_str_0(&cmd);
 
-			res = PQexec(conn_obj->intern->conn, cmd.c);
+			res = PQexec(conn_obj->intern->conn, smart_str_v(&cmd));
 
 			if (!res) {
-				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to start %s (%s)", cmd.c, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+				throw_exce(EX_RUNTIME, "Failed to start %s (%s)", smart_str_v(&cmd), PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			} else {
-				if (SUCCESS == php_pqres_success(res TSRMLS_CC)) {
+				if (SUCCESS == php_pqres_success(res)) {
 					obj->intern = ecalloc(1, sizeof(*obj->intern));
 					obj->intern->direction = direction;
 					obj->intern->expression = estrdup(expr_str);
 					obj->intern->options = estrdup(opt_str);
 					obj->intern->conn = conn_obj;
-					php_pq_object_addref(conn_obj TSRMLS_CC);
+					php_pq_object_addref(conn_obj);
 				}
 
 				PHP_PQclear(res);
 			}
 
 			smart_str_free(&cmd);
-			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
+			php_pqconn_notify_listeners(obj->intern->conn);
 		}
 	}
 }
@@ -179,25 +174,25 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqcopy, put) {
 	zend_error_handling zeh;
 	char *data_str;
-	int data_len;
+	size_t data_len;
 	ZEND_RESULT_CODE rv;
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &data_str, &data_len);
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS(), "s", &data_str, &data_len);
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
-		php_pqcopy_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+		php_pqcopy_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
 
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\COPY not initialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\COPY not initialized");
 		} else if (obj->intern->direction != PHP_PQCOPY_FROM_STDIN) {
-			throw_exce(EX_BAD_METHODCALL TSRMLS_CC, "pq\\COPY was not initialized with FROM_STDIN");
+			throw_exce(EX_BAD_METHODCALL, "pq\\COPY was not initialized with FROM_STDIN");
 		} else {
 			if (1 != PQputCopyData(obj->intern->conn->intern->conn, data_str, data_len)) {
-				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to put COPY data (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+				throw_exce(EX_RUNTIME, "Failed to put COPY data (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			}
-			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
+			php_pqconn_notify_listeners(obj->intern->conn);
 		}
 	}
 }
@@ -208,35 +203,35 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqcopy, end) {
 	zend_error_handling zeh;
 	char *error_str = NULL;
-	int error_len = 0;
+	size_t error_len = 0;
 	ZEND_RESULT_CODE rv;
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s!", &error_str, &error_len);
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS(), "|s!", &error_str, &error_len);
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
-		php_pqcopy_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+		php_pqcopy_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
 
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\COPY not intitialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\COPY not intitialized");
 		} else if (obj->intern->direction != PHP_PQCOPY_FROM_STDIN) {
-			throw_exce(EX_BAD_METHODCALL TSRMLS_CC, "pq\\COPY was not intitialized with FROM_STDIN");
+			throw_exce(EX_BAD_METHODCALL, "pq\\COPY was not intitialized with FROM_STDIN");
 		} else {
 			if (1 != PQputCopyEnd(obj->intern->conn->intern->conn, error_str)) {
-				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to end COPY (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+				throw_exce(EX_RUNTIME, "Failed to end COPY (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			} else {
 				PGresult *res = PQgetResult(obj->intern->conn->intern->conn);
 
 				if (!res) {
-					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to fetch COPY result (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+					throw_exce(EX_RUNTIME, "Failed to fetch COPY result (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				} else {
-					php_pqres_success(res TSRMLS_CC);
+					php_pqres_success(res);
 					PHP_PQclear(res);
 				}
 			}
 
-			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
+			php_pqconn_notify_listeners(obj->intern->conn);
 		}
 	}
 }
@@ -249,17 +244,17 @@ static PHP_METHOD(pqcopy, get) {
 	zval *zdata;
 	ZEND_RESULT_CODE rv;
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &zdata);
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
-		php_pqcopy_object_t *obj = zend_object_store_get_object(getThis() TSRMLS_CC);
+		php_pqcopy_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
 
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\COPY not initialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\COPY not initialized");
 		} else if (obj->intern->direction != PHP_PQCOPY_TO_STDOUT) {
-			throw_exce(EX_RUNTIME TSRMLS_CC, "pq\\COPY was not intialized with TO_STDOUT");
+			throw_exce(EX_RUNTIME, "pq\\COPY was not intialized with TO_STDOUT");
 		} else {
 			PGresult *res;
 			char *buffer = NULL;
@@ -267,25 +262,26 @@ static PHP_METHOD(pqcopy, get) {
 
 			switch (bytes) {
 			case -2:
-				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to fetch COPY data (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+				throw_exce(EX_RUNTIME, "Failed to fetch COPY data (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				break;
 
 			case -1:
 				res = PQgetResult(obj->intern->conn->intern->conn);
 
 				if (!res) {
-					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to fetch COPY result (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
+					throw_exce(EX_RUNTIME, "Failed to fetch COPY result (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				} else {
-					php_pqres_success(res TSRMLS_CC);
+					php_pqres_success(res);
 					PHP_PQclear(res);
 					RETVAL_FALSE;
 				}
 				break;
 
 			default:
+				ZVAL_DEREF(zdata);
 				zval_dtor(zdata);
 				if (buffer) {
-					ZVAL_STRINGL(zdata, buffer, bytes, 1);
+					ZVAL_STRINGL(zdata, buffer, bytes);
 				} else {
 					ZVAL_EMPTY_STRING(zdata);
 				}
@@ -320,10 +316,12 @@ PHP_MINIT_FUNCTION(pqcopy)
 	php_pq_object_prophandler_t ph = {0};
 
 	INIT_NS_CLASS_ENTRY(ce, "pq", "COPY", php_pqcopy_methods);
-	php_pqcopy_class_entry = zend_register_internal_class_ex(&ce, NULL, NULL TSRMLS_CC);
+	php_pqcopy_class_entry = zend_register_internal_class_ex(&ce, NULL);
 	php_pqcopy_class_entry->create_object = php_pqcopy_create_object;
 
 	memcpy(&php_pqcopy_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
+	php_pqcopy_object_handlers.offset = XtOffsetOf(php_pqcopy_object_t, zo);
+	php_pqcopy_object_handlers.free_obj = php_pqcopy_object_free;
 	php_pqcopy_object_handlers.read_property = php_pq_object_read_prop;
 	php_pqcopy_object_handlers.write_property = php_pq_object_write_prop;
 	php_pqcopy_object_handlers.clone_obj = NULL;
@@ -334,24 +332,24 @@ PHP_MINIT_FUNCTION(pqcopy)
 
 	zend_hash_init(&php_pqcopy_object_prophandlers, 4, NULL, NULL, 1);
 
-	zend_declare_property_null(php_pqcopy_class_entry, ZEND_STRL("connection"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_null(php_pqcopy_class_entry, ZEND_STRL("connection"), ZEND_ACC_PUBLIC);
 	ph.read = php_pqcopy_object_read_connection;
-	zend_hash_add(&php_pqcopy_object_prophandlers, "connection", sizeof("connection"), (void *) &ph, sizeof(ph), NULL);
+	zend_hash_str_add_mem(&php_pqcopy_object_prophandlers, "connection", sizeof("connection")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqcopy_class_entry, ZEND_STRL("expression"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_null(php_pqcopy_class_entry, ZEND_STRL("expression"), ZEND_ACC_PUBLIC);
 	ph.read = php_pqcopy_object_read_expression;
-	zend_hash_add(&php_pqcopy_object_prophandlers, "expression", sizeof("expression"), (void *) &ph, sizeof(ph), NULL);
+	zend_hash_str_add_mem(&php_pqcopy_object_prophandlers, "expression", sizeof("expression")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqcopy_class_entry, ZEND_STRL("direction"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_null(php_pqcopy_class_entry, ZEND_STRL("direction"), ZEND_ACC_PUBLIC);
 	ph.read = php_pqcopy_object_read_direction;
-	zend_hash_add(&php_pqcopy_object_prophandlers, "direction", sizeof("direction"), (void *) &ph, sizeof(ph), NULL);
+	zend_hash_str_add_mem(&php_pqcopy_object_prophandlers, "direction", sizeof("direction")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqcopy_class_entry, ZEND_STRL("options"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_null(php_pqcopy_class_entry, ZEND_STRL("options"), ZEND_ACC_PUBLIC);
 	ph.read = php_pqcopy_object_read_options;
-	zend_hash_add(&php_pqcopy_object_prophandlers, "options", sizeof("options"), (void *) &ph, sizeof(ph), NULL);
+	zend_hash_str_add_mem(&php_pqcopy_object_prophandlers, "options", sizeof("options")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_class_constant_long(php_pqcopy_class_entry, ZEND_STRL("FROM_STDIN"), PHP_PQCOPY_FROM_STDIN TSRMLS_CC);
-	zend_declare_class_constant_long(php_pqcopy_class_entry, ZEND_STRL("TO_STDOUT"), PHP_PQCOPY_TO_STDOUT TSRMLS_CC);
+	zend_declare_class_constant_long(php_pqcopy_class_entry, ZEND_STRL("FROM_STDIN"), PHP_PQCOPY_FROM_STDIN);
+	zend_declare_class_constant_long(php_pqcopy_class_entry, ZEND_STRL("TO_STDOUT"), PHP_PQCOPY_TO_STDOUT);
 
 	return SUCCESS;
 }

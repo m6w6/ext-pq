@@ -14,28 +14,34 @@
 #define PHP_PQ_OBJECT_H
 
 typedef struct php_pq_object {
-	zend_object zo;
-	zend_object_value zv;
-	HashTable *prophandler;
 	void *intern;
+	HashTable *prophandler;
+	zend_object zo;
 } php_pq_object_t;
 
-typedef void (*php_pq_object_prophandler_func_t)(zval *object, void *o, zval *return_value TSRMLS_DC);
+static inline void *PHP_PQ_OBJ(zval *zv, zend_object *zo) {
+	if (zv) {
+		zo = Z_OBJ_P(zv);
+	}
+	return (void *) (((char *) zo) - zo->handlers->offset);
+}
+
+typedef void (*php_pq_object_prophandler_func_t)(zval *object, void *o, zval *return_value);
 
 typedef struct php_pq_object_prophandler {
 	php_pq_object_prophandler_func_t read;
 	php_pq_object_prophandler_func_t write;
 } php_pq_object_prophandler_t;
 
-extern void php_pq_object_to_zval(void *o, zval **zv TSRMLS_DC);
-extern void php_pq_object_to_zval_no_addref(void *o, zval **zv TSRMLS_DC);
-extern void php_pq_object_addref(void *o TSRMLS_DC);
-extern void php_pq_object_delref(void *o TSRMLS_DC);
-extern HashTable *php_pq_object_debug_info(zval *object, int *temp TSRMLS_DC);
-extern HashTable *php_pq_object_properties(zval *object TSRMLS_DC);
+extern void php_pq_object_to_zval(void *o, zval *zv);
+extern void php_pq_object_to_zval_no_addref(void *o, zval *zv);
+extern void php_pq_object_addref(void *o);
+extern void php_pq_object_delref(void *o);
+extern HashTable *php_pq_object_debug_info(zval *object, int *temp);
+extern HashTable *php_pq_object_properties(zval *object);
 extern zend_class_entry *ancestor(zend_class_entry *ce);
-extern zval *php_pq_object_read_prop(zval *object, zval *member, int type, const zend_literal *key TSRMLS_DC);
-extern void php_pq_object_write_prop(zval *object, zval *member, zval *value, const zend_literal *key TSRMLS_DC);
+extern zval *php_pq_object_read_prop(zval *object, zval *member, int type, void **cache_slot, zval *tmp);
+extern void php_pq_object_write_prop(zval *object, zval *member, zval *value, void **cache_slot);
 
 #endif
 

@@ -52,7 +52,7 @@ const char *php_pq_strmode(long mode)
 	}
 }
 
-int php_pq_compare_index(const void *lptr, const void *rptr TSRMLS_DC)
+int php_pq_compare_index(const void *lptr, const void *rptr)
 {
 	const Bucket *l = *(const Bucket **) lptr;
 	const Bucket *r = *(const Bucket **) rptr;
@@ -72,13 +72,12 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqdt_to_string, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqdt, __toString)
 {
-	zval *rv = NULL;
+	zval rv, tmp;
 
-	zend_call_method_with_1_params(&getThis(), php_pqdt_class_entry, NULL, "format", &rv,
-			zend_read_property(php_pqdt_class_entry, getThis(), ZEND_STRL("format"), 0 TSRMLS_CC));
-	if (rv) {
-		RETVAL_ZVAL(rv, 1, 1);
-	}
+	ZVAL_NULL(&rv);
+	zend_call_method_with_1_params(getThis(), php_pqdt_class_entry, NULL, "format", &rv,
+			zend_read_property(php_pqdt_class_entry, getThis(), ZEND_STRL("format"), 0, &tmp));
+	RETVAL_ZVAL(&rv, 1, 1);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqdt_create_from_format, 0, 0, 2)
@@ -94,12 +93,12 @@ static PHP_METHOD(pqdt, createFromFormat)
 	zval *ztz = NULL;
 	ZEND_RESULT_CODE rv;
 
-	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh TSRMLS_CC);
-	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|O", &fmt_str, &fmt_len, &dt_str, &dt_len, &ztz, php_date_get_timezone_ce());
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS(), "ss|O", &fmt_str, &fmt_len, &dt_str, &dt_len, &ztz, php_date_get_timezone_ce());
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
-		php_pqdt_from_string(return_value, fmt_str, dt_str, dt_len, "Y-m-d H:i:s.uO", ztz TSRMLS_CC);
+		php_pqdt_from_string(return_value, fmt_str, dt_str, dt_len, "Y-m-d H:i:s.uO", ztz);
 	}
 }
 
@@ -110,54 +109,47 @@ static zend_function_entry php_pqdt_methods[] = {
 	{0}
 };
 
-zval *php_pqdt_from_string(zval *zv, char *input_fmt, char *dt_str, size_t dt_len, char *output_fmt, zval *ztimezone TSRMLS_DC)
+zval *php_pqdt_from_string(zval *zv, char *input_fmt, char *dt_str, size_t dt_len, char *output_fmt, zval *ztimezone)
 {
 	php_date_obj *dobj;
 
-	if (!zv) {
-		MAKE_STD_ZVAL(zv);
-	}
-
-	php_date_instantiate(php_pqdt_class_entry, zv TSRMLS_CC);
-	dobj = zend_object_store_get_object(zv TSRMLS_CC);
-	if (!php_date_initialize(dobj, dt_str, dt_len, input_fmt, ztimezone, 1 TSRMLS_CC)) {
+	php_date_instantiate(php_pqdt_class_entry, zv);
+	dobj = php_date_obj_from_obj(Z_OBJ_P(zv));
+	if (!php_date_initialize(dobj, dt_str, dt_len, input_fmt, ztimezone, 1)) {
 		zval_dtor(zv);
 		ZVAL_NULL(zv);
 	} else if (output_fmt) {
-		zend_update_property_string(php_pqdt_class_entry, zv, ZEND_STRL("format"), output_fmt TSRMLS_CC);
+		zend_update_property_string(php_pqdt_class_entry, zv, ZEND_STRL("format"), output_fmt);
 	}
 
 	return zv;
 }
 
-void php_pqdt_to_string(zval *zdt, const char *format, char **str_buf, size_t *str_len TSRMLS_DC)
+zend_string *php_pqdt_to_string(zval *zdt, const char *format)
 {
 	zval rv;
 
-	INIT_PZVAL(&rv);
 	ZVAL_NULL(&rv);
 
 	if (Z_OBJ_HT_P(zdt)->cast_object
-	&&	SUCCESS == Z_OBJ_HT_P(zdt)->cast_object(zdt, &rv, IS_STRING TSRMLS_CC)
+	&&	SUCCESS == Z_OBJ_HT_P(zdt)->cast_object(zdt, &rv, IS_STRING)
 	) {
-		*str_len = Z_STRLEN(rv);
-		*str_buf = Z_STRVAL(rv);
-	} else if (instanceof_function(Z_OBJCE_P(zdt), php_date_get_date_ce() TSRMLS_CC)) {
-		zval *rv = NULL, *zfmt;
+		return Z_STR(rv);
+	} else if (instanceof_function(Z_OBJCE_P(zdt), php_date_get_date_ce())) {
+		zval rv, zfmt;
 
-		MAKE_STD_ZVAL(zfmt);
-		ZVAL_STRING(zfmt, format, 1);
-		zend_call_method_with_1_params(&zdt, Z_OBJCE_P(zdt), NULL, "format", &rv, zfmt);
+		ZVAL_NULL(&rv);
+		ZVAL_STRING(&zfmt, format);
+		zend_call_method_with_1_params(zdt, Z_OBJCE_P(zdt), NULL, "format", &rv, &zfmt);
 		zval_ptr_dtor(&zfmt);
 
-		if (rv) {
-			if (Z_TYPE_P(rv) == IS_STRING) {
-				*str_len = Z_STRLEN_P(rv);
-				*str_buf = estrndup(Z_STRVAL_P(rv), *str_len);
-			}
-			zval_ptr_dtor(&rv);
+		if (Z_TYPE(rv) == IS_STRING) {
+			return Z_STR(rv);
 		}
+		zval_ptr_dtor(&rv);
 	}
+
+	return NULL;
 }
 
 zend_class_entry *php_pqconv_class_entry;
@@ -185,27 +177,27 @@ zend_function_entry php_pqconv_methods[] = {
 
 PHP_MINIT_FUNCTION(pq_misc)
 {
-	zend_class_entry **json, ce = {0};
+	zend_class_entry *json, ce = {0};
 
 	INIT_NS_CLASS_ENTRY(ce, "pq", "Converter", php_pqconv_methods);
-	php_pqconv_class_entry = zend_register_internal_interface(&ce TSRMLS_CC);
+	php_pqconv_class_entry = zend_register_internal_interface(&ce);
 
 	memset(&ce, 0, sizeof(ce));
 	INIT_NS_CLASS_ENTRY(ce ,"pq", "DateTime", php_pqdt_methods);
-	php_pqdt_class_entry = zend_register_internal_class_ex(&ce, php_date_get_date_ce(), "DateTime" TSRMLS_CC);
+	php_pqdt_class_entry = zend_register_internal_class_ex(&ce, php_date_get_date_ce());
 
-	zend_declare_property_stringl(php_pqdt_class_entry, ZEND_STRL("format"), ZEND_STRL("Y-m-d H:i:s.uO"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_stringl(php_pqdt_class_entry, ZEND_STRL("format"), ZEND_STRL("Y-m-d H:i:s.uO"), ZEND_ACC_PUBLIC);
 
 	/* stop reading this file right here! */
-	if (SUCCESS == zend_hash_find(CG(class_table), ZEND_STRS("jsonserializable"), (void *) &json)) {
-		zend_class_implements(php_pqdt_class_entry TSRMLS_CC, 1, *json);
+	if ((json = zend_hash_str_find_ptr(CG(class_table), ZEND_STRL("jsonserializable")))) {
+		zend_class_implements(php_pqdt_class_entry, 1, json);
 	}
 
 	return SUCCESS;
 }
 
 typedef struct _HashTableList {
-	HashTable ht;
+	zval arr;
 	struct _HashTableList *parent;
 } HashTableList;
 
@@ -213,9 +205,6 @@ typedef struct _ArrayParserState {
 	const char *ptr, *end;
 	HashTableList *list;
 	php_pqres_t *res;
-#ifdef ZTS
-	void ***ts;
-#endif
 	Oid typ;
 	unsigned quotes:1;
 	unsigned escaped:1;
@@ -224,7 +213,6 @@ typedef struct _ArrayParserState {
 static char caa(ArrayParserState *a, const char *any, unsigned advance)
 {
 	const char *p = any;
-	TSRMLS_FETCH_FROM_CTX(a->ts);
 
 	do {
 		if (*p == *a->ptr) {
@@ -233,38 +221,31 @@ static char caa(ArrayParserState *a, const char *any, unsigned advance)
 		}
 	} while (*++p);
 
-	php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to parse array: expected one of '%s', got '%c'", any, *a->ptr); \
+	php_error_docref(NULL, E_WARNING, "Failed to parse array: expected one of '%s', got '%c'", any, *a->ptr); \
 	return 0;
 }
 
 static ZEND_RESULT_CODE add_element(ArrayParserState *a, const char *start)
 {
-	zval *zelem;
-	size_t el_len = a->ptr - start;
-	char *el_str = estrndup(start, el_len);
-	TSRMLS_FETCH_FROM_CTX(a->ts);
+	zval zelem;
+	zend_string *zstr = zend_string_init(start, a->ptr - start, 0);
 
 	if (a->quotes) {
-		int tmp_len = el_len;
-
-		php_stripslashes(el_str, &tmp_len TSRMLS_CC);
-		el_len = tmp_len;
-	} else if ((a->ptr - start == 4) && !strncmp(start, "NULL", 4)) {
-		efree(el_str);
-		el_str = NULL;
-		el_len = 0;
-	}
-
-	if (!el_str) {
-		MAKE_STD_ZVAL(zelem);
-		ZVAL_NULL(zelem);
+		php_stripslashes(zstr);
+		ZVAL_STR(&zelem, zstr);
+	} else if (!zend_string_equals_literal(zstr, "NULL")) {
+		ZVAL_STR(&zelem, zstr);
 	} else {
-		zelem = php_pqres_typed_zval(a->res, el_str, el_len, a->typ TSRMLS_CC);
-
-		efree(el_str);
+		zend_string_release(zstr);
+		ZVAL_NULL(&zelem);
 	}
 
-	return zend_hash_next_index_insert(&a->list->ht, &zelem, sizeof(zval *), NULL);
+	if (!ZVAL_IS_NULL(&zelem)) {
+		php_pqres_typed_zval(a->res, a->typ, &zelem);
+	}
+
+	add_next_index_zval(&a->list->arr, &zelem);
+	return SUCCESS;
 }
 
 static ZEND_RESULT_CODE parse_array(ArrayParserState *a);
@@ -272,7 +253,6 @@ static ZEND_RESULT_CODE parse_array(ArrayParserState *a);
 static ZEND_RESULT_CODE parse_element(ArrayParserState *a, char delim)
 {
 	const char *el;
-	TSRMLS_FETCH_FROM_CTX(a->ts);
 
 	switch (*a->ptr) {
 	case '{':
@@ -301,7 +281,7 @@ static ZEND_RESULT_CODE parse_element(ArrayParserState *a, char delim)
 				++a->ptr;
 				return SUCCESS;
 			} else {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to parse element, unexpected quote: '%.*s'", (int) (a->ptr - el), el);
+				php_error_docref(NULL, E_WARNING, "Failed to parse element, unexpected quote: '%.*s'", (int) (a->ptr - el), el);
 				return FAILURE;
 			}
 			break;
@@ -321,14 +301,13 @@ static ZEND_RESULT_CODE parse_element(ArrayParserState *a, char delim)
 		}
 	}
 
-	php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to parse element, reached end of input");
+	php_error_docref(NULL, E_WARNING, "Failed to parse element, reached end of input");
 	return FAILURE;
 }
 
 static ZEND_RESULT_CODE parse_elements(ArrayParserState *a)
 {
 	char delims[] = {'}', PHP_PQ_DELIM_OF_ARRAY(a->typ), 0};
-	TSRMLS_FETCH_FROM_CTX(a->ts);
 
 	while (SUCCESS == parse_element(a, delims[1])) {
 		switch (caa(a, delims, 0)) {
@@ -340,7 +319,7 @@ static ZEND_RESULT_CODE parse_elements(ArrayParserState *a)
 
 		default:
 			if (!*++a->ptr) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to parse elements, reached end of input");
+				php_error_docref(NULL, E_WARNING, "Failed to parse elements, reached end of input");
 				return FAILURE;
 			}
 			break;
@@ -359,17 +338,10 @@ static ZEND_RESULT_CODE parse_array(ArrayParserState *a)
 	}
 
 	list = ecalloc(1, sizeof(*list));
-	ZEND_INIT_SYMTABLE(&list->ht);
+	ZVAL_NEW_ARR(&list->arr);
 
 	if (a->list) {
-		zval *zcur;
-
-		MAKE_STD_ZVAL(zcur);
-		Z_TYPE_P(zcur) = IS_ARRAY;
-		Z_ARRVAL_P(zcur) = &list->ht;
-
-		zend_hash_next_index_insert(&a->list->ht, &zcur, sizeof(zval *), NULL);
-
+		add_next_index_zval(&a->list->arr, &list->arr);
 		list->parent = a->list;
 	}
 	a->list = list;
@@ -393,7 +365,6 @@ HashTable *php_pq_parse_array(php_pqres_t *res, const char *val_str, size_t val_
 {
 	HashTable *ht = NULL;
 	ArrayParserState a = {0};
-	TSRMLS_SET_CTX(a.ts);
 
 	a.typ = typ;
 	a.ptr = val_str;
@@ -404,7 +375,7 @@ HashTable *php_pq_parse_array(php_pqres_t *res, const char *val_str, size_t val_
 		while (a.list) {
 			HashTableList *l = a.list->parent;
 
-			zend_hash_destroy(&a.list->ht);
+			zval_dtor(&a.list->arr);
 			efree(a.list);
 			a.list = l;
 		}
@@ -412,11 +383,11 @@ HashTable *php_pq_parse_array(php_pqres_t *res, const char *val_str, size_t val_
 	}
 
 	if (*a.ptr) {
-		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Trailing input: '%s'", a.ptr);
+		php_error_docref(NULL, E_NOTICE, "Trailing input: '%s'", a.ptr);
 	}
 
 	do {
-		ht = &a.list->ht;
+		ht = Z_ARRVAL(a.list->arr);
 	} while ((a.list = a.list->parent));
 
 	return ht;

@@ -32,17 +32,16 @@ typedef struct php_pqcur {
 } php_pqcur_t;
 
 typedef struct php_pqcur_object {
-	zend_object zo;
-	zend_object_value zv;
-	HashTable *prophandler;
 	php_pqcur_t *intern;
+	HashTable *prophandler;
+	zend_object zo;
 } php_pqcur_object_t;
 
 extern zend_class_entry *php_pqcur_class_entry;
-extern zend_object_value php_pqcur_create_object_ex(zend_class_entry *ce, php_pqcur_t *intern, php_pqcur_object_t **ptr TSRMLS_DC);
+extern php_pqcur_object_t *php_pqcur_create_object_ex(zend_class_entry *ce, php_pqcur_t *intern);
 
 extern char *php_pqcur_declare_str(const char *name_str, size_t name_len, unsigned flags, const char *query_str, size_t query_len, int *query_offset);
-extern php_pqcur_t *php_pqcur_init(php_pqconn_object_t *conn, const char *name, char *decl, int query_offset, long flags TSRMLS_DC);
+extern php_pqcur_t *php_pqcur_init(php_pqconn_object_t *conn, const char *name, char *decl, int query_offset, long flags);
 
 extern PHP_MINIT_FUNCTION(pqcur);
 extern PHP_MSHUTDOWN_FUNCTION(pqcur);

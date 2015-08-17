@@ -36,48 +36,35 @@ static zend_object_handlers php_pqres_object_handlers;
 static HashTable php_pqres_object_prophandlers;
 static zend_object_iterator_funcs php_pqres_iterator_funcs;
 
-static zend_object_iterator *php_pqres_iterator_init(zend_class_entry *ce, zval *object, int by_ref TSRMLS_DC)
+static zend_object_iterator *php_pqres_iterator_init(zend_class_entry *ce, zval *object, int by_ref)
 {
 	php_pqres_iterator_t *iter;
-	zval *prop, *zfetch_type;
+	zval tmp, *zfetch_type;
 
 	iter = ecalloc(1, sizeof(*iter));
 	iter->zi.funcs = &php_pqres_iterator_funcs;
-	iter->zi.data = zend_object_store_get_object(object TSRMLS_CC);
-	zend_objects_store_add_ref(object TSRMLS_CC);
+	iter->zi.data = PHP_PQ_OBJ(object, NULL);
+	php_pq_object_addref(iter->zi.data);
 
-	zfetch_type = prop = zend_read_property(ce, object, ZEND_STRL("fetchType"), 0 TSRMLS_CC);
-	if (Z_TYPE_P(zfetch_type) != IS_LONG) {
-		convert_to_long_ex(&zfetch_type);
-	}
-	iter->fetch_type = Z_LVAL_P(zfetch_type);
-	if (zfetch_type != prop) {
-		zval_ptr_dtor(&zfetch_type);
-	}
-	if (Z_REFCOUNT_P(prop)) {
-		zval_ptr_dtor(&prop);
-	} else {
-		zval_dtor(prop);
-		FREE_ZVAL(prop);
-	}
+	zfetch_type = zend_read_property(ce, object, ZEND_STRL("fetchType"), 0, &tmp);
+	iter->fetch_type = zval_get_long(zfetch_type);
 
 	return (zend_object_iterator *) iter;
 }
 
-static void php_pqres_iterator_dtor(zend_object_iterator *i TSRMLS_DC)
+static void php_pqres_iterator_dtor(zend_object_iterator *i)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
 	php_pqres_object_t *obj = i->data;
 
-	if (iter->current_val) {
+	if (!Z_IS_UNDEF(&iter->current_val)) {
 		zval_ptr_dtor(&iter->current_val);
-		iter->current_val = NULL;
 	}
-	zend_objects_store_del_ref_by_handle_ex(obj->zv.handle, obj->zv.handlers TSRMLS_CC);
+	php_pq_object_delref(obj);
 	efree(iter);
 }
 
-static ZEND_RESULT_CODE php_pqres_iterator_valid(zend_object_iterator *i TSRMLS_DC)
+static ZEND_RESULT_CODE php_pqres_iterator_valid(zend_object_iterator *i)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
 	php_pqres_object_t *obj = i->data;
@@ -101,35 +88,33 @@ static ZEND_RESULT_CODE php_pqres_iterator_valid(zend_object_iterator *i TSRMLS_
 #define PHP_PQRES_JSON_OPTIONS(res) \
 	(php_pqres_fetch_type(res) != PHP_PQRES_FETCH_OBJECT ? PHP_JSON_OBJECT_AS_ARRAY:0)
 
-zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRMLS_DC)
+zval *php_pqres_typed_zval(php_pqres_t *res, Oid typ, zval *zv)
 {
-	zval *zv, **zconv;
+	zval *zconv;
+	HashTable *ht;
+	zend_string *str;
 
-	MAKE_STD_ZVAL(zv);
+	if ((zconv = zend_hash_index_find(&res->converters, typ))) {
+		zval ztype, rv;
 
-	if (SUCCESS == zend_hash_index_find(&res->converters, typ, (void *) &zconv)) {
-		zval *ztype, *tmp = NULL;
+		ZVAL_NULL(&rv);
+		ZVAL_LONG(&ztype, typ);
+		zend_call_method_with_2_params(zconv, NULL, NULL, "convertfromstring", &rv, zv, &ztype);
 
-		MAKE_STD_ZVAL(ztype);
-		ZVAL_LONG(ztype, typ);
-		ZVAL_STRINGL(zv, val, len, 1);
-		zend_call_method_with_2_params(zconv, NULL, NULL, "convertfromstring", &tmp, zv, ztype);
-		zval_ptr_dtor(&ztype);
-
-		if (tmp) {
-			zval_ptr_dtor(&zv);
-			zv = tmp;
-		}
+		ZVAL_ZVAL(&rv, zv, 1, 1);
 
 		return zv;
 	}
+
+	str = zval_get_string(zv);
+	zval_ptr_dtor(zv);
 
 	switch (typ) {
 	case PHP_PQ_OID_BOOL:
 		if (!(res->auto_convert & PHP_PQRES_CONV_BOOL)) {
 			goto noconversion;
 		}
-		ZVAL_BOOL(zv, *val == 't');
+		ZVAL_BOOL(zv, *str->val == 't');
 		break;
 
 	case PHP_PQ_OID_INT8:
@@ -145,7 +130,7 @@ zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRM
 			long lval;
 			double dval;
 
-			switch (is_numeric_string(val, len, &lval, &dval, 0)) {
+			switch (is_numeric_str_function(str, &lval, &dval)) {
 				case IS_LONG:
 					ZVAL_LONG(zv, lval);
 					break;
@@ -163,35 +148,35 @@ zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRM
 		if (!(res->auto_convert & PHP_PQRES_CONV_FLOAT)) {
 			goto noconversion;
 		}
-		ZVAL_DOUBLE(zv, zend_strtod(val, NULL));
+		ZVAL_DOUBLE(zv, zend_strtod(str->val, NULL));
 		break;
 
 	case PHP_PQ_OID_DATE:
 		if (!(res->auto_convert & PHP_PQRES_CONV_DATETIME)) {
 			goto noconversion;
 		}
-		php_pqdt_from_string(zv, NULL, val, len, "Y-m-d", NULL TSRMLS_CC);
+		php_pqdt_from_string(zv, NULL, str->val, str->len, "Y-m-d", NULL);
 		break;
 
 	case PHP_PQ_OID_ABSTIME:
 		if (!(res->auto_convert & PHP_PQRES_CONV_DATETIME)) {
 			goto noconversion;
 		}
-		php_pqdt_from_string(zv, NULL, val, len, "Y-m-d H:i:s", NULL TSRMLS_CC);
+		php_pqdt_from_string(zv, NULL, str->val, str->len, "Y-m-d H:i:s", NULL);
 		break;
 
 	case PHP_PQ_OID_TIMESTAMP:
 		if (!(res->auto_convert & PHP_PQRES_CONV_DATETIME)) {
 			goto noconversion;
 		}
-		php_pqdt_from_string(zv, NULL, val, len, "Y-m-d H:i:s.u", NULL TSRMLS_CC);
+		php_pqdt_from_string(zv, NULL, str->val, str->len, "Y-m-d H:i:s.u", NULL);
 		break;
 
 	case PHP_PQ_OID_TIMESTAMPTZ:
 		if (!(res->auto_convert & PHP_PQRES_CONV_DATETIME)) {
 			goto noconversion;
 		}
-		php_pqdt_from_string(zv, NULL, val, len, "Y-m-d H:i:s.uO", NULL TSRMLS_CC);
+		php_pqdt_from_string(zv, NULL, str->val, str->len, "Y-m-d H:i:s.uO", NULL);
 		break;
 
 #if PHP_PQ_HAVE_PHP_JSON_H && defined(PHP_PQ_OID_JSON)
@@ -202,7 +187,7 @@ zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRM
 		if (!(res->auto_convert & PHP_PQRES_CONV_JSON)) {
 			goto noconversion;
 		}
-		php_json_decode_ex(zv, val, len, PHP_PQRES_JSON_OPTIONS(res), 512 /* PHP_JSON_DEFAULT_DEPTH */ TSRMLS_CC);
+		php_json_decode_ex(zv, str->val, str->len, PHP_PQRES_JSON_OPTIONS(res), 512 /* PHP_JSON_DEFAULT_DEPTH */);
 		break;
 #endif
 
@@ -210,33 +195,35 @@ zval *php_pqres_typed_zval(php_pqres_t *res, char *val, size_t len, Oid typ TSRM
 		if (!(res->auto_convert & PHP_PQRES_CONV_ARRAY)) {
 			goto noconversion;
 		}
-		if (PHP_PQ_TYPE_IS_ARRAY(typ) && (Z_ARRVAL_P(zv) = php_pq_parse_array(res, val, len, PHP_PQ_TYPE_OF_ARRAY(typ) TSRMLS_CC))) {
-			Z_TYPE_P(zv) = IS_ARRAY;
+		if (PHP_PQ_TYPE_IS_ARRAY(typ) && (ht = php_pq_parse_array(res, str->val, str->len, PHP_PQ_TYPE_OF_ARRAY(typ)))) {
+			ZVAL_ARR(zv, ht);
 		} else {
-			noconversion:
-			ZVAL_STRINGL(zv, val, len, 1);
+			goto noconversion;
 		}
 		break;
 	}
 
+	zend_sring_release(str);
+	return zv;
+
+	noconversion:
+	ZVAL_STR(zv, str);
 	return zv;
 }
 
-static inline zval *php_pqres_get_col(php_pqres_t *r, unsigned row, unsigned col TSRMLS_DC)
+static inline zval *php_pqres_get_col(php_pqres_t *r, unsigned row, unsigned col, zval *zv)
 {
-	zval *zv;
-
 	if (PQgetisnull(r->res, row, col)) {
-		MAKE_STD_ZVAL(zv);
 		ZVAL_NULL(zv);
 	} else {
-		zv = php_pqres_typed_zval(r, PQgetvalue(r->res, row, col), PQgetlength(r->res, row, col), PQftype(r->res, col) TSRMLS_CC);
+		ZVAL_STRINGL(zv, PQgetvalue(r->res, row, col), PQgetlength(r->res, row, col));
+		zv = php_pqres_typed_zval(r, PQftype(r->res, col), zv);
 	}
 
 	return zv;
 }
 
-static inline void php_pqres_add_col_to_zval(php_pqres_t *r, unsigned row, unsigned col, php_pqres_fetch_t fetch_type, zval *data TSRMLS_DC)
+static inline void php_pqres_add_col_to_zval(php_pqres_t *r, unsigned row, unsigned col, php_pqres_fetch_t fetch_type, zval *data)
 {
 	if (PQgetisnull(r->res, row, col)) {
 		switch (fetch_type) {
@@ -253,51 +240,44 @@ static inline void php_pqres_add_col_to_zval(php_pqres_t *r, unsigned row, unsig
 			break;
 		}
 	} else {
-		zval *zv;
+		zval zv;
 
-		zv = php_pqres_typed_zval(r, PQgetvalue(r->res, row, col), PQgetlength(r->res, row, col), PQftype(r->res, col) TSRMLS_CC);
+		ZVAL_STRINGL(&zv, PQgetvalue(r->res, row, col), PQgetlength(r->res, row, col));
+		php_pqres_typed_zval(r, PQftype(r->res, col), &zv);
 
 		switch (fetch_type) {
 		case PHP_PQRES_FETCH_OBJECT:
-			add_property_zval(data, PQfname(r->res, col), zv);
+			add_property_zval(data, PQfname(r->res, col), &zv);
 			zval_ptr_dtor(&zv);
 			break;
 
 		case PHP_PQRES_FETCH_ASSOC:
-			add_assoc_zval(data, PQfname(r->res, col), zv);
+			add_assoc_zval(data, PQfname(r->res, col), &zv);
 			break;
 
 		case PHP_PQRES_FETCH_ARRAY:
-			add_index_zval(data, col, zv);
+			add_index_zval(data, col, &zv);
 			break;
 		}
 	}
 }
 
-zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch_type, zval **data_ptr TSRMLS_DC)
+zval *php_pqres_row_to_zval(PGresult *res, unsigned row, php_pqres_fetch_t fetch_type, zval *data)
 {
-	zval *data = NULL;
 	int c, cols;
 	php_pqres_object_t *res_obj = PQresultInstanceData(res, php_pqconn_event);
 
-	if (data_ptr) {
-		data = *data_ptr;
-	}
-	if (!data) {
-		MAKE_STD_ZVAL(data);
+	if (Z_TYPE_P(data) != IS_OBJECT && Z_TYPE_P(data) != IS_ARRAY) {
 		if (PHP_PQRES_FETCH_OBJECT == fetch_type) {
 			object_init(data);
 		} else {
 			array_init(data);
 		}
-		if (data_ptr) {
-			*data_ptr = data;
-		}
 	}
 
 	if (PQntuples(res) > row) {
 		for (c = 0, cols = PQnfields(res); c < cols; ++c) {
-			php_pqres_add_col_to_zval(res_obj->intern, row, c, fetch_type, data TSRMLS_CC);
+			php_pqres_add_col_to_zval(res_obj->intern, row, c, fetch_type, data);
 		}
 	}
 
