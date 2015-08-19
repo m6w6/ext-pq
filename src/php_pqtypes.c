@@ -114,6 +114,9 @@ static int php_pqtypes_object_has_dimension(zval *object, zval *member, int chec
 				return Z_TYPE_P(data) != IS_NULL;
 			}
 		} else {
+			if (key) {
+				zend_string_release(key);
+			}
 			return 1;
 		}
 	}
