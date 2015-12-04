@@ -13,17 +13,17 @@ http://pear.php.net/dtd/package-2.0.xsd">
  <channel>pecl.php.net</channel>
  <summary>PostgreSQL client library (libpq) binding</summary>
  <description>
- Documents: http://devel-m6w6.rhcloud.com/mdref/pq
+ Documents: https://mdref.m6w6.name/pq
  
  Highlights:
  * Nearly complete support for asynchronous usage:
-   http://devel-m6w6.rhcloud.com/mdref/pq/Connection/%3A%20Asynchronous%20Usage
+   https://mdref.m6w6.name/pq/Connection/%3A%20Asynchronous%20Usage
  * Extended type support by pg_type:
-   http:/devel-m6w6.rhcloud.com/mdref/pq/Types/%3A%20Overview
+   https://mdref.m6w6.name/pq/Types/%3A%20Overview
  * Fetching simple multi-dimensional array maps:
-   http:/devel-m6w6.rhcloud.com/mdref/pq/Result/map
+   https://mdref.m6w6.name/pq/Result/map
  * Working Gateway implementation: 
-   https://http://devel-m6w6.rhcloud.com/mdref/pq-gateway
+   https://mdref.m6w6.name/pq-gateway
  </description>
  <lead>
   <name>Michael Wallner</name>
@@ -37,9 +37,9 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>daverandom@php.net</email>
   <active>yes</active>
  </developer>
- <date>2015-07-28</date>
+ <date>2015-09-05</date>
  <version>
-  <release>0.6.0RC2</release>
+  <release>0.6.0</release>
   <api>0.6.0</api>
  </version>
  <stability>
@@ -160,7 +160,9 @@ Changes from RC1:
  <dependencies>
   <required>
    <php>
-    <min>5.4</min>
+    <min>5.4.0</min>
+    <max>7.0.0</max>
+    <exclude>7.0.0</exclude>
    </php>
    <pearinstaller>
     <min>1.4.0</min>
