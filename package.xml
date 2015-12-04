@@ -37,27 +37,18 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>daverandom@php.net</email>
   <active>yes</active>
  </developer>
- <date>2015-09-05</date>
+ <date>2015-12-04</date>
  <version>
-  <release>0.6.0</release>
-  <api>0.6.0</api>
+  <release>2.0.0RC1</release>
+  <api>2.0.0</api>
  </version>
  <stability>
   <release>beta</release>
-  <api>beta</api>
+  <api>stable</api>
  </stability>
  <license>BSD, revised</license>
  <notes><![CDATA[
-* Fixed crash with result iterator when the iterator exists longer than the result
-* Fixed array parser compatibility with arrays of boxes 
-+ Added pq\Statement::deallocate{,Async}() and pq\Statement::prepare{,Async}() methods
-+ Added pq\Statement::$query and pq\Statement::$types readonly properties
-+ Added pq\Cursor::{open,close}Async() methods
-+ Added pq\Cursor::$query and pq\Cursor::$flags readonly properties
-
-Changes from RC1:
-* Fixed RTLD_LAZY compatibility with pecl/raphf
-* Simplified config.m4
+* PHP 7 compatible release
 ]]></notes>
  <contents>
   <dir name="/">
@@ -160,9 +151,7 @@ Changes from RC1:
  <dependencies>
   <required>
    <php>
-    <min>5.4.0</min>
-    <max>7.0.0</max>
-    <exclude>7.0.0</exclude>
+    <min>7.0.0</min>
    </php>
    <pearinstaller>
     <min>1.4.0</min>
@@ -170,7 +159,7 @@ Changes from RC1:
    <package>
     <name>raphf</name>
     <channel>pecl.php.net</channel>
-    <min>1.1.0</min>
+    <min>2.0.0dev</min>
     <providesextension>raphf</providesextension>
    </package>
   </required>
