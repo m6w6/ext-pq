@@ -13,13 +13,29 @@ This is a modern binding to the mature [libpq](http://www.postgresql.org/docs/cu
 * Fetching simple [multi-dimensional array maps](https://mdref.m6w6.name/pq/Result/map).
 * Working [Gateway implementation](https://github.com/m6w6/pq-gateway).
 
-## Installation:
+## Documentation
 
-This extension is hosted at [PECL](http://pecl.php.net) and can be installed with [PEAR](http://pear.php.net)'s pecl command:
+See the [online markdown reference](https://mdref.m6w6.name/pq).
 
-	# pecl install pq
+Known issues are listed in [BUGS](./BUGS) and future ideas can be found in [TODO](./TODO).
 
-Also, watch out for self-installing [pharext](https://github.com/m6w6/pharext) packages attached to [releases](https://github.com/m6w6/ext-pq/releases).
+## Installing
+
+### PECL
+
+	pecl install pq
+
+Watch out for [PECL replicates](https://replicator.pharext.org?pq)
+and pharext packages attached to [releases](./releases).
+
+### Checkout
+
+	git clone github.com:m6w6/ext-pq
+	cd ext-pq
+	/path/to/phpize
+	./configure --with-php-config=/path/to/php-config
+	make
+	sudo make install
 
 ## Dependencies:
 
@@ -32,7 +48,19 @@ It optionally depends on the following extensions:
 
 * [json](http://php.net/json)
 
+## ChangeLog
 
-## Documentation:
+A comprehensive list of changes can be obtained from the
+[PECL website](https://pecl.php.net/package-changelog.php?package=pq).
 
-Documentation is available at https://mdref.m6w6.name/pq
+## License
+
+ext-pq is licensed under the 2-Clause-BSD license, which can be found in
+the accompanying [LICENSE](./LICENSE) file.
+
+## Contributing
+
+All forms of contribution are welcome! Please see the bundled
+[CONTRIBUTING](./CONTRIBUTING.md) note for the general principles followed.
+
+The list of past and current contributors is maintained in [THANKS](./THANKS).
