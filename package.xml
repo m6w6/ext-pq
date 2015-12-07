@@ -37,27 +37,18 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <email>daverandom@php.net</email>
   <active>yes</active>
  </developer>
- <date>2015-09-05</date>
+ <date>2015-12-04</date>
  <version>
-  <release>0.6.0</release>
-  <api>0.6.0</api>
+  <release>1.0.0RC1</release>
+  <api>1.0.0</api>
  </version>
  <stability>
   <release>beta</release>
-  <api>beta</api>
+  <api>stable</api>
  </stability>
  <license>BSD, revised</license>
  <notes><![CDATA[
-* Fixed crash with result iterator when the iterator exists longer than the result
-* Fixed array parser compatibility with arrays of boxes 
-+ Added pq\Statement::deallocate{,Async}() and pq\Statement::prepare{,Async}() methods
-+ Added pq\Statement::$query and pq\Statement::$types readonly properties
-+ Added pq\Cursor::{open,close}Async() methods
-+ Added pq\Cursor::$query and pq\Cursor::$flags readonly properties
-
-Changes from RC1:
-* Fixed RTLD_LAZY compatibility with pecl/raphf
-* Simplified config.m4
+* Stable release for PHP 5.4 - 5.6
 ]]></notes>
  <contents>
   <dir name="/">

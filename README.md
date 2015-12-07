@@ -1,6 +1,6 @@
 # pecl/pq
 
-[![Build Status](https://travis-ci.org/m6w6/ext-pq.svg?branch=master)](https://travis-ci.org/m6w6/ext-pq)
+[![Build Status](https://travis-ci.org/m6w6/ext-pq.svg?branch=v1.0.x)](https://travis-ci.org/m6w6/ext-pq)
 
 ## About:
 
