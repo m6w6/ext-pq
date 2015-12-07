@@ -1,20 +1,18 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<package 
- packagerversion="1.4.11" 
- version="2.0" 
- xmlns="http://pear.php.net/dtd/package-2.0" 
- xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" 
- xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
- xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0
-http://pear.php.net/dtd/tasks-1.0.xsd
-http://pear.php.net/dtd/package-2.0
-http://pear.php.net/dtd/package-2.0.xsd">
+<?xml version="1.0" encoding="UTF-8" ?>
+<package version="2.0" xmlns="http://pear.php.net/dtd/package-2.0"
+ xmlns:tasks="http://pear.php.net/dtd/tasks-1.0"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="
+  http://pear.php.net/dtd/tasks-1.0
+  http://pear.php.net/dtd/tasks-1.0.xsd
+  http://pear.php.net/dtd/package-2.0
+  http://pear.php.net/dtd/package-2.0.xsd">
  <name>pq</name>
  <channel>pecl.php.net</channel>
  <summary>PostgreSQL client library (libpq) binding</summary>
  <description>
  Documents: https://mdref.m6w6.name/pq
- 
+
  Highlights:
  * Nearly complete support for asynchronous usage:
    https://mdref.m6w6.name/pq/Connection/%3A%20Asynchronous%20Usage
@@ -22,7 +20,7 @@ http://pear.php.net/dtd/package-2.0.xsd">
    https://mdref.m6w6.name/pq/Types/%3A%20Overview
  * Fetching simple multi-dimensional array maps:
    https://mdref.m6w6.name/pq/Result/map
- * Working Gateway implementation: 
+ * Working Gateway implementation:
    https://mdref.m6w6.name/pq-gateway
  </description>
  <lead>
@@ -46,14 +44,18 @@ http://pear.php.net/dtd/package-2.0.xsd">
   <release>beta</release>
   <api>stable</api>
  </stability>
- <license>BSD, revised</license>
+ <license uri="http://copyfree.org/content/standard/licenses/2bsd/license.txt">BSD-2-Clause</license>
  <notes><![CDATA[
 * PHP 7 compatible release
 ]]></notes>
  <contents>
   <dir name="/">
+   <file role="doc" name="AUTHORS" />
+   <file role="doc" name="BUGS" />
+   <file role="doc" name="CONTRIBUTING.md" />
    <file role="doc" name="CREDITS" />
    <file role="doc" name="LICENSE" />
+   <file role="doc" name="THANKS" />
    <file role="doc" name="TODO" />
    <file role="doc" name="README.md" />
    <file role="src" name="config.m4" />

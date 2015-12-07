@@ -1,0 +1,23 @@
+; see http://editorconfig.org
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+indent_style = tab
+charset = utf-8
+trim_trailing_whitespace = true
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.json]
+indent_style = space
+indent_size = 4
+
+[package.xml]
+indent_style = space
+indent_size = 1
+
+[config.w32]
+end_of_line = crlf
