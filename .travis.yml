@@ -39,7 +39,7 @@ env:
 
 before_script:
  - make -f travis/pecl/Makefile php
- - make -f travis/pecl/Makefile pecl PECL=raphf
+ - make -f travis/pecl/Makefile pecl PECL=raphf:raphf:1.1.1RC1
  - psql -U postgres -c "CREATE DATABASE test"
 
 script:
