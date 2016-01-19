@@ -12,22 +12,22 @@ env:
  global:
   - PQ_DSN="postgres://postgres@localhost/test"
  matrix:
-  - PHP=7.0 enable_debug=no enable_maintainer_zts=no enable_json=no enable_hash=yes enable_phar=yes enable_posix=yes
-  - PHP=master enable_debug=no enable_maintainer_zts=no enable_json=no enable_hash=yes enable_phar=yes enable_posix=yes
-  - PHP=7.0 enable_debug=yes enable_maintainer_zts=no enable_json=no enable_hash=yes enable_phar=yes enable_posix=yes
-  - PHP=master enable_debug=yes enable_maintainer_zts=no enable_json=no enable_hash=yes enable_phar=yes enable_posix=yes
-  - PHP=7.0 enable_debug=no enable_maintainer_zts=yes enable_json=no enable_hash=yes enable_phar=yes enable_posix=yes
-  - PHP=master enable_debug=no enable_maintainer_zts=yes enable_json=no enable_hash=yes enable_phar=yes enable_posix=yes
-  - PHP=7.0 enable_debug=yes enable_maintainer_zts=yes enable_json=no enable_hash=yes enable_phar=yes enable_posix=yes
-  - PHP=master enable_debug=yes enable_maintainer_zts=yes enable_json=no enable_hash=yes enable_phar=yes enable_posix=yes
-  - PHP=7.0 enable_debug=no enable_maintainer_zts=no enable_json=yes enable_hash=yes enable_phar=yes enable_posix=yes
-  - PHP=master enable_debug=no enable_maintainer_zts=no enable_json=yes enable_hash=yes enable_phar=yes enable_posix=yes
-  - PHP=7.0 enable_debug=yes enable_maintainer_zts=no enable_json=yes enable_hash=yes enable_phar=yes enable_posix=yes
-  - PHP=master enable_debug=yes enable_maintainer_zts=no enable_json=yes enable_hash=yes enable_phar=yes enable_posix=yes
-  - PHP=7.0 enable_debug=no enable_maintainer_zts=yes enable_json=yes enable_hash=yes enable_phar=yes enable_posix=yes
-  - PHP=master enable_debug=no enable_maintainer_zts=yes enable_json=yes enable_hash=yes enable_phar=yes enable_posix=yes
-  - PHP=7.0 enable_debug=yes enable_maintainer_zts=yes enable_json=yes enable_hash=yes enable_phar=yes enable_posix=yes
-  - PHP=master enable_debug=yes enable_maintainer_zts=yes enable_json=yes enable_hash=yes enable_phar=yes enable_posix=yes
+  - PHP=7.0 enable_debug=no enable_maintainer_zts=no enable_json=no
+  - PHP=master enable_debug=no enable_maintainer_zts=no enable_json=no
+  - PHP=7.0 enable_debug=yes enable_maintainer_zts=no enable_json=no
+  - PHP=master enable_debug=yes enable_maintainer_zts=no enable_json=no
+  - PHP=7.0 enable_debug=no enable_maintainer_zts=yes enable_json=no
+  - PHP=master enable_debug=no enable_maintainer_zts=yes enable_json=no
+  - PHP=7.0 enable_debug=yes enable_maintainer_zts=yes enable_json=no
+  - PHP=master enable_debug=yes enable_maintainer_zts=yes enable_json=no
+  - PHP=7.0 enable_debug=no enable_maintainer_zts=no enable_json=yes
+  - PHP=master enable_debug=no enable_maintainer_zts=no enable_json=yes
+  - PHP=7.0 enable_debug=yes enable_maintainer_zts=no enable_json=yes
+  - PHP=master enable_debug=yes enable_maintainer_zts=no enable_json=yes
+  - PHP=7.0 enable_debug=no enable_maintainer_zts=yes enable_json=yes
+  - PHP=master enable_debug=no enable_maintainer_zts=yes enable_json=yes
+  - PHP=7.0 enable_debug=yes enable_maintainer_zts=yes enable_json=yes
+  - PHP=master enable_debug=yes enable_maintainer_zts=yes enable_json=yes
 
 before_script:
  - make -f travis/pecl/Makefile php
