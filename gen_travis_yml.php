@@ -33,7 +33,7 @@ foreach ($env as $e) {
 
 before_script:
  - make -f travis/pecl/Makefile php
- - make -f travis/pecl/Makefile pharext/raphf-master
+ - make -f travis/pecl/Makefile pecl PECL=raphf:raphf:2.0.0
  - make -f travis/pecl/Makefile ext PECL=pq
  - psql -U postgres -c "CREATE DATABASE test"
 
