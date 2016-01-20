@@ -145,7 +145,7 @@ zval *php_pqres_typed_zval(php_pqres_t *res, Oid typ, zval *zv)
 			goto noconversion;
 		}
 		{
-			long lval;
+			zend_long lval;
 			double dval;
 
 			switch (is_numeric_str_function(str, &lval, &dval)) {
@@ -561,7 +561,7 @@ typedef struct php_pqres_col {
 
 static ZEND_RESULT_CODE column_nn(php_pqres_object_t *obj, zval *zcol, php_pqres_col_t *col)
 {
-	long index = -1;
+	zend_long index = -1;
 	char *name = NULL;
 
 	if (!zcol) {
