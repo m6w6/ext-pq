@@ -46,7 +46,7 @@
  </stability>
  <license uri="http://copyfree.org/content/standard/licenses/2bsd/license.txt">BSD-2-Clause</license>
  <notes><![CDATA[
-* 
+* Fix github issue #9 (execAsync - gets another result)
 ]]></notes>
  <contents>
   <dir name="/">
@@ -110,6 +110,9 @@
     <file role="test" name="basic001.phpt" />
     <file role="test" name="basic002.phpt" />
     <file role="test" name="bound002.phpt" />
+    <file role="test" name="callback001.phpt" />
+    <file role="test" name="callback002.phpt" />
+    <file role="test" name="callback003.phpt" />
     <file role="test" name="cancel001.phpt" />
     <file role="test" name="conv001.phpt" />
     <file role="test" name="copy001.phpt" />

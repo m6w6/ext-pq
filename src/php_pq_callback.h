@@ -26,6 +26,10 @@ extern void php_pq_callback_addref(php_pq_callback_t *cb);
 extern zval *php_pq_callback_to_zval(php_pq_callback_t *cb);
 extern zend_bool php_pq_callback_is_locked(php_pq_callback_t *cb TSRMLS_DC);
 extern void php_pq_callback_recurse(php_pq_callback_t *old, php_pq_callback_t *new TSRMLS_DC);
+extern zend_bool php_pq_callback_is_enabled(php_pq_callback_t *cb);
+extern void php_pq_callback_disable(php_pq_callback_t *cb TSRMLS_DC);
+extern void php_pq_callback_recurse_ex(php_pq_callback_t *old, php_pq_callback_t *new TSRMLS_DC);
+extern zend_bool php_pq_callback_is_recurrent(php_pq_callback_t *cb);
 
 #endif
 

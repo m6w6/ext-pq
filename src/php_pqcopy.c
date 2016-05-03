@@ -150,7 +150,7 @@ static PHP_METHOD(pqcopy, __construct) {
 			smart_str_appendl(&cmd, opt_str, opt_len);
 			smart_str_0(&cmd);
 
-			res = PQexec(conn_obj->intern->conn, cmd.c);
+			res = php_pq_exec(conn_obj->intern->conn, cmd.c);
 
 			if (!res) {
 				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to start %s (%s)", cmd.c, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
@@ -164,7 +164,7 @@ static PHP_METHOD(pqcopy, __construct) {
 					php_pq_object_addref(conn_obj TSRMLS_CC);
 				}
 
-				PHP_PQclear(res);
+				php_pq_clear_res(res);
 			}
 
 			smart_str_free(&cmd);
@@ -232,7 +232,7 @@ static PHP_METHOD(pqcopy, end) {
 					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to fetch COPY result (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				} else {
 					php_pqres_success(res TSRMLS_CC);
-					PHP_PQclear(res);
+					php_pq_clear_res(res);
 				}
 			}
 
@@ -277,7 +277,7 @@ static PHP_METHOD(pqcopy, get) {
 					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to fetch COPY result (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				} else {
 					php_pqres_success(res TSRMLS_CC);
-					PHP_PQclear(res);
+					php_pq_clear_res(res);
 					RETVAL_FALSE;
 				}
 				break;

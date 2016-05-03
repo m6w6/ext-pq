@@ -275,7 +275,7 @@ static PHP_METHOD(pqtypes, refresh) {
 			PGresult *res;
 
 			if (!nsp || !zend_hash_num_elements(nsp)) {
-				res = PQexec(obj->intern->conn->intern->conn, PHP_PQ_TYPES_QUERY " and nspname in ('public', 'pg_catalog')");
+				res = php_pq_exec(obj->intern->conn->intern->conn, PHP_PQ_TYPES_QUERY " and nspname in ('public', 'pg_catalog')");
 			} else {
 				smart_str str = {0};
 				php_pq_params_t *params = php_pq_params_init(&obj->intern->conn->intern->converters, NULL, NULL TSRMLS_CC);
@@ -285,7 +285,7 @@ static PHP_METHOD(pqtypes, refresh) {
 				smart_str_appendc(&str, ')');
 				smart_str_0(&str);
 
-				res = PQexecParams(obj->intern->conn->intern->conn, str.c, params->param.count, params->type.oids, (const char *const*) params->param.strings, NULL, NULL, 0);
+				res = php_pq_exec_params(obj->intern->conn->intern->conn, str.c, params->param.count, params->type.oids, (const char *const*) params->param.strings, NULL, NULL, 0);
 
 				smart_str_free(&str);
 				php_pq_params_free(&params);
@@ -309,7 +309,7 @@ static PHP_METHOD(pqtypes, refresh) {
 					}
 				}
 
-				PHP_PQclear(res);
+				php_pq_clear_res(res);
 				php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
 			}
 		}

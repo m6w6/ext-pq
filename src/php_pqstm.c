@@ -51,8 +51,8 @@ static void php_pqstm_deallocate(php_pqstm_object_t *obj, zend_bool async, zend_
 			} else {
 				PGresult *res;
 
-				if ((res = PQexec(obj->intern->conn->intern->conn, cmd.c))) {
-					PHP_PQclear(res);
+				if ((res = php_pq_exec(obj->intern->conn->intern->conn, cmd.c))) {
+					php_pq_clear_res(res);
 				} else if (!silent) {
 					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to deallocate statement (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				}
@@ -262,7 +262,7 @@ static PHP_METHOD(pqstm, exec) {
 			PGresult *res;
 
 			php_pq_params_set_params(obj->intern->params, zparams ? Z_ARRVAL_P(zparams) : &obj->intern->bound);
-			res = PQexecPrepared(obj->intern->conn->intern->conn, obj->intern->name, obj->intern->params->param.count, (const char *const*) obj->intern->params->param.strings, NULL, NULL, 0);
+			res = php_pq_exec_prepared(obj->intern->conn->intern->conn, obj->intern->name, obj->intern->params->param.count, (const char *const*) obj->intern->params->param.strings, NULL, NULL, 0);
 			php_pq_params_set_params(obj->intern->params, NULL);
 
 			if (!res) {
@@ -350,7 +350,7 @@ static PHP_METHOD(pqstm, desc) {
 						add_next_index_long(return_value, PQparamtype(res, p));
 					}
 				}
-				PHP_PQclear(res);
+				php_pq_clear_res(res);
 				php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
 			}
 		}

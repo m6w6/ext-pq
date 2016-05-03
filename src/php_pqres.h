@@ -62,14 +62,6 @@ extern php_pqres_fetch_t php_pqres_fetch_type(php_pqres_t *res);
 
 #include "php_pq_object.h"
 #include "php_pqconn_event.h"
-#define PHP_PQclear(_r) do { \
-	php_pqres_object_t *_o = PQresultInstanceData((_r), php_pqconn_event); \
-	if (_o) { \
-		php_pq_object_delref(_o TSRMLS_CC); \
-	} else { \
-		PQclear(_r); \
-	} \
-} while(0)
 
 extern zend_class_entry *php_pqres_class_entry;
 extern zend_object_value php_pqres_create_object_ex(zend_class_entry *ce, php_pqres_t *intern, php_pqres_object_t **ptr TSRMLS_DC);

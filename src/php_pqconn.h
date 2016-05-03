@@ -19,6 +19,7 @@
 
 #include <ext/raphf/php_raphf.h>
 #include "php_pq_callback.h"
+#include "php_pq_object.h"
 #include "php_pq_params.h"
 
 typedef struct php_pqconn {

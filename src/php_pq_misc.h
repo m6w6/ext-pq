@@ -27,6 +27,16 @@ typedef enum {
 
 #include "php_pqres.h"
 
+/* clear result object associated with a result handle */
+extern void php_pq_clear_res(PGresult *r);
+/* clear any asynchronous results */
+extern void php_pq_clear_conn(PGconn *conn);
+/* safe wrappers to clear any asynchronous wrappers before querying synchronously */
+extern PGresult *php_pq_exec(PGconn *conn, const char *query);
+extern PGresult *php_pq_exec_params(PGconn *conn, const char *command, int nParams, const Oid *paramTypes, const char *const * paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
+extern PGresult *php_pq_prepare(PGconn *conn, const char *stmtName, const char *query, int nParams, const Oid *paramTypes);
+extern PGresult *php_pq_exec_prepared(PGconn *conn, const char *stmtName, int nParams, const char *const * paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
+
 /* TSRM morony */
 #if PHP_VERSION_ID >= 50700
 #	define z_is_true(z) zend_is_true(z TSRMLS_CC)

@@ -47,8 +47,8 @@ static void cur_close(php_pqcur_object_t *obj, zend_bool async, zend_bool silent
 				throw_exce(EX_IO TSRMLS_CC, "Failed to close cursor (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			}
 		} else {
-			if ((res = PQexec(obj->intern->conn->intern->conn, cmd.c))) {
-				PHP_PQclear(res);
+			if ((res = php_pq_exec(obj->intern->conn->intern->conn, cmd.c))) {
+				php_pq_clear_res(res);
 			} else if (!silent) {
 				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to close cursor (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			}
@@ -133,7 +133,7 @@ static void cur_fetch_or_move(INTERNAL_FUNCTION_PARAMETERS, const char *action, 
 					obj->intern->conn->intern->poller = PQconsumeInput;
 				}
 			} else {
-				PGresult *res = PQexec(obj->intern->conn->intern->conn, cmd.c);
+				PGresult *res = php_pq_exec(obj->intern->conn->intern->conn, cmd.c);
 
 				if (!res) {
 					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to %s cursor (%s)", *action == 'f' ? "fetch from" : "move in", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
