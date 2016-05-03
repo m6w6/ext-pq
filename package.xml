@@ -37,7 +37,7 @@
  </developer>
  <date>2016-05-03</date>
  <version>
-  <release>2.0.1</release>
+  <release>2.0.2dev</release>
   <api>2.0.0</api>
  </version>
  <stability>
@@ -46,7 +46,7 @@
  </stability>
  <license uri="http://copyfree.org/content/standard/licenses/2bsd/license.txt">BSD-2-Clause</license>
  <notes><![CDATA[
-* Fix github issue #9 (execAsync - gets another result)
+* 
 ]]></notes>
  <contents>
   <dir name="/">
