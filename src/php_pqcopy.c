@@ -155,7 +155,7 @@ static PHP_METHOD(pqcopy, __construct) {
 					php_pq_object_addref(conn_obj);
 				}
 
-				php_pq_clear_res(res);
+				php_pqres_clear(res);
 			}
 
 			smart_str_free(&cmd);
@@ -223,7 +223,7 @@ static PHP_METHOD(pqcopy, end) {
 					throw_exce(EX_RUNTIME, "Failed to fetch COPY result (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				} else {
 					php_pqres_success(res);
-					php_pq_clear_res(res);
+					php_pqres_clear(res);
 				}
 			}
 
@@ -268,7 +268,7 @@ static PHP_METHOD(pqcopy, get) {
 					throw_exce(EX_RUNTIME, "Failed to fetch COPY result (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				} else {
 					php_pqres_success(res);
-					php_pq_clear_res(res);
+					php_pqres_clear(res);
 					RETVAL_FALSE;
 				}
 				break;

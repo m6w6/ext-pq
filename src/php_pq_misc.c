@@ -31,7 +31,7 @@
 
 
 /* clear result object associated with a result handle */
-void php_pq_clear_res(PGresult *r) {
+void php_pqres_clear(PGresult *r) {
 	php_pq_object_t *o = PQresultInstanceData(r, php_pqconn_event);
 
 	if (o) {
@@ -42,12 +42,12 @@ void php_pq_clear_res(PGresult *r) {
 }
 
 /* clear any asynchronous results */
-void php_pq_clear_conn(PGconn *conn) {
+void php_pqconn_clear(PGconn *conn) {
 	PGresult *r;
 	php_pqconn_event_data_t *evdata = PQinstanceData(conn, php_pqconn_event);
 
 	while ((r = PQgetResult(conn))) {
-		php_pq_clear_res(r);
+		php_pqres_clear(r);
 	}
 
 	if (evdata && evdata->obj) {
@@ -63,19 +63,19 @@ void php_pq_clear_conn(PGconn *conn) {
 
 /* safe wrappers to clear any asynchronous wrappers before querying synchronously */
 PGresult *php_pq_exec(PGconn *conn, const char *query) {
-	php_pq_clear_conn(conn);
+	php_pqconn_clear(conn);
 	return PQexec(conn, query);
 }
 PGresult *php_pq_exec_params(PGconn *conn, const char *command, int nParams, const Oid *paramTypes, const char *const * paramValues, const int *paramLengths, const int *paramFormats, int resultFormat) {
-	php_pq_clear_conn(conn);
+	php_pqconn_clear(conn);
 	return PQexecParams(conn, command, nParams, paramTypes, paramValues, paramLengths, paramFormats, resultFormat);
 }
 PGresult *php_pq_prepare(PGconn *conn, const char *stmtName, const char *query, int nParams, const Oid *paramTypes) {
-	php_pq_clear_conn(conn);
+	php_pqconn_clear(conn);
 	return PQprepare(conn, stmtName, query, nParams, paramTypes);
 }
 PGresult *php_pq_exec_prepared(PGconn *conn, const char *stmtName, int nParams, const char *const * paramValues, const int *paramLengths, const int *paramFormats, int resultFormat) {
-	php_pq_clear_conn(conn);
+	php_pqconn_clear(conn);
 	return PQexecPrepared(conn, stmtName, nParams, paramValues, paramLengths, paramFormats, resultFormat);
 }
 

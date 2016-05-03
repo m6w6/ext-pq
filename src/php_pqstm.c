@@ -52,7 +52,7 @@ static void php_pqstm_deallocate(php_pqstm_object_t *obj, zend_bool async, zend_
 				PGresult *res;
 
 				if ((res = php_pq_exec(obj->intern->conn->intern->conn, smart_str_v(&cmd)))) {
-					php_pq_clear_res(res);
+					php_pqres_clear(res);
 				} else if (!silent) {
 					throw_exce(EX_RUNTIME, "Failed to deallocate statement (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				}
@@ -340,7 +340,7 @@ static PHP_METHOD(pqstm, desc) {
 						add_next_index_long(return_value, PQparamtype(res, p));
 					}
 				}
-				php_pq_clear_res(res);
+				php_pqres_clear(res);
 				php_pqconn_notify_listeners(obj->intern->conn);
 			}
 		}

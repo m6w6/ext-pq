@@ -58,7 +58,7 @@ static void php_pqtxn_object_free(zend_object *o)
 			PGresult *res = php_pq_exec(obj->intern->conn->intern->conn, "ROLLBACK");
 
 			if (res) {
-				php_pq_clear_res(res);
+				php_pqres_clear(res);
 			}
 		}
 		php_pq_object_delref(obj->intern->conn);
@@ -140,7 +140,7 @@ static void php_pqtxn_object_write_isolation(zval *object, void *o, zval *value)
 
 	if (res) {
 		php_pqres_success(res);
-		php_pq_clear_res(res);
+		php_pqres_clear(res);
 	}
 }
 
@@ -157,7 +157,7 @@ static void php_pqtxn_object_write_readonly(zval *object, void *o, zval *value)
 
 	if (res) {
 		php_pqres_success(res);
-		php_pq_clear_res(res);
+		php_pqres_clear(res);
 	}
 }
 
@@ -174,7 +174,7 @@ static void php_pqtxn_object_write_deferrable(zval *object, void *o, zval *value
 
 	if (res) {
 		php_pqres_success(res);
-		php_pq_clear_res(res);
+		php_pqres_clear(res);
 	}
 }
 
@@ -271,7 +271,7 @@ static PHP_METHOD(pqtxn, savepoint) {
 				throw_exce(EX_RUNTIME, "Failed to create %s (%s)", smart_str_v(&cmd), PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			} else {
 				php_pqres_success(res);
-				php_pq_clear_res(res);
+				php_pqres_clear(res);
 			}
 
 			smart_str_free(&cmd);
@@ -354,7 +354,7 @@ static PHP_METHOD(pqtxn, commit) {
 						obj->intern->open = 0;
 					}
 				}
-				php_pq_clear_res(res);
+				php_pqres_clear(res);
 			}
 
 			smart_str_free(&cmd);
@@ -452,7 +452,7 @@ static PHP_METHOD(pqtxn, rollback) {
 						obj->intern->open = 0;
 					}
 				}
-				php_pq_clear_res(res);
+				php_pqres_clear(res);
 			}
 
 			smart_str_free(&cmd);
@@ -534,7 +534,7 @@ static PHP_METHOD(pqtxn, exportSnapshot) {
 					RETVAL_STRING(PQgetvalue(res, 0, 0));
 				}
 
-				php_pq_clear_res(res);
+				php_pqres_clear(res);
 			}
 
 			php_pqconn_notify_listeners(obj->intern->conn);
@@ -605,7 +605,7 @@ static PHP_METHOD(pqtxn, importSnapshot) {
 					throw_exce(EX_RUNTIME, "Failed to import transaction snapshot (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				} else {
 					php_pqres_success(res);
-					php_pq_clear_res(res);
+					php_pqres_clear(res);
 				}
 
 				smart_str_free(&cmd);
