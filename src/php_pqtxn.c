@@ -58,7 +58,7 @@ static void php_pqtxn_object_free(void *o TSRMLS_DC)
 			PGresult *res = php_pq_exec(obj->intern->conn->intern->conn, "ROLLBACK");
 
 			if (res) {
-				php_pq_clear_res(res);
+				php_pqres_clear(res);
 			}
 		}
 		php_pq_object_delref(obj->intern->conn TSRMLS_CC);
@@ -166,7 +166,7 @@ static void php_pqtxn_object_write_isolation(zval *object, void *o, zval *value 
 
 	if (res) {
 		php_pqres_success(res TSRMLS_CC);
-		php_pq_clear_res(res);
+		php_pqres_clear(res);
 	}
 }
 
@@ -183,7 +183,7 @@ static void php_pqtxn_object_write_readonly(zval *object, void *o, zval *value T
 
 	if (res) {
 		php_pqres_success(res TSRMLS_CC);
-		php_pq_clear_res(res);
+		php_pqres_clear(res);
 	}
 }
 
@@ -200,7 +200,7 @@ static void php_pqtxn_object_write_deferrable(zval *object, void *o, zval *value
 
 	if (res) {
 		php_pqres_success(res TSRMLS_CC);
-		php_pq_clear_res(res);
+		php_pqres_clear(res);
 	}
 }
 
@@ -297,7 +297,7 @@ static PHP_METHOD(pqtxn, savepoint) {
 				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to create %s (%s)", cmd.c, PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			} else {
 				php_pqres_success(res TSRMLS_CC);
-				php_pq_clear_res(res);
+				php_pqres_clear(res);
 			}
 
 			smart_str_free(&cmd);
@@ -379,7 +379,7 @@ static PHP_METHOD(pqtxn, commit) {
 						obj->intern->open = 0;
 					}
 				}
-				php_pq_clear_res(res);
+				php_pqres_clear(res);
 			}
 
 			smart_str_free(&cmd);
@@ -475,7 +475,7 @@ static PHP_METHOD(pqtxn, rollback) {
 						obj->intern->open = 0;
 					}
 				}
-				php_pq_clear_res(res);
+				php_pqres_clear(res);
 			}
 
 			smart_str_free(&cmd);
@@ -556,7 +556,7 @@ static PHP_METHOD(pqtxn, exportSnapshot) {
 					RETVAL_STRING(PQgetvalue(res, 0, 0), 1);
 				}
 
-				php_pq_clear_res(res);
+				php_pqres_clear(res);
 			}
 
 			php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
@@ -627,7 +627,7 @@ static PHP_METHOD(pqtxn, importSnapshot) {
 					throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to import transaction snapshot (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				} else {
 					php_pqres_success(res TSRMLS_CC);
-					php_pq_clear_res(res);
+					php_pqres_clear(res);
 				}
 
 				smart_str_free(&cmd);

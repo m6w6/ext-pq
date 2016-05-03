@@ -48,7 +48,7 @@ static void cur_close(php_pqcur_object_t *obj, zend_bool async, zend_bool silent
 			}
 		} else {
 			if ((res = php_pq_exec(obj->intern->conn->intern->conn, cmd.c))) {
-				php_pq_clear_res(res);
+				php_pqres_clear(res);
 			} else if (!silent) {
 				throw_exce(EX_RUNTIME TSRMLS_CC, "Failed to close cursor (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			}

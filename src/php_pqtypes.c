@@ -309,7 +309,7 @@ static PHP_METHOD(pqtypes, refresh) {
 					}
 				}
 
-				php_pq_clear_res(res);
+				php_pqres_clear(res);
 				php_pqconn_notify_listeners(obj->intern->conn TSRMLS_CC);
 			}
 		}
