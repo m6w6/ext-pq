@@ -18,7 +18,7 @@
 #include <php.h>
 #include <ext/standard/info.h>
 
-#include <libpq-fe.h>
+#include <libpq-events.h>
 
 #include "php_pq.h"
 #include "php_pq_misc.h"

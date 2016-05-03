@@ -47,8 +47,8 @@ static void cur_close(php_pqcur_object_t *obj, zend_bool async, zend_bool silent
 				throw_exce(EX_IO, "Failed to close cursor (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			}
 		} else {
-			if ((res = PQexec(obj->intern->conn->intern->conn, smart_str_v(&cmd)))) {
-				PHP_PQclear(res);
+			if ((res = php_pq_exec(obj->intern->conn->intern->conn, smart_str_v(&cmd)))) {
+				php_pq_clear_res(res);
 			} else if (!silent) {
 				throw_exce(EX_RUNTIME, "Failed to close cursor (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			}
@@ -133,7 +133,7 @@ static void cur_fetch_or_move(INTERNAL_FUNCTION_PARAMETERS, const char *action, 
 					obj->intern->conn->intern->poller = PQconsumeInput;
 				}
 			} else {
-				PGresult *res = PQexec(obj->intern->conn->intern->conn, smart_str_v(&cmd));
+				PGresult *res = php_pq_exec(obj->intern->conn->intern->conn, smart_str_v(&cmd));
 
 				if (!res) {
 					throw_exce(EX_RUNTIME, "Failed to %s cursor (%s)", *action == 'f' ? "fetch from" : "move in", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
@@ -460,7 +460,7 @@ PHP_MINIT_FUNCTION(pqcur)
 	ph.read = php_pqcur_object_read_query;
 	zend_hash_str_add_mem(&php_pqcur_object_prophandlers, "query", sizeof("query")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("flags"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("flags"), ZEND_ACC_PUBLIC);
 	ph.read = php_pqcur_object_read_flags;
 	zend_hash_str_add_mem(&php_pqcur_object_prophandlers, "flags", sizeof("flags")-1, (void *) &ph, sizeof(ph));
 

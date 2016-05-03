@@ -80,7 +80,7 @@ static void php_pqconn_event_resultcreate(PGEventResultCreate *event)
 		}
 
 		/* async callback */
-		if (data->obj->intern->onevent.fci.size > 0) {
+		if (php_pq_callback_is_enabled(&data->obj->intern->onevent)) {
 			zval res;
 
 			php_pq_object_to_zval(obj, &res);

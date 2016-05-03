@@ -49,7 +49,7 @@ php_pqcancel_object_t *php_pqcancel_create_object_ex(zend_class_entry *ce, php_p
 			&php_pqcancel_object_handlers, &php_pqcancel_object_prophandlers);
 }
 
-static zend_object *php_pqcancel_create_object(zend_class_entry *class_type TSRMLS_DC)
+static zend_object *php_pqcancel_create_object(zend_class_entry *class_type)
 {
 	return &php_pqcancel_create_object_ex(class_type, NULL)->zo;
 }

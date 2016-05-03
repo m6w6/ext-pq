@@ -141,7 +141,7 @@ static PHP_METHOD(pqcopy, __construct) {
 			smart_str_appendl(&cmd, opt_str, opt_len);
 			smart_str_0(&cmd);
 
-			res = PQexec(conn_obj->intern->conn, smart_str_v(&cmd));
+			res = php_pq_exec(conn_obj->intern->conn, smart_str_v(&cmd));
 
 			if (!res) {
 				throw_exce(EX_RUNTIME, "Failed to start %s (%s)", smart_str_v(&cmd), PHP_PQerrorMessage(obj->intern->conn->intern->conn));
@@ -155,7 +155,7 @@ static PHP_METHOD(pqcopy, __construct) {
 					php_pq_object_addref(conn_obj);
 				}
 
-				PHP_PQclear(res);
+				php_pq_clear_res(res);
 			}
 
 			smart_str_free(&cmd);
@@ -223,7 +223,7 @@ static PHP_METHOD(pqcopy, end) {
 					throw_exce(EX_RUNTIME, "Failed to fetch COPY result (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				} else {
 					php_pqres_success(res);
-					PHP_PQclear(res);
+					php_pq_clear_res(res);
 				}
 			}
 
@@ -241,7 +241,7 @@ static PHP_METHOD(pqcopy, get) {
 	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
-	rv = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &zdata);
+	rv = zend_parse_parameters(ZEND_NUM_ARGS(), "z", &zdata);
 	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
@@ -268,7 +268,7 @@ static PHP_METHOD(pqcopy, get) {
 					throw_exce(EX_RUNTIME, "Failed to fetch COPY result (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				} else {
 					php_pqres_success(res);
-					PHP_PQclear(res);
+					php_pq_clear_res(res);
 					RETVAL_FALSE;
 				}
 				break;

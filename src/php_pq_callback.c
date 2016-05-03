@@ -84,36 +84,79 @@ zval *php_pq_callback_to_zval_no_addref(php_pq_callback_t *cb, zval *tmp)
 zend_bool php_pq_callback_is_locked(php_pq_callback_t *cb)
 {
 	/* TODO: fixed in php7?
-	if (cb->fci.size > 0 && Z_TYPE_P(cb->fci.function_name) == IS_OBJECT) {
-		const zend_function *closure = zend_get_closure_method_def(cb->fci.function_name);
+	if (php_pq_callback_is_enabled(cb)) {
+		const zend_function *closure;
+		const zend_execute_data *ex;
 
-		if (closure->type == ZEND_USER_FUNCTION) {
-			zend_execute_data *ex = EG(current_execute_data);
+		if (Z_TYPE_P(cb->fci.function_name) != IS_OBJECT) {
+			return 0;
+		}
 
-			while (ex) {
-				if (ex->op_array == &closure->op_array) {
-					return 1;
-				}
-				ex = ex->prev_execute_data;
+		closure = zend_get_closure_method_def(cb->fci.function_name);
+		if (closure->type != ZEND_USER_FUNCTION) {
+			return 0;
+		}
+
+		for (ex = EG(current_execute_data); ex; ex = ex->prev_execute_data) {
+			if (ex->op_array == &closure->op_array) {
+				return 1;
 			}
 		}
 	}
+	if (!php_pq_callback_is_recurrent(cb)) {
+		return 0;
+	}
+	return php_pq_callback_is_locked(cb->recursion);
 	*/
 	return 0;
 }
 
-void php_pq_callback_recurse(php_pq_callback_t *old, php_pq_callback_t *new TSRMLS_DC)
+void php_pq_callback_recurse(php_pq_callback_t *old, php_pq_callback_t *new)
 {
-	if (new && new->fci.size > 0 && php_pq_callback_is_locked(old TSRMLS_CC)) {
-		new->recursion = emalloc(sizeof(*old));
-		memcpy(new->recursion, old, sizeof(*old));
-	} else if (new && new->fci.size > 0) {
-		php_pq_callback_dtor(old);
-		php_pq_callback_addref(new);
-		memcpy(old, new, sizeof(*old));
-		new->fci.size = 0;
+	if (php_pq_callback_is_locked(old)) {
+		php_pq_callback_recurse_ex(old, new);
 	} else {
 		php_pq_callback_dtor(old);
+		if (php_pq_callback_is_enabled(new)) {
+			php_pq_callback_addref(new);
+			memcpy(old, new, sizeof(*old));
+			new->fci.size = 0;
+		}
+	}
+}
+
+extern zend_bool php_pq_callback_is_enabled(php_pq_callback_t *cb)
+{
+	return cb && cb->fci.size > 0;
+}
+
+extern zend_bool php_pq_callback_is_recurrent(php_pq_callback_t *cb)
+{
+	return cb && cb->recursion != NULL;
+}
+
+extern void php_pq_callback_disable(php_pq_callback_t *cb)
+{
+	if (php_pq_callback_is_enabled(cb)) {
+		php_pq_callback_recurse_ex(cb, NULL);
+	}
+}
+
+extern void php_pq_callback_recurse_ex(php_pq_callback_t *old, php_pq_callback_t *new)
+{
+	php_pq_callback_t *tmp = emalloc(sizeof(*tmp));
+
+	if (new) {
+		memcpy(tmp, old, sizeof(*tmp));
+		memcpy(old, new, sizeof(*old));
+		old->recursion = tmp;
+
+		php_pq_callback_addref(old);
+		php_pq_callback_disable(tmp);
+	} else {
+		memcpy(tmp, old, sizeof(*tmp));
+		memset(old, 0, sizeof(*old));
+		old->recursion = tmp;
 	}
 }
 

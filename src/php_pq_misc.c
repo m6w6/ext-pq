@@ -24,9 +24,60 @@
 
 #include "php_pq.h"
 #include "php_pqexc.h"
+#include "php_pqconn_event.h"
 #include "php_pq_misc.h"
 #undef PHP_PQ_TYPE
 #include "php_pq_type.h"
+
+
+/* clear result object associated with a result handle */
+void php_pq_clear_res(PGresult *r) {
+	php_pq_object_t *o = PQresultInstanceData(r, php_pqconn_event);
+
+	if (o) {
+		php_pq_object_delref(o);
+	} else {
+		PQclear(r);
+	}
+}
+
+/* clear any asynchronous results */
+void php_pq_clear_conn(PGconn *conn) {
+	PGresult *r;
+	php_pqconn_event_data_t *evdata = PQinstanceData(conn, php_pqconn_event);
+
+	while ((r = PQgetResult(conn))) {
+		php_pq_clear_res(r);
+	}
+
+	if (evdata && evdata->obj) {
+		if (php_pq_callback_is_enabled(&evdata->obj->intern->onevent)) {
+			if (php_pq_callback_is_locked(&evdata->obj->intern->onevent)) {
+				php_pq_callback_disable(&evdata->obj->intern->onevent);
+			} else {
+				php_pq_callback_dtor(&evdata->obj->intern->onevent);
+			}
+		}
+	}
+}
+
+/* safe wrappers to clear any asynchronous wrappers before querying synchronously */
+PGresult *php_pq_exec(PGconn *conn, const char *query) {
+	php_pq_clear_conn(conn);
+	return PQexec(conn, query);
+}
+PGresult *php_pq_exec_params(PGconn *conn, const char *command, int nParams, const Oid *paramTypes, const char *const * paramValues, const int *paramLengths, const int *paramFormats, int resultFormat) {
+	php_pq_clear_conn(conn);
+	return PQexecParams(conn, command, nParams, paramTypes, paramValues, paramLengths, paramFormats, resultFormat);
+}
+PGresult *php_pq_prepare(PGconn *conn, const char *stmtName, const char *query, int nParams, const Oid *paramTypes) {
+	php_pq_clear_conn(conn);
+	return PQprepare(conn, stmtName, query, nParams, paramTypes);
+}
+PGresult *php_pq_exec_prepared(PGconn *conn, const char *stmtName, int nParams, const char *const * paramValues, const int *paramLengths, const int *paramFormats, int resultFormat) {
+	php_pq_clear_conn(conn);
+	return PQexecPrepared(conn, stmtName, nParams, paramValues, paramLengths, paramFormats, resultFormat);
+}
 
 char *php_pq_rtrim(char *e)
 {
@@ -370,7 +421,7 @@ static ZEND_RESULT_CODE parse_array(ArrayParserState *a)
 	return SUCCESS;
 }
 
-HashTable *php_pq_parse_array(php_pqres_t *res, const char *val_str, size_t val_len, Oid typ TSRMLS_DC)
+HashTable *php_pq_parse_array(php_pqres_t *res, const char *val_str, size_t val_len, Oid typ)
 {
 	HashTable *ht = NULL;
 	ArrayParserState a = {0};

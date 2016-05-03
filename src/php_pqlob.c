@@ -100,7 +100,7 @@ static void php_pqlob_object_read_stream(zval *object, void *o, zval *return_val
 	RETVAL_ZVAL(&zstream, 1, 0);
 }
 
-static size_t php_pqlob_stream_write(php_stream *stream, const char *buffer, size_t length TSRMLS_DC)
+static size_t php_pqlob_stream_write(php_stream *stream, const char *buffer, size_t length)
 {
 	php_pqlob_object_t *obj = stream->abstract;
 	int written = 0;
@@ -109,16 +109,16 @@ static size_t php_pqlob_stream_write(php_stream *stream, const char *buffer, siz
 		written = lo_write(obj->intern->txn->intern->conn->intern->conn, obj->intern->lofd, buffer, length);
 
 		if (written < 0) {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to write to LOB with oid=%u (%s)", obj->intern->loid, PHP_PQerrorMessage(obj->intern->txn->intern->conn->intern->conn));
+			php_error_docref(NULL, E_WARNING, "Failed to write to LOB with oid=%u (%s)", obj->intern->loid, PHP_PQerrorMessage(obj->intern->txn->intern->conn->intern->conn));
 		}
 
-		php_pqconn_notify_listeners(obj->intern->txn->intern->conn TSRMLS_CC);
+		php_pqconn_notify_listeners(obj->intern->txn->intern->conn);
 	}
 
 	return written;
 }
 
-static size_t php_pqlob_stream_read(php_stream *stream, char *buffer, size_t length TSRMLS_DC)
+static size_t php_pqlob_stream_read(php_stream *stream, char *buffer, size_t length)
 {
 	php_pqlob_object_t *obj = stream->abstract;
 	int read = 0;
@@ -133,27 +133,27 @@ static size_t php_pqlob_stream_read(php_stream *stream, char *buffer, size_t len
 			read = lo_read(obj->intern->txn->intern->conn->intern->conn, obj->intern->lofd, buffer, length);
 
 			if (read < 0) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to read from LOB with oid=%d (%s)", obj->intern->loid, PHP_PQerrorMessage(obj->intern->txn->intern->conn->intern->conn));
+				php_error_docref(NULL, E_WARNING, "Failed to read from LOB with oid=%d (%s)", obj->intern->loid, PHP_PQerrorMessage(obj->intern->txn->intern->conn->intern->conn));
 			}
 		}
 
-		php_pqconn_notify_listeners(obj->intern->txn->intern->conn TSRMLS_CC);
+		php_pqconn_notify_listeners(obj->intern->txn->intern->conn);
 	}
 
 	return read;
 }
 
-static ZEND_RESULT_CODE php_pqlob_stream_close(php_stream *stream, int close_handle TSRMLS_DC)
+static ZEND_RESULT_CODE php_pqlob_stream_close(php_stream *stream, int close_handle)
 {
 	return SUCCESS;
 }
 
-static int php_pqlob_stream_flush(php_stream *stream TSRMLS_DC)
+static int php_pqlob_stream_flush(php_stream *stream)
 {
 	return SUCCESS;
 }
 
-static ZEND_RESULT_CODE php_pqlob_stream_seek(php_stream *stream, off_t offset, int whence, off_t *newoffset TSRMLS_DC)
+static ZEND_RESULT_CODE php_pqlob_stream_seek(php_stream *stream, off_t offset, int whence, off_t *newoffset)
 {
 	ZEND_RESULT_CODE rv = FAILURE;
 	php_pqlob_object_t *obj = stream->abstract;
@@ -162,14 +162,14 @@ static ZEND_RESULT_CODE php_pqlob_stream_seek(php_stream *stream, off_t offset, 
 		int position = lo_lseek(obj->intern->txn->intern->conn->intern->conn, obj->intern->lofd, offset, whence);
 
 		if (position < 0) {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to seek offset in LOB with oid=%d (%s)", obj->intern->loid, PHP_PQerrorMessage(obj->intern->txn->intern->conn->intern->conn));
+			php_error_docref(NULL, E_WARNING, "Failed to seek offset in LOB with oid=%d (%s)", obj->intern->loid, PHP_PQerrorMessage(obj->intern->txn->intern->conn->intern->conn));
 			rv = FAILURE;
 		} else {
 			*newoffset = position;
 			rv = SUCCESS;
 		}
 
-		php_pqconn_notify_listeners(obj->intern->txn->intern->conn TSRMLS_CC);
+		php_pqconn_notify_listeners(obj->intern->txn->intern->conn);
 	}
 
 	return rv;

@@ -55,10 +55,10 @@ static void php_pqtxn_object_free(zend_object *o)
 #endif
 	if (obj->intern) {
 		if (obj->intern->open && obj->intern->conn->intern) {
-			PGresult *res = PQexec(obj->intern->conn->intern->conn, "ROLLBACK");
+			PGresult *res = php_pq_exec(obj->intern->conn->intern->conn, "ROLLBACK");
 
 			if (res) {
-				PHP_PQclear(res);
+				php_pq_clear_res(res);
 			}
 		}
 		php_pq_object_delref(obj->intern->conn);
@@ -124,13 +124,13 @@ static void php_pqtxn_object_write_isolation(zval *object, void *o, zval *value)
 
 	switch ((obj->intern->isolation = zval_get_long(value))) {
 	case PHP_PQTXN_READ_COMMITTED:
-		res = PQexec(obj->intern->conn->intern->conn, "SET TRANSACTION ISOLATION LEVEL READ COMMITED");
+		res = php_pq_exec(obj->intern->conn->intern->conn, "SET TRANSACTION ISOLATION LEVEL READ COMMITED");
 		break;
 	case PHP_PQTXN_REPEATABLE_READ:
-		res = PQexec(obj->intern->conn->intern->conn, "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+		res = php_pq_exec(obj->intern->conn->intern->conn, "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ");
 		break;
 	case PHP_PQTXN_SERIALIZABLE:
-		res = PQexec(obj->intern->conn->intern->conn, "SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+		res = php_pq_exec(obj->intern->conn->intern->conn, "SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 		break;
 	default:
 		obj->intern->isolation = orig;
@@ -140,7 +140,7 @@ static void php_pqtxn_object_write_isolation(zval *object, void *o, zval *value)
 
 	if (res) {
 		php_pqres_success(res);
-		PHP_PQclear(res);
+		php_pq_clear_res(res);
 	}
 }
 
@@ -150,14 +150,14 @@ static void php_pqtxn_object_write_readonly(zval *object, void *o, zval *value)
 	PGresult *res;
 
 	if ((obj->intern->readonly = z_is_true(value))) {
-		res = PQexec(obj->intern->conn->intern->conn, "SET TRANSACTION READ ONLY");
+		res = php_pq_exec(obj->intern->conn->intern->conn, "SET TRANSACTION READ ONLY");
 	} else {
-		res = PQexec(obj->intern->conn->intern->conn, "SET TRANSACTION READ WRITE");
+		res = php_pq_exec(obj->intern->conn->intern->conn, "SET TRANSACTION READ WRITE");
 	}
 
 	if (res) {
 		php_pqres_success(res);
-		PHP_PQclear(res);
+		php_pq_clear_res(res);
 	}
 }
 
@@ -167,14 +167,14 @@ static void php_pqtxn_object_write_deferrable(zval *object, void *o, zval *value
 	PGresult *res;
 
 	if ((obj->intern->deferrable = z_is_true(value))) {
-		res = PQexec(obj->intern->conn->intern->conn, "SET TRANSACTION DEFERRABLE");
+		res = php_pq_exec(obj->intern->conn->intern->conn, "SET TRANSACTION DEFERRABLE");
 	} else {
-		res = PQexec(obj->intern->conn->intern->conn, "SET TRANSACTION NOT DEFERRABLE");
+		res = php_pq_exec(obj->intern->conn->intern->conn, "SET TRANSACTION NOT DEFERRABLE");
 	}
 
 	if (res) {
 		php_pqres_success(res);
-		PHP_PQclear(res);
+		php_pq_clear_res(res);
 	}
 }
 
@@ -265,13 +265,13 @@ static PHP_METHOD(pqtxn, savepoint) {
 			smart_str_appends(&cmd, "\"");
 			smart_str_0(&cmd);
 
-			res = PQexec(obj->intern->conn->intern->conn, smart_str_v(&cmd));
+			res = php_pq_exec(obj->intern->conn->intern->conn, smart_str_v(&cmd));
 
 			if (!res) {
 				throw_exce(EX_RUNTIME, "Failed to create %s (%s)", smart_str_v(&cmd), PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 			} else {
 				php_pqres_success(res);
-				PHP_PQclear(res);
+				php_pq_clear_res(res);
 			}
 
 			smart_str_free(&cmd);
@@ -336,14 +336,14 @@ static PHP_METHOD(pqtxn, commit) {
 			zend_bool just_release_sp = !!obj->intern->savepoint;
 
 			if (!just_release_sp) {
-				res = PQexec(obj->intern->conn->intern->conn, "COMMIT");
+				res = php_pq_exec(obj->intern->conn->intern->conn, "COMMIT");
 			} else {
 				smart_str_appends(&cmd, "RELEASE SAVEPOINT \"");
 				smart_str_append_unsigned(&cmd, obj->intern->savepoint--);
 				smart_str_appends(&cmd, "\"");
 				smart_str_0(&cmd);
 
-				res = PQexec(obj->intern->conn->intern->conn, smart_str_v(&cmd));
+				res = php_pq_exec(obj->intern->conn->intern->conn, smart_str_v(&cmd));
 			}
 
 			if (!res) {
@@ -354,7 +354,7 @@ static PHP_METHOD(pqtxn, commit) {
 						obj->intern->open = 0;
 					}
 				}
-				PHP_PQclear(res);
+				php_pq_clear_res(res);
 			}
 
 			smart_str_free(&cmd);
@@ -434,14 +434,14 @@ static PHP_METHOD(pqtxn, rollback) {
 			zend_bool just_release_sp = !!obj->intern->savepoint;
 
 			if (!just_release_sp) {
-				res = PQexec(obj->intern->conn->intern->conn, "ROLLBACK");
+				res = php_pq_exec(obj->intern->conn->intern->conn, "ROLLBACK");
 			} else {
 				smart_str_appends(&cmd, "ROLLBACK TO SAVEPOINT \"");
 				smart_str_append_unsigned(&cmd, obj->intern->savepoint--);
 				smart_str_appends(&cmd, "\"");
 				smart_str_0(&cmd);
 
-				res = PQexec(obj->intern->conn->intern->conn, smart_str_v(&cmd));
+				res = php_pq_exec(obj->intern->conn->intern->conn, smart_str_v(&cmd));
 			}
 
 			if (!res) {
@@ -452,7 +452,7 @@ static PHP_METHOD(pqtxn, rollback) {
 						obj->intern->open = 0;
 					}
 				}
-				PHP_PQclear(res);
+				php_pq_clear_res(res);
 			}
 
 			smart_str_free(&cmd);
@@ -525,7 +525,7 @@ static PHP_METHOD(pqtxn, exportSnapshot) {
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED, "pq\\Transaction not initialized");
 		} else {
-			PGresult *res = PQexec(obj->intern->conn->intern->conn, "SELECT pg_export_snapshot()");
+			PGresult *res = php_pq_exec(obj->intern->conn->intern->conn, "SELECT pg_export_snapshot()");
 
 			if (!res) {
 				throw_exce(EX_RUNTIME, "Failed to export transaction snapshot (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
@@ -534,7 +534,7 @@ static PHP_METHOD(pqtxn, exportSnapshot) {
 					RETVAL_STRING(PQgetvalue(res, 0, 0));
 				}
 
-				PHP_PQclear(res);
+				php_pq_clear_res(res);
 			}
 
 			php_pqconn_notify_listeners(obj->intern->conn);
@@ -599,13 +599,13 @@ static PHP_METHOD(pqtxn, importSnapshot) {
 				smart_str_appends(&cmd, sid);
 				smart_str_0(&cmd);
 
-				res = PQexec(obj->intern->conn->intern->conn, smart_str_v(&cmd));
+				res = php_pq_exec(obj->intern->conn->intern->conn, smart_str_v(&cmd));
 
 				if (!res) {
 					throw_exce(EX_RUNTIME, "Failed to import transaction snapshot (%s)", PHP_PQerrorMessage(obj->intern->conn->intern->conn));
 				} else {
 					php_pqres_success(res);
-					PHP_PQclear(res);
+					php_pq_clear_res(res);
 				}
 
 				smart_str_free(&cmd);
@@ -731,7 +731,7 @@ static PHP_METHOD(pqtxn, createLOB) {
 
 					lob->lofd = lofd;
 					lob->loid = loid;
-					php_pq_object_addref(obj TSRMLS_CC);
+					php_pq_object_addref(obj);
 					lob->txn = obj;
 
 					RETVAL_OBJ(&php_pqlob_create_object_ex(php_pqlob_class_entry, lob)->zo);

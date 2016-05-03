@@ -552,7 +552,7 @@ php_resource_factory_ops_t *php_pqconn_get_resource_factory_ops(void)
 static void php_pqconn_wakeup(php_persistent_handle_factory_t *f, void **handle)
 {
 	PGresult *res = PQexec(*handle, "");
-	PHP_PQclear(res);
+	php_pq_clear_res(res);
 
 	if (CONNECTION_OK != PQstatus(*handle)) {
 		PQreset(*handle);
@@ -586,7 +586,7 @@ static int apply_unlisten(zval *p, int argc, va_list argv, zend_hash_key *key)
 	PGresult *res = unlisten(obj->intern->conn, key->key->val, key->key->len);
 
 	if (res) {
-		PHP_PQclear(res);
+		php_pq_clear_res(res);
 	}
 
 	return ZEND_HASH_APPLY_REMOVE;
@@ -613,7 +613,7 @@ static void php_pqconn_retire(php_persistent_handle_factory_t *f, void **handle)
 	}
 	/* clean up async results */
 	while ((res = PQgetResult(*handle))) {
-		PHP_PQclear(res);
+		php_pq_clear_res(res);
 	}
 
 	/* clean up transaction & session */
@@ -627,7 +627,7 @@ static void php_pqconn_retire(php_persistent_handle_factory_t *f, void **handle)
 	}
 
 	if (res) {
-		PHP_PQclear(res);
+		php_pq_clear_res(res);
 	}
 
 	if (evdata) {
@@ -652,7 +652,7 @@ static PHP_METHOD(pqconn, __construct) {
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
 	rv = zend_parse_parameters(ZEND_NUM_ARGS(), "|sl", &dsn_str, &dsn_len, &flags);
-	zend_restore_error_handling(&zeh TSRMLS_CC);
+	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
 		php_pqconn_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
@@ -737,10 +737,10 @@ static PHP_METHOD(pqconn, resetAsync) {
 		php_pqconn_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
 
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\Connection not initialized");
 		} else {
 			if (!PQresetStart(obj->intern->conn)) {
-				throw_exce(EX_IO TSRMLS_CC, "Failed to start connection reset (%s)", PHP_PQerrorMessage(obj->intern->conn));
+				throw_exce(EX_IO, "Failed to start connection reset (%s)", PHP_PQerrorMessage(obj->intern->conn));
 			} else {
 				obj->intern->poller = (int (*)(PGconn*)) PQresetPoll;
 			}
@@ -774,7 +774,7 @@ static PHP_METHOD(pqconn, unlisten)
 
 			if (res) {
 				php_pqres_success(res);
-				PHP_PQclear(res);
+				php_pq_clear_res(res);
 			}
 		}
 	}
@@ -879,7 +879,7 @@ static PHP_METHOD(pqconn, listen) {
 				smart_str_appends(&cmd, quoted_channel);
 				smart_str_0(&cmd);
 
-				res = PQexec(obj->intern->conn, smart_str_v(&cmd));
+				res = php_pq_exec(obj->intern->conn, smart_str_v(&cmd));
 
 				smart_str_free(&cmd);
 				PQfreemem(quoted_channel);
@@ -891,7 +891,7 @@ static PHP_METHOD(pqconn, listen) {
 						obj->intern->poller = PQconsumeInput;
 						php_pqconn_add_listener(obj, channel_str, channel_len, &listener);
 					}
-					PHP_PQclear(res);
+					php_pq_clear_res(res);
 				}
 
 				php_pqconn_notify_listeners(obj);
@@ -919,12 +919,12 @@ static PHP_METHOD(pqconn, listenAsync) {
 		php_pqconn_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
 
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\Connection not initialized");
 		} else {
 			char *quoted_channel = PQescapeIdentifier(obj->intern->conn, channel_str, channel_len);
 
 			if (!quoted_channel) {
-				throw_exce(EX_ESCAPE TSRMLS_CC, "Failed to escape channel identifier (%s)", PHP_PQerrorMessage(obj->intern->conn));
+				throw_exce(EX_ESCAPE, "Failed to escape channel identifier (%s)", PHP_PQerrorMessage(obj->intern->conn));
 			} else {
 				smart_str cmd = {0};
 
@@ -976,7 +976,7 @@ static PHP_METHOD(pqconn, notify) {
 				throw_exce(EX_RUNTIME, "Failed to notify listeners (%s)", PHP_PQerrorMessage(obj->intern->conn));
 			} else {
 				php_pqres_success(res);
-				PHP_PQclear(res);
+				php_pq_clear_res(res);
 			}
 
 			php_pqconn_notify_listeners(obj);
@@ -1064,14 +1064,14 @@ static PHP_METHOD(pqconn, exec) {
 		if (!obj->intern) {
 			throw_exce(EX_UNINITIALIZED, "pq\\Connection not initialized");
 		} else {
-			PGresult *res = PQexec(obj->intern->conn, query_str);
+			PGresult *res = php_pq_exec(obj->intern->conn, query_str);
 
 			if (!res) {
 				throw_exce(EX_RUNTIME, "Failed to execute query (%s)", PHP_PQerrorMessage(obj->intern->conn));
 			} else if (SUCCESS == php_pqres_success(res)) {
 				php_pq_object_to_zval_no_addref(PQresultInstanceData(res, php_pqconn_event), return_value);
 			} else {
-				PHP_PQclear(res);
+				php_pq_clear_res(res);
 			}
 
 			php_pqconn_notify_listeners(obj);
@@ -1178,7 +1178,7 @@ static PHP_METHOD(pqconn, execParams) {
 				if (SUCCESS == php_pqres_success(res)) {
 					php_pq_object_to_zval_no_addref(PQresultInstanceData(res, php_pqconn_event), return_value);
 				} else {
-					PHP_PQclear(res);
+					php_pq_clear_res(res);
 				}
 
 				php_pqconn_notify_listeners(obj);
@@ -1244,14 +1244,14 @@ ZEND_RESULT_CODE php_pqconn_prepare(zval *object, php_pqconn_object_t *obj, cons
 		obj = PHP_PQ_OBJ(object, NULL);
 	}
 
-	res = PQprepare(obj->intern->conn, name, query, params->type.count, params->type.oids);
+	res = php_pq_prepare(obj->intern->conn, name, query, params->type.count, params->type.oids);
 
 	if (!res) {
 		rv = FAILURE;
 		throw_exce(EX_RUNTIME, "Failed to prepare statement (%s)", PHP_PQerrorMessage(obj->intern->conn));
 	} else {
 		rv = php_pqres_success(res);
-		PHP_PQclear(res);
+		php_pq_clear_res(res);
 		php_pqconn_notify_listeners(obj);
 	}
 
@@ -1293,7 +1293,7 @@ static PHP_METHOD(pqconn, prepare) {
 	}
 }
 
-ZEND_RESULT_CODE php_pqconn_prepare_async(zval *object, php_pqconn_object_t *obj, const char *name, const char *query, php_pq_params_t *params TSRMLS_DC)
+ZEND_RESULT_CODE php_pqconn_prepare_async(zval *object, php_pqconn_object_t *obj, const char *name, const char *query, php_pq_params_t *params)
 {
 	ZEND_RESULT_CODE rv;
 
@@ -1357,14 +1357,14 @@ ZEND_RESULT_CODE php_pqconn_declare(zval *object, php_pqconn_object_t *obj, cons
 		obj = PHP_PQ_OBJ(object, NULL);
 	}
 
-	res = PQexec(obj->intern->conn, decl);
+	res = php_pq_exec(obj->intern->conn, decl);
 
 	if (!res) {
 		rv = FAILURE;
 		throw_exce(EX_RUNTIME, "Failed to declare cursor (%s)", PHP_PQerrorMessage(obj->intern->conn));
 	} else {
 		rv = php_pqres_success(res);
-		PHP_PQclear(res);
+		php_pq_clear_res(res);
 		php_pqconn_notify_listeners(obj);
 	}
 
@@ -1578,7 +1578,7 @@ ZEND_RESULT_CODE php_pqconn_start_transaction(zval *zconn, php_pqconn_object_t *
 	}
 
 	if (!conn_obj->intern) {
-		throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
+		throw_exce(EX_UNINITIALIZED, "pq\\Connection not initialized");
 	} else {
 		PGresult *res;
 		smart_str cmd = {0};
@@ -1593,13 +1593,13 @@ ZEND_RESULT_CODE php_pqconn_start_transaction(zval *zconn, php_pqconn_object_t *
 		smart_str_appends(&cmd, " DEFERRABLE");
 		smart_str_0(&cmd);
 
-		res = PQexec(conn_obj->intern->conn, smart_str_v(&cmd));
+		res = php_pq_exec(conn_obj->intern->conn, smart_str_v(&cmd));
 
 		if (!res) {
 			throw_exce(EX_RUNTIME, "Failed to start transaction (%s)", PHP_PQerrorMessage(conn_obj->intern->conn));
 		} else {
 			rv = php_pqres_success(res);
-			PHP_PQclear(res);
+			php_pq_clear_res(res);
 			php_pqconn_notify_listeners(conn_obj);
 		}
 
@@ -1791,7 +1791,7 @@ static PHP_METHOD(pqconn, on) {
 		php_pqconn_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
 
 		if (!obj->intern) {
-			throw_exce(EX_UNINITIALIZED TSRMLS_CC, "pq\\Connection not initialized");
+			throw_exce(EX_UNINITIALIZED, "pq\\Connection not initialized");
 		} else {
 			RETVAL_LONG(php_pqconn_add_eventhandler(obj, type_str, type_len, &cb));
 		}
@@ -2057,7 +2057,7 @@ PHP_MINIT_FUNCTION(pqconn)
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "defaultTransactionReadonly", sizeof("defaultTransactionReadonly")-1, (void *) &ph, sizeof(ph));
 	ph.write = NULL;
 
-	zend_declare_property_bool(php_pqconn_class_entry, ZEND_STRL("defaultTransactionDeferrable"), 0, ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_bool(php_pqconn_class_entry, ZEND_STRL("defaultTransactionDeferrable"), 0, ZEND_ACC_PUBLIC);
 	ph.read = php_pqconn_object_read_def_txn_deferrable;
 	ph.write = php_pqconn_object_write_def_txn_deferrable;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "defaultTransactionDeferrable", sizeof("defaultTransactionDeferrable")-1, (void *) &ph, sizeof(ph));

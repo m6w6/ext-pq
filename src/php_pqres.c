@@ -374,7 +374,7 @@ static ZEND_RESULT_CODE php_pqres_count_elements(zval *object, long *count)
 	}
 }
 
-ZEND_RESULT_CODE php_pqres_success(PGresult *res TSRMLS_DC)
+ZEND_RESULT_CODE php_pqres_success(PGresult *res)
 {
 	zval zexc;
 
@@ -529,7 +529,7 @@ static void php_pqres_object_write_auto_conv(zval *object, void *o, zval *value)
 	obj->intern->auto_convert = zval_get_long(value);
 }
 
-static ZEND_RESULT_CODE php_pqres_iteration(zval *zobj, php_pqres_object_t *obj, php_pqres_fetch_t fetch_type, zval *row TSRMLS_DC)
+static ZEND_RESULT_CODE php_pqres_iteration(zval *zobj, php_pqres_object_t *obj, php_pqres_fetch_t fetch_type, zval *row)
 {
 	ZEND_RESULT_CODE rv;
 	php_pqres_fetch_t orig_fetch;

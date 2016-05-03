@@ -16,21 +16,23 @@
 
 #include <libpq-fe.h>
 
-#if PHP_VERSION_ID < 50500
-#undef SUCCESS
-#undef FAILURE
-typedef enum {
-	SUCCESS = 0,
-	FAILURE = -1
-} ZEND_RESULT_CODE;
-#endif
-
 #include "php_pqres.h"
 
 #define z_is_true zend_is_true
 #define smart_str_s(ss) (ss)->s
 #define smart_str_v(ss) (ss)->s->val
 #define smart_str_l(ss) (ss)->s->len
+
+/* clear result object associated with a result handle */
+extern void php_pq_clear_res(PGresult *r);
+/* clear any asynchronous results */
+extern void php_pq_clear_conn(PGconn *conn);
+/* safe wrappers to clear any asynchronous wrappers before querying synchronously */
+extern PGresult *php_pq_exec(PGconn *conn, const char *query);
+extern PGresult *php_pq_exec_params(PGconn *conn, const char *command, int nParams, const Oid *paramTypes, const char *const * paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
+extern PGresult *php_pq_prepare(PGconn *conn, const char *stmtName, const char *query, int nParams, const Oid *paramTypes);
+extern PGresult *php_pq_exec_prepared(PGconn *conn, const char *stmtName, int nParams, const char *const * paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
+
 
 /* trim LF from EOL */
 extern char *php_pq_rtrim(char *e);
