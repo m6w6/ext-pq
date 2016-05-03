@@ -24,8 +24,8 @@
 
 #include "php_pq.h"
 #include "php_pqexc.h"
-#include "php_pqconn_event.h"
 #include "php_pq_misc.h"
+#include "php_pqconn_event.h"
 #undef PHP_PQ_TYPE
 #include "php_pq_type.h"
 
