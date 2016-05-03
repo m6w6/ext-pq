@@ -20,8 +20,8 @@
 
 #define z_is_true zend_is_true
 #define smart_str_s(ss) (ss)->s
-#define smart_str_v(ss) (ss)->s->val
-#define smart_str_l(ss) (ss)->s->len
+#define smart_str_v(ss) (smart_str_s(ss)?(ss)->s->val:NULL)
+#define smart_str_l(ss) (smart_str_s(ss)?(ss)->s->len:0)
 
 /* clear result object associated with a result handle */
 extern void php_pqres_clear(PGresult *r);
