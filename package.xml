@@ -35,10 +35,10 @@
   <email>daverandom@php.net</email>
   <active>yes</active>
  </developer>
- <date>2016-05-03</date>
+ <date>2016-05-17</date>
  <version>
-  <release>2.0.2dev</release>
-  <api>2.0.0</api>
+  <release>2.1.0dev</release>
+  <api>2.1.0</api>
  </version>
  <stability>
   <release>stable</release>
@@ -46,7 +46,7 @@
  </stability>
  <license uri="http://copyfree.org/content/standard/licenses/2bsd/license.txt">BSD-2-Clause</license>
  <notes><![CDATA[
-* 
+* Added public readonly array pq\Result::$diag property, listing PQresultErrorField details (gh-issue #14)
 ]]></notes>
  <contents>
   <dir name="/">
@@ -156,7 +156,9 @@
  <dependencies>
   <required>
    <php>
-    <min>7.0.0</min>
+    <min>5.4.0</min>
+    <max>7.0.0</max>
+    <exclude>7.0.0</exclude>
    </php>
    <pearinstaller>
     <min>1.4.0</min>
