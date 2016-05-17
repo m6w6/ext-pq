@@ -511,6 +511,45 @@ static void php_pqres_object_read_error_message(zval *object, void *o, zval *ret
 	}
 }
 
+static void php_pqres_object_read_diag(zval *object, void *o, zval *return_value TSRMLS_DC)
+{
+	php_pqres_object_t *obj = o;
+	int i;
+	struct {
+		char code;
+		const char *const name;
+	} diag[] = {
+			{PG_DIAG_SEVERITY,			"severity"},
+			{PG_DIAG_SQLSTATE,			"sqlstate"},
+			{PG_DIAG_MESSAGE_PRIMARY,	"message_primary"},
+			{PG_DIAG_MESSAGE_DETAIL,	"message_detail"},
+			{PG_DIAG_MESSAGE_HINT,		"message_hint"},
+			{PG_DIAG_STATEMENT_POSITION,"statement_position"},
+			{PG_DIAG_INTERNAL_POSITION,	"internal_position"},
+			{PG_DIAG_INTERNAL_QUERY,	"internal_query"},
+			{PG_DIAG_CONTEXT,			"context"},
+			{PG_DIAG_SCHEMA_NAME,		"schema_name"},
+			{PG_DIAG_TABLE_NAME,		"table_name"},
+			{PG_DIAG_COLUMN_NAME,		"column_name"},
+			{PG_DIAG_DATATYPE_NAME,		"datatype_name"},
+			{PG_DIAG_CONSTRAINT_NAME,	"constraint_name"},
+			{PG_DIAG_SOURCE_FILE,		"source_file"},
+			{PG_DIAG_SOURCE_LINE,		"source_line"},
+			{PG_DIAG_SOURCE_FUNCTION,	"source_function"}
+	};
+
+	array_init_size(return_value, 32);
+	for (i = 0; i < sizeof(diag)/sizeof(diag[0]); ++i) {
+		char *value = PQresultErrorField(obj->intern->res, diag[i].code);
+
+		if (value) {
+			add_assoc_string(return_value, diag[i].name, value, 1);
+		} else {
+			add_assoc_null(return_value, diag[i].name);
+		}
+	}
+}
+
 static void php_pqres_object_read_num_rows(zval *object, void *o, zval *return_value TSRMLS_DC)
 {
 	php_pqres_object_t *obj = o;
@@ -1194,6 +1233,10 @@ PHP_MINIT_FUNCTION(pqres)
 	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("errorMessage"), ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqres_object_read_error_message;
 	zend_hash_add(&php_pqres_object_prophandlers, "errorMessage", sizeof("errorMessage"), (void *) &ph, sizeof(ph), NULL);
+
+	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("diag"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	ph.read = php_pqres_object_read_diag;
+	zend_hash_add(&php_pqres_object_prophandlers, "diag", sizeof("diag"), (void *) &ph, sizeof(ph), NULL);
 
 	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("numRows"), 0, ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqres_object_read_num_rows;
