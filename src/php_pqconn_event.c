@@ -16,12 +16,16 @@
 
 #include <php.h>
 
+#define SMART_STR_PREALLOC 256
+#include <ext/standard/php_smart_str.h>
+
 #include <libpq-events.h>
 
 #include "php_pq.h"
 #include "php_pq_misc.h"
 #include "php_pq_object.h"
 #include "php_pqconn_event.h"
+#include "php_pqstm.h"
 #include "php_pqres.h"
 
 static int apply_event(void *p, void *a TSRMLS_DC)
@@ -39,6 +43,50 @@ static int apply_event(void *p, void *a TSRMLS_DC)
 	return ZEND_HASH_APPLY_KEEP;
 }
 
+
+static inline PGresult *relisten(PGconn *conn, const char *channel_str, size_t channel_len TSRMLS_DC)
+{
+	char *quoted_channel = PQescapeIdentifier(conn, channel_str, channel_len);
+	PGresult *res = NULL;
+
+	if (quoted_channel) {
+		smart_str cmd = {0};
+
+		smart_str_appends(&cmd, "LISTEN ");
+		smart_str_appends(&cmd, quoted_channel);
+		smart_str_0(&cmd);
+
+		res = PQexec(conn, cmd.c);
+
+		smart_str_free(&cmd);
+		PQfreemem(quoted_channel);
+	}
+
+	return res;
+}
+
+static int apply_relisten(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
+{
+	php_pqconn_object_t *obj = va_arg(argv, php_pqconn_object_t *);
+	PGresult *res = relisten(obj->intern->conn, key->arKey, key->nKeyLength - 1 TSRMLS_CC);
+
+	if (res) {
+		php_pqres_clear(res);
+	}
+
+	return ZEND_HASH_APPLY_KEEP;
+}
+
+static int apply_reprepare(void *p TSRMLS_DC, int argc, va_list argv, zend_hash_key *key)
+{
+	php_pqconn_object_t *obj = va_arg(argv, php_pqconn_object_t *);
+	php_pqstm_t *stm = *(php_pqstm_object_t **) p;
+
+	php_pqconn_prepare(NULL, obj, stm->name, stm->query, stm->params TSRMLS_CC);
+
+	return ZEND_HASH_APPLY_KEEP;
+}
+
 static void php_pqconn_event_connreset(PGEventConnReset *event)
 {
 	php_pqconn_event_data_t *data = PQinstanceData(event->conn, php_pqconn_event);
@@ -47,6 +95,13 @@ static void php_pqconn_event_connreset(PGEventConnReset *event)
 		HashTable *evhs;
 		TSRMLS_DF(data);
 
+		/* restore listeners */
+		zend_hash_apply_with_arguments(&data->obj->intern->listeners TSRMLS_CC, apply_relisten, 1, data->obj);
+
+		/* restore statements */
+		zend_hash_apply_with_arguments(&data->obj->intern->statements TSRMLS_CC, apply_reprepare, 1, data->obj);
+
+		/* eventhandler */
 		if (SUCCESS == zend_hash_find(&data->obj->intern->eventhandlers, ZEND_STRS("reset"), (void *) &evhs)) {
 			zval *args, *connection = NULL;
 
