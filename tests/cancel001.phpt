@@ -64,7 +64,7 @@ object(pq\Result)#%d (9) {
     ["source_file"]=>
     string(10) "postgres.c"
     ["source_line"]=>
-    string(4) "2988"
+    string(4) "%d"
     ["source_function"]=>
     string(17) "ProcessInterrupts"
   }
