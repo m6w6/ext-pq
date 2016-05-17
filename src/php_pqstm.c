@@ -63,6 +63,7 @@ static void php_pqstm_deallocate(php_pqstm_object_t *obj, zend_bool async, zend_
 		}
 
 		obj->intern->allocated = 0;
+		zend_hash_str_del(&obj->intern->conn->intern->statements, obj->intern->name, strlen(obj->intern->name));
 	}
 }
 
@@ -154,6 +155,8 @@ php_pqstm_t *php_pqstm_init(php_pqconn_object_t *conn, const char *name, const c
 	stm->allocated = 1;
 
 	ZEND_INIT_SYMTABLE(&stm->bound);
+
+	zend_hash_str_add_ptr(&conn->intern->statements, name, strlen(name), stm);
 
 	return stm;
 }
@@ -410,7 +413,7 @@ static PHP_METHOD(pqstm, deallocateAsync)
 	php_pqstm_deallocate_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, 1);
 }
 
-static zend_always_inline void php_pqstm_prepare_handler(INTERNAL_FUNCTION_PARAMETERS, zend_bool async)
+static inline void php_pqstm_prepare_handler(INTERNAL_FUNCTION_PARAMETERS, zend_bool async)
 {
 	zend_error_handling zeh;
 	ZEND_RESULT_CODE rv;
@@ -433,6 +436,9 @@ static zend_always_inline void php_pqstm_prepare_handler(INTERNAL_FUNCTION_PARAM
 
 			if (SUCCESS == rv) {
 				obj->intern->allocated = 1;
+
+				zend_hash_str_add_ptr(&obj->intern->conn->intern->statements,
+						obj->intern->name, strlen(obj->intern->name), obj->intern);
 			}
 		}
 	}

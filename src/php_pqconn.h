@@ -28,6 +28,7 @@ typedef struct php_pqconn {
 	int (*poller)(PGconn *);
 	php_resource_factory_t factory;
 	HashTable listeners;
+	HashTable statements;
 	HashTable converters;
 	HashTable eventhandlers;
 	php_pq_callback_t onevent;

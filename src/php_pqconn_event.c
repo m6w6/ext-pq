@@ -16,12 +16,15 @@
 
 #include <php.h>
 
+#include <Zend/zend_smart_str.h>
+
 #include <libpq-events.h>
 
 #include "php_pq.h"
 #include "php_pq_misc.h"
 #include "php_pq_object.h"
 #include "php_pqconn_event.h"
+#include "php_pqstm.h"
 #include "php_pqres.h"
 
 static int apply_event(zval *p, void *a)
@@ -39,6 +42,50 @@ static int apply_event(zval *p, void *a)
 	return ZEND_HASH_APPLY_KEEP;
 }
 
+
+static inline PGresult *relisten(PGconn *conn, const char *channel_str, size_t channel_len)
+{
+	char *quoted_channel = PQescapeIdentifier(conn, channel_str, channel_len);
+	PGresult *res = NULL;
+
+	if (quoted_channel) {
+		smart_str cmd = {0};
+
+		smart_str_appends(&cmd, "LISTEN ");
+		smart_str_appends(&cmd, quoted_channel);
+		smart_str_0(&cmd);
+
+		res = PQexec(conn, smart_str_v(&cmd));
+
+		smart_str_free(&cmd);
+		PQfreemem(quoted_channel);
+	}
+
+	return res;
+}
+
+static int apply_relisten(zval *p, int argc, va_list argv, zend_hash_key *key)
+{
+	php_pqconn_object_t *obj = va_arg(argv, php_pqconn_object_t *);
+	PGresult *res = relisten(obj->intern->conn, key->key->val, key->key->len);
+
+	if (res) {
+		php_pqres_clear(res);
+	}
+
+	return ZEND_HASH_APPLY_KEEP;
+}
+
+static int apply_reprepare(zval *p, int argc, va_list argv, zend_hash_key *key)
+{
+	php_pqconn_object_t *obj = va_arg(argv, php_pqconn_object_t *);
+	php_pqstm_t *stm = Z_PTR_P(p);
+
+	php_pqconn_prepare(NULL, obj, stm->name, stm->query, stm->params);
+
+	return ZEND_HASH_APPLY_KEEP;
+}
+
 static void php_pqconn_event_connreset(PGEventConnReset *event)
 {
 	php_pqconn_event_data_t *data = PQinstanceData(event->conn, php_pqconn_event);
@@ -46,6 +93,13 @@ static void php_pqconn_event_connreset(PGEventConnReset *event)
 	if (data) {
 		zval *zevhs;
 
+		/* restore listeners */
+		zend_hash_apply_with_arguments(&data->obj->intern->listeners, apply_relisten, 1, data->obj);
+
+		/* restore statements */
+		zend_hash_apply_with_arguments(&data->obj->intern->statements, apply_reprepare, 1, data->obj);
+
+		/* eventhandler */
 		if ((zevhs = zend_hash_str_find(&data->obj->intern->eventhandlers, ZEND_STRL("reset")))) {
 			zval args, connection;
 

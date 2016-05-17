@@ -86,6 +86,7 @@ static void php_pqconn_object_free(zend_object *o)
 		php_resource_factory_handle_dtor(&obj->intern->factory, obj->intern->conn);
 		php_resource_factory_dtor(&obj->intern->factory);
 		zend_hash_destroy(&obj->intern->listeners);
+		zend_hash_destroy(&obj->intern->statements);
 		zend_hash_destroy(&obj->intern->converters);
 		zend_hash_destroy(&obj->intern->eventhandlers);
 		efree(obj->intern);
@@ -668,6 +669,7 @@ static PHP_METHOD(pqconn, __construct) {
 			obj->intern->default_auto_convert = PHP_PQRES_CONV_ALL;
 
 			zend_hash_init(&obj->intern->listeners, 0, NULL, ZVAL_PTR_DTOR, 0);
+			zend_hash_init(&obj->intern->statements, 0, NULL, NULL, 0);
 			zend_hash_init(&obj->intern->converters, 0, NULL, ZVAL_PTR_DTOR, 0);
 			zend_hash_init(&obj->intern->eventhandlers, 0, NULL, ZVAL_PTR_DTOR, 0);
 
