@@ -1150,7 +1150,7 @@ PHP_MINIT_FUNCTION(pqres)
 	php_pqres_object_handlers.get_properties = php_pq_object_properties;
 	php_pqres_object_handlers.count_elements = php_pqres_count_elements;
 
-	zend_hash_init(&php_pqres_object_prophandlers, 8, NULL, php_pq_object_prophandler_dtor, 1);
+	zend_hash_init(&php_pqres_object_prophandlers, 9, NULL, php_pq_object_prophandler_dtor, 1);
 
 	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("status"), ZEND_ACC_PUBLIC);
 	ph.read = php_pqres_object_read_status;
@@ -1164,15 +1164,11 @@ PHP_MINIT_FUNCTION(pqres)
 	ph.read = php_pqres_object_read_error_message;
 	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "errorMessage", sizeof("errorMessage")-1, (void *) &ph, sizeof(ph));
 
-<<<<<<< HEAD
-	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("numRows"), 0, ZEND_ACC_PUBLIC);
-=======
 	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("diag"), ZEND_ACC_PUBLIC TSRMLS_CC);
 	ph.read = php_pqres_object_read_diag;
-	zend_hash_add(&php_pqres_object_prophandlers, "diag", sizeof("diag"), (void *) &ph, sizeof(ph), NULL);
+	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "diag", sizeof("diag")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("numRows"), 0, ZEND_ACC_PUBLIC TSRMLS_CC);
->>>>>>> v1.1.x
+	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("numRows"), 0, ZEND_ACC_PUBLIC);
 	ph.read = php_pqres_object_read_num_rows;
 	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "numRows", sizeof("numRows")-1, (void *) &ph, sizeof(ph));
 
