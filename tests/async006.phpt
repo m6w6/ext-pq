@@ -30,13 +30,50 @@ do {
 DONE
 --EXPECTF--
 Test
-object(pq\Result)#%d (8) {
+object(pq\Result)#%d (9) {
   ["status"]=>
   int(9)
   ["statusMessage"]=>
   string(12) "SINGLE_TUPLE"
   ["errorMessage"]=>
   string(0) ""
+  ["diag"]=>
+  array(17) {
+    ["severity"]=>
+    NULL
+    ["sqlstate"]=>
+    NULL
+    ["message_primary"]=>
+    NULL
+    ["message_detail"]=>
+    NULL
+    ["message_hint"]=>
+    NULL
+    ["statement_position"]=>
+    NULL
+    ["internal_position"]=>
+    NULL
+    ["internal_query"]=>
+    NULL
+    ["context"]=>
+    NULL
+    ["schema_name"]=>
+    NULL
+    ["table_name"]=>
+    NULL
+    ["column_name"]=>
+    NULL
+    ["datatype_name"]=>
+    NULL
+    ["constraint_name"]=>
+    NULL
+    ["source_file"]=>
+    NULL
+    ["source_line"]=>
+    NULL
+    ["source_function"]=>
+    NULL
+  }
   ["numRows"]=>
   int(1)
   ["numCols"]=>
@@ -48,13 +85,50 @@ object(pq\Result)#%d (8) {
   ["autoConvert"]=>
   int(65535)
 }
-object(pq\Result)#%d (8) {
+object(pq\Result)#%d (9) {
   ["status"]=>
   int(9)
   ["statusMessage"]=>
   string(12) "SINGLE_TUPLE"
   ["errorMessage"]=>
   string(0) ""
+  ["diag"]=>
+  array(17) {
+    ["severity"]=>
+    NULL
+    ["sqlstate"]=>
+    NULL
+    ["message_primary"]=>
+    NULL
+    ["message_detail"]=>
+    NULL
+    ["message_hint"]=>
+    NULL
+    ["statement_position"]=>
+    NULL
+    ["internal_position"]=>
+    NULL
+    ["internal_query"]=>
+    NULL
+    ["context"]=>
+    NULL
+    ["schema_name"]=>
+    NULL
+    ["table_name"]=>
+    NULL
+    ["column_name"]=>
+    NULL
+    ["datatype_name"]=>
+    NULL
+    ["constraint_name"]=>
+    NULL
+    ["source_file"]=>
+    NULL
+    ["source_line"]=>
+    NULL
+    ["source_function"]=>
+    NULL
+  }
   ["numRows"]=>
   int(1)
   ["numCols"]=>
@@ -66,13 +140,50 @@ object(pq\Result)#%d (8) {
   ["autoConvert"]=>
   int(65535)
 }
-object(pq\Result)#%d (8) {
+object(pq\Result)#%d (9) {
   ["status"]=>
   int(9)
   ["statusMessage"]=>
   string(12) "SINGLE_TUPLE"
   ["errorMessage"]=>
   string(0) ""
+  ["diag"]=>
+  array(17) {
+    ["severity"]=>
+    NULL
+    ["sqlstate"]=>
+    NULL
+    ["message_primary"]=>
+    NULL
+    ["message_detail"]=>
+    NULL
+    ["message_hint"]=>
+    NULL
+    ["statement_position"]=>
+    NULL
+    ["internal_position"]=>
+    NULL
+    ["internal_query"]=>
+    NULL
+    ["context"]=>
+    NULL
+    ["schema_name"]=>
+    NULL
+    ["table_name"]=>
+    NULL
+    ["column_name"]=>
+    NULL
+    ["datatype_name"]=>
+    NULL
+    ["constraint_name"]=>
+    NULL
+    ["source_file"]=>
+    NULL
+    ["source_line"]=>
+    NULL
+    ["source_function"]=>
+    NULL
+  }
   ["numRows"]=>
   int(1)
   ["numCols"]=>
@@ -84,13 +195,50 @@ object(pq\Result)#%d (8) {
   ["autoConvert"]=>
   int(65535)
 }
-object(pq\Result)#%d (8) {
+object(pq\Result)#%d (9) {
   ["status"]=>
   int(2)
   ["statusMessage"]=>
   string(9) "TUPLES_OK"
   ["errorMessage"]=>
   string(0) ""
+  ["diag"]=>
+  array(17) {
+    ["severity"]=>
+    NULL
+    ["sqlstate"]=>
+    NULL
+    ["message_primary"]=>
+    NULL
+    ["message_detail"]=>
+    NULL
+    ["message_hint"]=>
+    NULL
+    ["statement_position"]=>
+    NULL
+    ["internal_position"]=>
+    NULL
+    ["internal_query"]=>
+    NULL
+    ["context"]=>
+    NULL
+    ["schema_name"]=>
+    NULL
+    ["table_name"]=>
+    NULL
+    ["column_name"]=>
+    NULL
+    ["datatype_name"]=>
+    NULL
+    ["constraint_name"]=>
+    NULL
+    ["source_file"]=>
+    NULL
+    ["source_line"]=>
+    NULL
+    ["source_function"]=>
+    NULL
+  }
   ["numRows"]=>
   int(0)
   ["numCols"]=>

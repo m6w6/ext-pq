@@ -58,12 +58,18 @@ Warning: pq\Result not initialized in %s on line %d
 Warning: pq\Result not initialized in %s on line %d
 
 Warning: pq\Result not initialized in %s on line %d
-object(pq\Result)#%d (8) {
+
+Warning: pq\Result not initialized in %s on line %d
+
+Warning: pq\Result not initialized in %s on line %d
+object(pq\Result)#%d (9) {
   ["status"]=>
   NULL
   ["statusMessage"]=>
   NULL
   ["errorMessage"]=>
+  NULL
+  ["diag"]=>
   NULL
   ["numRows"]=>
   int(0)
@@ -76,7 +82,7 @@ object(pq\Result)#%d (8) {
   ["autoConvert"]=>
   int(65535)
 }
-array(9) {
+array(10) {
   ["dummy"]=>
   int(2)
   ["status"]=>
@@ -84,6 +90,8 @@ array(9) {
   ["statusMessage"]=>
   NULL
   ["errorMessage"]=>
+  NULL
+  ["diag"]=>
   NULL
   ["numRows"]=>
   int(0)
