@@ -448,7 +448,7 @@ static inline void php_pqstm_prepare_handler(INTERNAL_FUNCTION_PARAMETERS, zend_
 				obj->intern->allocated = 1;
 
 				zend_hash_add(&obj->intern->conn->intern->statements,
-						obj->intern->name, strlen(obj->intern->name)+1, &obj, sizeof(obj), NULL);
+						obj->intern->name, strlen(obj->intern->name)+1, &obj->intern, sizeof(obj->intern), NULL);
 			}
 		}
 	}
