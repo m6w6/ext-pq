@@ -216,6 +216,20 @@ static void php_pqconn_object_write_unbuffered(zval *object, void *o, zval *valu
 	obj->intern->unbuffered = z_is_true(value);
 }
 
+static void php_pqconn_object_read_nonblocking(zval *object, void *o, zval *return_value)
+{
+	php_pqconn_object_t *obj = o;
+
+	RETVAL_BOOL(PQisnonblocking(obj->intern->conn));
+}
+
+static void php_pqconn_object_write_nonblocking(zval *object, void *o, zval *value)
+{
+	php_pqconn_object_t *obj = o;
+
+	PQsetnonblocking(obj->intern->conn, z_is_true(value));
+}
+
 static void php_pqconn_object_read_db(zval *object, void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
@@ -1043,6 +1057,40 @@ static PHP_METHOD(pqconn, poll) {
 				RETVAL_LONG(obj->intern->poller(obj->intern->conn));
 			}
 			php_pqconn_notify_listeners(obj);
+		}
+	}
+}
+
+ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_flush, 0, 0, 0)
+ZEND_END_ARG_INFO();
+static PHP_METHOD(pqconn, flush) {
+	zend_error_handling zeh;
+	ZEND_RESULT_CODE rv;
+
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh);
+
+	if (SUCCESS == rv) {
+		php_pqconn_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
+
+		if (!obj->intern) {
+			throw_exce(EX_UNINITIALIZED, "pq\\Connection not initialized");
+		} else if (!obj->intern->poller) {
+			throw_exce(EX_RUNTIME, "No asynchronous operation active");
+		} else {
+			switch (PQflush(obj->intern->conn)) {
+			case -1:
+			default:
+				throw_exce(EX_RUNTIME, "Failed to flush connection: %s", PHP_PQerrorMessage(obj->intern->conn));
+				break;
+			case 0:
+				RETVAL_TRUE;
+				break;
+			case 1:
+				RETVAL_FALSE;
+				break;
+			}
 		}
 	}
 }
@@ -1902,6 +1950,7 @@ static zend_function_entry php_pqconn_methods[] = {
 	PHP_ME(pqconn, reset, ai_pqconn_reset, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, resetAsync, ai_pqconn_reset_async, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, poll, ai_pqconn_poll, ZEND_ACC_PUBLIC)
+	PHP_ME(pqconn, flush, ai_pqconn_flush, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, exec, ai_pqconn_exec, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, execAsync, ai_pqconn_exec_async, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, execParams, ai_pqconn_exec_params, ZEND_ACC_PUBLIC)
@@ -1959,7 +2008,7 @@ PHP_MINIT_FUNCTION(pqconn)
 	php_pqconn_object_handlers.get_properties = php_pq_object_properties;
 	php_pqconn_object_handlers.get_debug_info = php_pq_object_debug_info;
 
-	zend_hash_init(&php_pqconn_object_prophandlers, 22, NULL, php_pq_object_prophandler_dtor, 1);
+	zend_hash_init(&php_pqconn_object_prophandlers, 23, NULL, php_pq_object_prophandler_dtor, 1);
 
 	zend_declare_property_long(php_pqconn_class_entry, ZEND_STRL("status"), CONNECTION_BAD, ZEND_ACC_PUBLIC);
 	ph.read = php_pqconn_object_read_status;
@@ -1991,6 +2040,12 @@ PHP_MINIT_FUNCTION(pqconn)
 	ph.read = php_pqconn_object_read_unbuffered;
 	ph.write = php_pqconn_object_write_unbuffered;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "unbuffered", sizeof("unbuffered")-1, (void *) &ph, sizeof(ph));
+	ph.write = NULL;
+
+	zend_declare_property_bool(php_pqconn_class_entry, ZEND_STRL("nonblocking"), 0, ZEND_ACC_PUBLIC);
+	ph.read = php_pqconn_object_read_nonblocking;
+	ph.write = php_pqconn_object_write_nonblocking;
+	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "nonblocking", sizeof("nonblocking")-1, (void *) &ph, sizeof(ph));
 	ph.write = NULL;
 
 	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("db"), ZEND_ACC_PUBLIC);

@@ -48,6 +48,7 @@
  <notes><![CDATA[
 * Added public readonly array pq\Result::$diag property, listing PQresultErrorField details (gh-issue #14)
 * Restore listeners and prepared statements after a connection reset (gh-issue #15)
+* Added pq\Connection::$nonblocking and pq\Connection::flush() to support non-blocking writes (gh-issue #16)
 ]]></notes>
  <contents>
   <dir name="/">
@@ -127,6 +128,7 @@
     <file role="test" name="exceptions001.phpt" />
     <file role="test" name="exceptions002.phpt" />
     <file role="test" name="fetch001.phpt" />
+    <file role="test" name="flush001.phpt" />
     <file role="test" name="gh-issue015_listeners.phpt" />
     <file role="test" name="gh-issue015_statements.phpt" />
     <file role="test" name="info001.phpt" />
