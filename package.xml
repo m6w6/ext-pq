@@ -35,9 +35,9 @@
   <email>daverandom@php.net</email>
   <active>yes</active>
  </developer>
- <date>2016-05-17</date>
+ <date>2016-05-20</date>
  <version>
-  <release>1.1.0dev</release>
+  <release>1.1.0</release>
   <api>1.1.0</api>
  </version>
  <stability>
