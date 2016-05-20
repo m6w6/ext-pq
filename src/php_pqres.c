@@ -485,23 +485,57 @@ static void php_pqres_object_read_diag(zval *object, void *o, zval *return_value
 		char code;
 		const char *const name;
 	} diag[] = {
+#ifdef PG_DIAG_SEVERITY
 			{PG_DIAG_SEVERITY,			"severity"},
+#endif
+#ifdef PG_DIAG_SQLSTATE
 			{PG_DIAG_SQLSTATE,			"sqlstate"},
+#endif
+#ifdef PG_DIAG_MESSAGE_PRIMARY
 			{PG_DIAG_MESSAGE_PRIMARY,	"message_primary"},
+#endif
+#ifdef PG_DIAG_MESSAGE_DETAIL
 			{PG_DIAG_MESSAGE_DETAIL,	"message_detail"},
+#endif
+#ifdef PG_DIAG_MESSAGE_HINT
 			{PG_DIAG_MESSAGE_HINT,		"message_hint"},
+#endif
+#ifdef PG_DIAG_STATEMENT_POSITION
 			{PG_DIAG_STATEMENT_POSITION,"statement_position"},
+#endif
+#ifdef PG_DIAG_INTERNAL_POSITION
 			{PG_DIAG_INTERNAL_POSITION,	"internal_position"},
+#endif
+#ifdef PG_DIAG_INTERNAL_QUERY
 			{PG_DIAG_INTERNAL_QUERY,	"internal_query"},
+#endif
+#ifdef PG_DIAG_CONTEXT
 			{PG_DIAG_CONTEXT,			"context"},
+#endif
+#ifdef PG_DIAG_SCHEMA_NAME
 			{PG_DIAG_SCHEMA_NAME,		"schema_name"},
+#endif
+#ifdef PG_DIAG_TABLE_NAME
 			{PG_DIAG_TABLE_NAME,		"table_name"},
+#endif
+#ifdef PG_DIAG_COLUMN_NAME
 			{PG_DIAG_COLUMN_NAME,		"column_name"},
+#endif
+#ifdef PG_DIAG_DATATYPE_NAME
 			{PG_DIAG_DATATYPE_NAME,		"datatype_name"},
+#endif
+#ifdef PG_DIAG_CONSTRAINT_NAME
 			{PG_DIAG_CONSTRAINT_NAME,	"constraint_name"},
+#endif
+#ifdef PG_DIAG_SOURCE_FILE
 			{PG_DIAG_SOURCE_FILE,		"source_file"},
+#endif
+#ifdef PG_DIAG_SOURCE_LINE
 			{PG_DIAG_SOURCE_LINE,		"source_line"},
-			{PG_DIAG_SOURCE_FUNCTION,	"source_function"}
+#endif
+#ifdef PG_DIAG_SOURCE_FUNCTION
+			{PG_DIAG_SOURCE_FUNCTION,	"source_function"},
+#endif
 	};
 
 	array_init_size(return_value, 32);
