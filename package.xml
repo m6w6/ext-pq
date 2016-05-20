@@ -37,7 +37,7 @@
  </developer>
  <date>2016-05-20</date>
  <version>
-  <release>2.1.1dev</release>
+  <release>2.1.1</release>
   <api>2.1.0</api>
  </version>
  <stability>
@@ -46,7 +46,8 @@
  </stability>
  <license uri="http://copyfree.org/content/standard/licenses/2bsd/license.txt">BSD-2-Clause</license>
  <notes><![CDATA[
-*
+* Fix build with PostgreSQL < 9.3
+* Fix required PHP version in package.xml
 ]]></notes>
  <contents>
   <dir name="/">
@@ -159,9 +160,7 @@
  <dependencies>
   <required>
    <php>
-    <min>5.4.0</min>
-    <max>7.0.0</max>
-    <exclude>7.0.0</exclude>
+    <min>7.0.0</min>
    </php>
    <pearinstaller>
     <min>1.4.0</min>
