@@ -411,7 +411,7 @@ static PHP_METHOD(pqcur, moveAsync)
 static zend_function_entry php_pqcur_methods[] = {
 	PHP_ME(pqcur, __construct, ai_pqcur___construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
 	PHP_ME(pqcur, open, ai_pqcur_open, ZEND_ACC_PUBLIC)
-	PHP_ME(pqcur, openAsync, ai_pqcur_open, ZEND_ACC_PUBLIC)
+	PHP_ME(pqcur, openAsync, ai_pqcur_openAsync, ZEND_ACC_PUBLIC)
 	PHP_ME(pqcur, close, ai_pqcur_close, ZEND_ACC_PUBLIC)
 	PHP_ME(pqcur, closeAsync, ai_pqcur_closeAsync, ZEND_ACC_PUBLIC)
 	PHP_ME(pqcur, fetch, ai_pqcur_fetch, ZEND_ACC_PUBLIC)
