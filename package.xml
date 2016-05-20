@@ -37,7 +37,7 @@
  </developer>
  <date>2016-05-20</date>
  <version>
-  <release>1.1.0</release>
+  <release>1.1.1dev</release>
   <api>1.1.0</api>
  </version>
  <stability>
@@ -46,10 +46,7 @@
  </stability>
  <license uri="http://copyfree.org/content/standard/licenses/2bsd/license.txt">BSD-2-Clause</license>
  <notes><![CDATA[
-* Added public readonly array pq\Result::$diag property, listing PQresultErrorField details (gh-issue #14)
-* Restore listeners and prepared statements after a connection reset (gh-issue #15)
-* Added pq\Connection::$nonblocking and pq\Connection::flush() to support non-blocking writes (gh-issue #16)
-]]></notes>
+*]]></notes>
  <contents>
   <dir name="/">
    <file role="doc" name="AUTHORS" />
