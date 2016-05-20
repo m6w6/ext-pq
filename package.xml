@@ -37,7 +37,7 @@
  </developer>
  <date>2016-05-20</date>
  <version>
-  <release>1.1.1dev</release>
+  <release>1.1.1</release>
   <api>1.1.0</api>
  </version>
  <stability>
@@ -46,7 +46,8 @@
  </stability>
  <license uri="http://copyfree.org/content/standard/licenses/2bsd/license.txt">BSD-2-Clause</license>
  <notes><![CDATA[
-*]]></notes>
+* Fix build with PostgreSQL < 9.3
+]]></notes>
  <contents>
   <dir name="/">
    <file role="doc" name="AUTHORS" />

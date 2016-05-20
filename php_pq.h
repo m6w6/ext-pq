@@ -14,7 +14,7 @@
 #ifndef PHP_PQ_H
 #define PHP_PQ_H
 
-#define PHP_PQ_VERSION "1.1.1dev"
+#define PHP_PQ_VERSION "1.1.1"
 
 #ifdef PHP_WIN32
 #	define PHP_PQ_API __declspec(dllexport)
