@@ -1198,7 +1198,7 @@ PHP_MINIT_FUNCTION(pqres)
 	ph.read = php_pqres_object_read_error_message;
 	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "errorMessage", sizeof("errorMessage")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("diag"), ZEND_ACC_PUBLIC TSRMLS_CC);
+	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("diag"), ZEND_ACC_PUBLIC);
 	ph.read = php_pqres_object_read_diag;
 	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "diag", sizeof("diag")-1, (void *) &ph, sizeof(ph));
 
