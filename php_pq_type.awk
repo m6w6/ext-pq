@@ -13,20 +13,20 @@ END {
 		printf "\t||\t((oid) == %d) \\\n", oid
 	}
 	printf ")\n#endif\n"
-	
+
 	printf "#ifndef PHP_PQ_TYPE_OF_ARRAY\n"
 	printf "# define PHP_PQ_TYPE_OF_ARRAY(oid) ("
 	for (oid in arrays) {
 		printf "\\\n\t(oid) == %d ? %s : ", oid, arrays[oid]
 	}
 	printf "0 \\\n)\n#endif\n"
-	
+
 	printf "#ifndef PHP_PQ_DELIM_OF_ARRAY\n"
 	printf "# define PHP_PQ_DELIM_OF_ARRAY(oid) ("
 	for (oid in delims) {
 		printf "\\\n\t(oid) == %d ? '%s' : ", oid, delims[oid]
 	}
-	printf "0 \\\n)\n#endif\n"
+	printf "\\\n\t0 \\\n)\n#endif\n"
 }
 
 /^DATA/ {

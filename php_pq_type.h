@@ -97,6 +97,10 @@ PHP_PQ_TYPE("JSONARRAY", 199)
 # define PHP_PQ_OID_PG_NODE_TREE 194
 #endif
 PHP_PQ_TYPE("PG_NODE_TREE", 194)
+#ifndef PHP_PQ_OID_PG_DDL_COMMAND
+# define PHP_PQ_OID_PG_DDL_COMMAND 32
+#endif
+PHP_PQ_TYPE("PG_DDL_COMMAND", 32)
 #ifndef PHP_PQ_OID_SMGR
 # define PHP_PQ_OID_SMGR 210
 #endif
@@ -421,6 +425,14 @@ PHP_PQ_TYPE("REGCLASS", 2205)
 # define PHP_PQ_OID_REGTYPE 2206
 #endif
 PHP_PQ_TYPE("REGTYPE", 2206)
+#ifndef PHP_PQ_OID_REGROLE
+# define PHP_PQ_OID_REGROLE 4096
+#endif
+PHP_PQ_TYPE("REGROLE", 4096)
+#ifndef PHP_PQ_OID_REGNAMESPACE
+# define PHP_PQ_OID_REGNAMESPACE 4089
+#endif
+PHP_PQ_TYPE("REGNAMESPACE", 4089)
 #ifndef PHP_PQ_OID_REGPROCEDUREARRAY
 # define PHP_PQ_OID_REGPROCEDUREARRAY 2207
 #endif
@@ -441,6 +453,14 @@ PHP_PQ_TYPE("REGCLASSARRAY", 2210)
 # define PHP_PQ_OID_REGTYPEARRAY 2211
 #endif
 PHP_PQ_TYPE("REGTYPEARRAY", 2211)
+#ifndef PHP_PQ_OID_REGROLEARRAY
+# define PHP_PQ_OID_REGROLEARRAY 4097
+#endif
+PHP_PQ_TYPE("REGROLEARRAY", 4097)
+#ifndef PHP_PQ_OID_REGNAMESPACEARRAY
+# define PHP_PQ_OID_REGNAMESPACEARRAY 4090
+#endif
+PHP_PQ_TYPE("REGNAMESPACEARRAY", 4090)
 #ifndef PHP_PQ_OID_UUID
 # define PHP_PQ_OID_UUID 2950
 #endif
@@ -621,6 +641,14 @@ PHP_PQ_TYPE("ANYENUM", 3500)
 # define PHP_PQ_OID_FDW_HANDLER 3115
 #endif
 PHP_PQ_TYPE("FDW_HANDLER", 3115)
+#ifndef PHP_PQ_OID_INDEX_AM_HANDLER
+# define PHP_PQ_OID_INDEX_AM_HANDLER 325
+#endif
+PHP_PQ_TYPE("INDEX_AM_HANDLER", 325)
+#ifndef PHP_PQ_OID_TSM_HANDLER
+# define PHP_PQ_OID_TSM_HANDLER 3310
+#endif
+PHP_PQ_TYPE("TSM_HANDLER", 3310)
 #ifndef PHP_PQ_OID_ANYRANGE
 # define PHP_PQ_OID_ANYRANGE 3831
 #endif
@@ -696,6 +724,8 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	||	((oid) == 3911) \
 	||	((oid) == 3913) \
 	||	((oid) == 3927) \
+	||	((oid) == 4090) \
+	||	((oid) == 4097) \
 )
 #endif
 #ifndef PHP_PQ_TYPE_OF_ARRAY
@@ -767,7 +797,9 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	(oid) == 3909 ? 3908 : \
 	(oid) == 3911 ? 3910 : \
 	(oid) == 3913 ? 3912 : \
-	(oid) == 3927 ? 3926 : 0 \
+	(oid) == 3927 ? 3926 : \
+	(oid) == 4090 ? 4089 : \
+	(oid) == 4097 ? 4096 : 0 \
 )
 #endif
 #ifndef PHP_PQ_DELIM_OF_ARRAY
@@ -787,6 +819,7 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	(oid) == 28 ? '\054' : \
 	(oid) == 29 ? '\054' : \
 	(oid) == 30 ? '\054' : \
+	(oid) == 32 ? '\054' : \
 	(oid) == 71 ? '\054' : \
 	(oid) == 75 ? '\054' : \
 	(oid) == 81 ? '\054' : \
@@ -797,6 +830,7 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	(oid) == 194 ? '\054' : \
 	(oid) == 199 ? '\054' : \
 	(oid) == 210 ? '\054' : \
+	(oid) == 325 ? '\054' : \
 	(oid) == 600 ? '\054' : \
 	(oid) == 601 ? '\054' : \
 	(oid) == 602 ? '\054' : \
@@ -901,6 +935,7 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	(oid) == 3115 ? '\054' : \
 	(oid) == 3220 ? '\054' : \
 	(oid) == 3221 ? '\054' : \
+	(oid) == 3310 ? '\054' : \
 	(oid) == 3500 ? '\054' : \
 	(oid) == 3614 ? '\054' : \
 	(oid) == 3615 ? '\054' : \
@@ -927,6 +962,11 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	(oid) == 3912 ? '\054' : \
 	(oid) == 3913 ? '\054' : \
 	(oid) == 3926 ? '\054' : \
-	(oid) == 3927 ? '\054' : 0 \
+	(oid) == 3927 ? '\054' : \
+	(oid) == 4089 ? '\054' : \
+	(oid) == 4090 ? '\054' : \
+	(oid) == 4096 ? '\054' : \
+	(oid) == 4097 ? '\054' : \
+	0 \
 )
 #endif
