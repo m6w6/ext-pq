@@ -328,7 +328,7 @@ array(1) {
       ["format"]=>
       string(11) "Y-m-d H:i:s"
       ["date"]=>
-      string(26) "%d-%d-%d %d:%d:%d.000000"
+      string(26) "%d-%d-%d %d:%d:%d.%d"
       ["timezone_type"]=>
       int(1)
       ["timezone"]=>
@@ -339,7 +339,7 @@ array(1) {
       ["format"]=>
       string(13) "Y-m-d H:i:s.u"
       ["date"]=>
-      string(26) "%d-%d-%d %d:%d:%d.000000"
+      string(26) "%d-%d-%d %d:%d:%d.%d"
       ["timezone_type"]=>
       int(3)
       ["timezone"]=>
@@ -350,7 +350,7 @@ array(1) {
       ["format"]=>
       string(14) "Y-m-d H:i:s.uO"
       ["date"]=>
-      string(26) "%d-%d-%d %d:%d:%d.000000"
+      string(26) "%d-%d-%d %d:%d:%d.%d"
       ["timezone_type"]=>
       int(1)
       ["timezone"]=>
@@ -372,7 +372,7 @@ array(1) {
       ["format"]=>
       string(11) "Y-m-d H:i:s"
       ["date"]=>
-      string(26) "%d-%d-%d %d:%d:%d.000000"
+      string(26) "%d-%d-%d %d:%d:%d.%d"
       ["timezone_type"]=>
       int(1)
       ["timezone"]=>
@@ -383,7 +383,7 @@ array(1) {
       ["format"]=>
       string(13) "Y-m-d H:i:s.u"
       ["date"]=>
-      string(26) "%d-%d-%d %d:%d:%d.000000"
+      string(26) "%d-%d-%d %d:%d:%d.%d"
       ["timezone_type"]=>
       int(3)
       ["timezone"]=>
@@ -394,7 +394,7 @@ array(1) {
       ["format"]=>
       string(14) "Y-m-d H:i:s.uO"
       ["date"]=>
-      string(26) "%d-%d-%d %d:%d:%d.000000"
+      string(26) "%d-%d-%d %d:%d:%d.%d"
       ["timezone_type"]=>
       int(1)
       ["timezone"]=>

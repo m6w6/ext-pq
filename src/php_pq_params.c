@@ -83,6 +83,9 @@ static zend_string *object_param_to_string(php_pq_params_t *p, zval *zobj, Oid t
 	case PHP_PQ_OID_JSONB:
 #	endif
 	case PHP_PQ_OID_JSON:
+#	if PHP_VERSION_ID >= 70100
+		JSON_G(encode_max_depth) = PHP_JSON_PARSER_DEFAULT_DEPTH;
+#	endif
 		php_json_encode(&str, zobj, PHP_JSON_UNESCAPED_UNICODE);
 		smart_str_0(&str);
 		return str.s;
