@@ -1146,11 +1146,12 @@ static PHP_METHOD(pqconn, getResult) {
 			throw_exce(EX_UNINITIALIZED, "pq\\Connection not initialized");
 		} else {
 			PGresult *res = PQgetResult(obj->intern->conn);
+			php_pq_object_t *res_obj;
 
-			if (!res) {
-				RETVAL_NULL();
+			if (res && (res_obj = PQresultInstanceData(res, php_pqconn_event))) {
+				php_pq_object_to_zval_no_addref(res_obj, return_value);
 			} else {
-				php_pq_object_to_zval_no_addref(PQresultInstanceData(res, php_pqconn_event), return_value);
+				RETVAL_NULL();
 			}
 
 			php_pqconn_notify_listeners(obj);
