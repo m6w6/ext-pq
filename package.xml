@@ -48,6 +48,7 @@
  <notes><![CDATA[
 * Fix gh-issue #32: JSON compatibility with PHP-7.1
 + Update static pq\Types with PostgreSQL-9.6 types
++ Fix pq\DateTime::createFromFormat() prototype with PHP 7.2
 ]]></notes>
  <contents>
   <dir name="/">
