@@ -139,7 +139,11 @@ static PHP_METHOD(pqdt, __toString)
 ZEND_BEGIN_ARG_INFO_EX(ai_pqdt_create_from_format, 0, 0, 2)
 	ZEND_ARG_INFO(0, format)
 	ZEND_ARG_INFO(0, datetime)
+#if PHP_VERSION_ID >= 70200
+	ZEND_ARG_OBJ_INFO(0, object, DateTimeZone, 1)
+#else
 	ZEND_ARG_INFO(0, timezone)
+#endif
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqdt, createFromFormat)
 {
