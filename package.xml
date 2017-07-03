@@ -35,7 +35,13 @@
   <email>daverandom@php.net</email>
   <active>yes</active>
  </developer>
- <date>2016-11-15</date>
+ <developer>
+  <name>Remi Collet</name>
+  <user>remi</user>
+  <email>remi@php.net</email>
+  <active>yes</active>
+ </developer>
+ <date>2017-07-03</date>
  <version>
   <release>2.1.2</release>
   <api>2.1.0</api>
@@ -47,8 +53,8 @@
  <license uri="http://copyfree.org/content/standard/licenses/2bsd/license.txt">BSD-2-Clause</license>
  <notes><![CDATA[
 * Fix gh-issue #32: JSON compatibility with PHP-7.1
+* Fix pq\DateTime::createFromFormat() prototype with PHP-7.2
 + Update static pq\Types with PostgreSQL-9.6 types
-+ Fix pq\DateTime::createFromFormat() prototype with PHP 7.2
 ]]></notes>
  <contents>
   <dir name="/">
