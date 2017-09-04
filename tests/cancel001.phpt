@@ -12,7 +12,7 @@ $c = new pq\Connection(PQ_DSN);
 
 $x = new pq\Cancel($c);
 
-$c->execAsync("SELECT pg_sleep(2)");
+$c->execAsync("SELECT pg_sleep(10)");
 
 $x->cancel();
 
