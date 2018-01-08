@@ -1571,7 +1571,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_escape_bytea, 0, 0, 1)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, escapeBytea) {
 	char *str;
-	int len;
+	size_t len;
 
 	if (SUCCESS == zend_parse_parameters(ZEND_NUM_ARGS(), "s", &str, &len)) {
 		php_pqconn_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
