@@ -43,7 +43,11 @@ void php_pq_callback_addref(php_pq_callback_t *cb)
 {
 	Z_TRY_ADDREF(cb->fci.function_name);
 	if (cb->fci.object) {
+#ifdef GC_ADDREF
+		GC_ADDREF(cb->fci.object);
+#else
 		++GC_REFCOUNT(cb->fci.object);
+#endif
 	}
 }
 

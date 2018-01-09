@@ -59,7 +59,11 @@ void php_pq_object_to_zval_no_addref(void *o, zval *zv)
 void php_pq_object_addref(void *o)
 {
 	php_pq_object_t *obj = o;
+#ifdef GC_ADDREF
+	GC_ADDREF(&obj->zo);
+#else
 	++GC_REFCOUNT(&obj->zo);
+#endif
 }
 
 void php_pq_object_delref(void *o)
