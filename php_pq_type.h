@@ -97,6 +97,14 @@ PHP_PQ_TYPE("JSONARRAY", 199)
 # define PHP_PQ_OID_PG_NODE_TREE 194
 #endif
 PHP_PQ_TYPE("PG_NODE_TREE", 194)
+#ifndef PHP_PQ_OID_PG_NDISTINCT
+# define PHP_PQ_OID_PG_NDISTINCT 3361
+#endif
+PHP_PQ_TYPE("PG_NDISTINCT", 3361)
+#ifndef PHP_PQ_OID_PG_DEPENDENCIES
+# define PHP_PQ_OID_PG_DEPENDENCIES 3402
+#endif
+PHP_PQ_TYPE("PG_DEPENDENCIES", 3402)
 #ifndef PHP_PQ_OID_PG_DDL_COMMAND
 # define PHP_PQ_OID_PG_DDL_COMMAND 32
 #endif
@@ -185,6 +193,10 @@ PHP_PQ_TYPE("INET", 869)
 # define PHP_PQ_OID_CIDR 650
 #endif
 PHP_PQ_TYPE("CIDR", 650)
+#ifndef PHP_PQ_OID_MACADDR8
+# define PHP_PQ_OID_MACADDR8 774
+#endif
+PHP_PQ_TYPE("MACADDR8", 774)
 #ifndef PHP_PQ_OID_BOOLARRAY
 # define PHP_PQ_OID_BOOLARRAY 1000
 #endif
@@ -305,6 +317,10 @@ PHP_PQ_TYPE("ACLITEMARRAY", 1034)
 # define PHP_PQ_OID_MACADDRARRAY 1040
 #endif
 PHP_PQ_TYPE("MACADDRARRAY", 1040)
+#ifndef PHP_PQ_OID_MACADDR8ARRAY
+# define PHP_PQ_OID_MACADDR8ARRAY 775
+#endif
+PHP_PQ_TYPE("MACADDR8ARRAY", 775)
 #ifndef PHP_PQ_OID_INETARRAY
 # define PHP_PQ_OID_INETARRAY 1041
 #endif
@@ -661,6 +677,7 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	||	((oid) == 629) \
 	||	((oid) == 651) \
 	||	((oid) == 719) \
+	||	((oid) == 775) \
 	||	((oid) == 791) \
 	||	((oid) == 1000) \
 	||	((oid) == 1001) \
@@ -735,6 +752,7 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	(oid) == 629 ? 628 : \
 	(oid) == 651 ? 650 : \
 	(oid) == 719 ? 718 : \
+	(oid) == 775 ? 774 : \
 	(oid) == 791 ? 790 : \
 	(oid) == 1000 ? 16 : \
 	(oid) == 1001 ? 17 : \
@@ -848,6 +866,8 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	(oid) == 705 ? '\054' : \
 	(oid) == 718 ? '\054' : \
 	(oid) == 719 ? '\054' : \
+	(oid) == 774 ? '\054' : \
+	(oid) == 775 ? '\054' : \
 	(oid) == 790 ? '\054' : \
 	(oid) == 791 ? '\054' : \
 	(oid) == 829 ? '\054' : \
@@ -936,6 +956,8 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	(oid) == 3220 ? '\054' : \
 	(oid) == 3221 ? '\054' : \
 	(oid) == 3310 ? '\054' : \
+	(oid) == 3361 ? '\054' : \
+	(oid) == 3402 ? '\054' : \
 	(oid) == 3500 ? '\054' : \
 	(oid) == 3614 ? '\054' : \
 	(oid) == 3615 ? '\054' : \
