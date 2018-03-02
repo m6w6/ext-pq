@@ -15,6 +15,10 @@ compiler:
  - gcc
  - clang
 
+cache:
+ directories:
+  - $HOME/build
+ 
 env:
  global:
   - PQ_DSN="postgres://postgres@localhost/test"
