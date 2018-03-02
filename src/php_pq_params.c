@@ -75,7 +75,9 @@ unsigned php_pq_params_add_type_oid(php_pq_params_t *p, Oid type)
 
 static zend_string *object_param_to_string(php_pq_params_t *p, zval *zobj, Oid type)
 {
+#if PHP_PQ_HAVE_PHP_JSON_H && defined(PHP_PQ_OID_JSON)
 	smart_str str = {0};
+#endif
 
 	switch (type) {
 #if PHP_PQ_HAVE_PHP_JSON_H && defined(PHP_PQ_OID_JSON)
