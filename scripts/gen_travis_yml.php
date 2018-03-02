@@ -17,7 +17,7 @@ compiler:
 
 cache:
  directories:
-  - $HOME/build
+  - $HOME/cache
  
 env:
  global:
