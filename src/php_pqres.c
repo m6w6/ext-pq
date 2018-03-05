@@ -36,16 +36,14 @@ static zend_object_handlers php_pqres_object_handlers;
 static HashTable php_pqres_object_prophandlers;
 static zend_object_iterator_funcs php_pqres_iterator_funcs;
 
-static zend_object_iterator *php_pqres_iterator_init(zend_class_entry *ce, zval *object, int by_ref)
+static inline zend_object_iterator *php_pqres_iterator_init_ex(zend_class_entry *ce, zval *object, int by_ref)
 {
 	php_pqres_iterator_t *iter;
 	zval tmp, *zfetch_type;
 
 	iter = ecalloc(1, sizeof(*iter));
 	iter->zi.funcs = &php_pqres_iterator_funcs;
-	ZVAL_COPY(&iter->zi.data, object);
-
-	zend_iterator_init(&iter->zi);
+	ZVAL_COPY_VALUE(&iter->zi.data, object);
 
 	zfetch_type = zend_read_property(ce, object, ZEND_STRL("fetchType"), 0, &tmp);
 	iter->fetch_type = zval_get_long(zfetch_type);
@@ -55,30 +53,50 @@ static zend_object_iterator *php_pqres_iterator_init(zend_class_entry *ce, zval 
 	return (zend_object_iterator *) iter;
 }
 
+static zend_object_iterator *php_pqres_iterator_init(zend_class_entry *ce, zval *object, int by_ref)
+{
+	zend_object_iterator *iter = php_pqres_iterator_init_ex(ce, object, by_ref);
+
+	zend_iterator_init(iter);
+	Z_ADDREF_P(object);
+
+	return iter;
+}
 static void php_pqres_internal_iterator_init(zval *zobj)
 {
 	php_pqres_object_t *obj = PHP_PQ_OBJ(zobj, NULL);
 
-	obj->intern->iter = (php_pqres_iterator_t *) php_pqres_iterator_init(Z_OBJCE_P(zobj), zobj, 0);
-	/* prevent cyclic dep */
-	Z_DELREF_P(zobj);
+	obj->intern->iter = (php_pqres_iterator_t *) php_pqres_iterator_init_ex(Z_OBJCE_P(zobj), zobj, 0);
 	obj->intern->iter->zi.funcs->rewind((zend_object_iterator *) obj->intern->iter);
 
 }
 
-static void php_pqres_iterator_dtor(zend_object_iterator *i)
+static inline void php_pqres_iterator_dtor_ex(zend_object_iterator *i)
 {
 	php_pqres_iterator_t *iter = (php_pqres_iterator_t *) i;
 
 #if DBG_GC
-	fprintf(stderr, "FREE iter(#%d) %p\n", iter->zi.std.handle, iter);
+	fprintf(stderr, "FREE iter(#%d) rc=%d %p\n", iter->zi.std.handle, GC_REFCOUNT(&iter->zi.std), iter);
 #endif
 	if (!Z_ISUNDEF(iter->current_val)) {
 		zval_ptr_dtor(&iter->current_val);
 		ZVAL_UNDEF(&iter->current_val);
 	}
+}
+
+static void php_pqres_iterator_dtor(zend_object_iterator *i)
+{
+	php_pqres_iterator_dtor_ex(i);
 	zval_ptr_dtor(&i->data);
-	zend_iterator_dtor(i);
+}
+
+static void php_pqres_internal_iterator_dtor(php_pqres_object_t *obj)
+{
+	if (obj->intern && obj->intern->iter) {
+		php_pqres_iterator_dtor_ex((zend_object_iterator *) obj->intern->iter);
+		efree(obj->intern->iter);
+		obj->intern->iter = NULL;
+	}
 }
 
 static ZEND_RESULT_CODE php_pqres_iterator_valid(zend_object_iterator *i)
@@ -425,11 +443,7 @@ static void php_pqres_object_free(zend_object *o)
 			obj->intern->res = NULL;
 		}
 
-		if (obj->intern->iter) {
-			ZVAL_NULL(&obj->intern->iter->zi.data);
-			php_pqres_iterator_dtor((zend_object_iterator *) obj->intern->iter);
-			obj->intern->iter = NULL;
-		}
+		php_pqres_internal_iterator_dtor(obj);
 
 		zend_hash_destroy(&obj->intern->bound);
 		zend_hash_destroy(&obj->intern->converters);
