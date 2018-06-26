@@ -181,8 +181,7 @@ static PHP_METHOD(pqtypes, __construct) {
 #define PHP_PQ_TYPES_QUERY \
 	"select t.oid, t.* " \
 	"from pg_type t join pg_namespace n on t.typnamespace=n.oid " \
-	"where typisdefined " \
-	"and typrelid=0"
+	"where typisdefined"
 #ifndef PHP_PQ_OID_TEXT
 # define PHP_PQ_OID_TEXT 25
 #endif
