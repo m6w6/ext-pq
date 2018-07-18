@@ -123,7 +123,7 @@ static int apply_to_param_from_array(zval *zparam, void *arg_ptr)
 	struct apply_to_param_from_array_arg subarg, *arg = arg_ptr;
 	char *tmp;
 	size_t len;
-	zend_string *str;
+	zend_string *str, *tmpstr;
 
 	if (arg->index++) {
 		smart_str_appendc(arg->buffer, arg->delim);
@@ -134,7 +134,7 @@ static int apply_to_param_from_array(zval *zparam, void *arg_ptr)
 
 		ZVAL_LONG(&ztype, arg->type);
 		zend_call_method_with_2_params(arg->zconv, NULL, NULL, "converttostring", &rv, zparam, &ztype);
-		str = zval_get_string(&rv);
+		tmpstr = zval_get_string(&rv);
 		zval_ptr_dtor(&rv);
 		goto append_string;
 
@@ -176,15 +176,20 @@ static int apply_to_param_from_array(zval *zparam, void *arg_ptr)
 			break;
 
 		case IS_OBJECT:
-			if ((str = object_param_to_string(arg->params, zparam, arg->type))) {
+			if ((tmpstr = object_param_to_string(arg->params, zparam, arg->type))) {
 				goto append_string;
 			}
 			/* no break */
 		default:
-			str = zval_get_string(zparam);
+			tmpstr = zval_get_string(zparam);
 
 			append_string:
-			str = php_addslashes(str, 1);
+#if PHP_VERSION_ID < 70300
+			str = php_addslashes(tmpstr, 1);
+#else
+			str = php_addslashes(tmpstr);
+			zend_string_release(tmpstr);
+#endif
 			smart_str_appendc(arg->buffer, '"');
 			smart_str_appendl(arg->buffer, str->val, str->len);
 			smart_str_appendc(arg->buffer, '"');
