@@ -31,7 +31,7 @@ env:
 $gen = include "./travis/pecl/gen-matrix.php";
 $cur = "7.2";
 $env = $gen([
-	"PHP" => ["7.0", "7.1", "master"],
+	"PHP" => ["7.0", "7.1", "7.3", "master"],
 	"enable_debug" => "yes",
 	"enable_maintainer_zts" => "yes",
 	"enable_json" => "yes",
@@ -59,7 +59,12 @@ foreach ($env as $g) {
 ?>
 
 install:
- - make -f travis/pecl/Makefile php
+ - |
+   if test "$PHP" = master; then \
+     make -f travis/pecl/Makefile reconf; \
+     make -f travis/pecl/Makefile pecl-rm pecl-clean PECL=raphf:raphf:2.0.0; \
+   fi
+ - make -f travis/pecl/Makefile php || make -f travis/pecl/Makefile clean php
  - make -f travis/pecl/Makefile pecl PECL=raphf:raphf:2.0.0
 
 before_script:
