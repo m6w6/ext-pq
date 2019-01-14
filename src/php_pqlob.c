@@ -423,7 +423,7 @@ static PHP_METHOD(pqlob, truncate) {
 }
 
 static zend_function_entry php_pqlob_methods[] = {
-	PHP_ME(pqlob, __construct, ai_pqlob_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+	PHP_ME(pqlob, __construct, ai_pqlob_construct, ZEND_ACC_PUBLIC)
 	PHP_ME(pqlob, write, ai_pqlob_write, ZEND_ACC_PUBLIC)
 	PHP_ME(pqlob, read, ai_pqlob_read, ZEND_ACC_PUBLIC)
 	PHP_ME(pqlob, seek, ai_pqlob_seek, ZEND_ACC_PUBLIC)

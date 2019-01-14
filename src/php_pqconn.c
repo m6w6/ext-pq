@@ -1947,7 +1947,7 @@ static PHP_METHOD(pqconn, unsetConverter) {
 }
 
 static zend_function_entry php_pqconn_methods[] = {
-	PHP_ME(pqconn, __construct, ai_pqconn_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+	PHP_ME(pqconn, __construct, ai_pqconn_construct, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, reset, ai_pqconn_reset, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, resetAsync, ai_pqconn_reset_async, ZEND_ACC_PUBLIC)
 	PHP_ME(pqconn, poll, ai_pqconn_poll, ZEND_ACC_PUBLIC)

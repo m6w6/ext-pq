@@ -271,7 +271,7 @@ static PHP_METHOD(pqtypes, refresh) {
 }
 
 static zend_function_entry php_pqtypes_methods[] = {
-	PHP_ME(pqtypes, __construct, ai_pqtypes_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+	PHP_ME(pqtypes, __construct, ai_pqtypes_construct, ZEND_ACC_PUBLIC)
 	PHP_ME(pqtypes, refresh, ai_pqtypes_refresh, ZEND_ACC_PUBLIC)
 	{0}
 };

@@ -130,7 +130,7 @@ static PHP_METHOD(pqcancel, cancel) {
 }
 
 static zend_function_entry php_pqcancel_methods[] = {
-	PHP_ME(pqcancel, __construct, ai_pqcancel_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+	PHP_ME(pqcancel, __construct, ai_pqcancel_construct, ZEND_ACC_PUBLIC)
 	PHP_ME(pqcancel, cancel, ai_pqcancel_cancel, ZEND_ACC_PUBLIC)
 	{0}
 };

@@ -843,7 +843,7 @@ static PHP_METHOD(pqtxn, exportLOB) {
 }
 
 static zend_function_entry php_pqtxn_methods[] = {
-	PHP_ME(pqtxn, __construct, ai_pqtxn_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+	PHP_ME(pqtxn, __construct, ai_pqtxn_construct, ZEND_ACC_PUBLIC)
 	PHP_ME(pqtxn, commit, ai_pqtxn_commit, ZEND_ACC_PUBLIC)
 	PHP_ME(pqtxn, rollback, ai_pqtxn_rollback, ZEND_ACC_PUBLIC)
 	PHP_ME(pqtxn, commitAsync, ai_pqtxn_commit_async, ZEND_ACC_PUBLIC)

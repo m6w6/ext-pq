@@ -459,7 +459,7 @@ static PHP_METHOD(pqstm, prepareAsync)
 }
 
 static zend_function_entry php_pqstm_methods[] = {
-	PHP_ME(pqstm, __construct, ai_pqstm_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+	PHP_ME(pqstm, __construct, ai_pqstm_construct, ZEND_ACC_PUBLIC)
 	PHP_ME(pqstm, bind, ai_pqstm_bind, ZEND_ACC_PUBLIC)
 	PHP_ME(pqstm, deallocate, ai_pqstm_deallocate, ZEND_ACC_PUBLIC)
 	PHP_ME(pqstm, deallocateAsync, ai_pqstm_deallocate_async, ZEND_ACC_PUBLIC)

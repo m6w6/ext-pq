@@ -293,7 +293,7 @@ static PHP_METHOD(pqcopy, get) {
 }
 
 static zend_function_entry php_pqcopy_methods[] = {
-	PHP_ME(pqcopy, __construct, ai_pqcopy_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+	PHP_ME(pqcopy, __construct, ai_pqcopy_construct, ZEND_ACC_PUBLIC)
 	PHP_ME(pqcopy, put, ai_pqcopy_put, ZEND_ACC_PUBLIC)
 	PHP_ME(pqcopy, end, ai_pqcopy_end, ZEND_ACC_PUBLIC)
 	PHP_ME(pqcopy, get, ai_pqcopy_get, ZEND_ACC_PUBLIC)
