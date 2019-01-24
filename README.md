@@ -25,13 +25,10 @@ Known issues are listed in [BUGS](./BUGS) and future ideas can be found in [TODO
 
 	pecl install pq
 
-Watch out for [PECL replicates](https://replicator.pharext.org?pq)
-and pharext packages attached to [releases](./releases).
-
 ### PHARext
 
 Watch out for [PECL replicates](https://replicator.pharext.org?pq)
-and pharext packages attached to [releases](./releases).
+and pharext packages attached to [releases](https://github.com/m6w6/ext-pq/releases).
 
 ### Checkout
 
