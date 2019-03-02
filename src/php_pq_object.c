@@ -203,7 +203,7 @@ zval *php_pq_object_read_prop(zval *object, zval *member, int type, void **cache
 	return return_value;
 }
 
-void php_pq_object_write_prop(zval *object, zval *member, zval *value, void **cache_slot)
+php_pq_object_write_prop_t php_pq_object_write_prop(zval *object, zval *member, zval *value, void **cache_slot)
 {
 	php_pq_object_t *obj = PHP_PQ_OBJ(object, NULL);
 	php_pq_object_prophandler_t *handler;
@@ -218,6 +218,14 @@ void php_pq_object_write_prop(zval *object, zval *member, zval *value, void **ca
 	} else {
 		zend_get_std_object_handlers()->write_property(object, member, value, cache_slot);
 	}
+#if PHP_VERSION_ID >= 70400
+	return value;
+#endif
+}
+
+zval *php_pq_object_get_prop_ptr_null(zval *object, zval *member, int type, void **cache_slot)
+{
+	return NULL;
 }
 
 void php_pq_object_prophandler_dtor(zval *zv) {

@@ -143,6 +143,16 @@ static zval *php_pqtypes_object_read_dimension(zval *object, zval *member, int t
 	return data;
 }
 
+static void php_pqtypes_object_write_dimension(zval *object, zval *offset, zval *value)
+{
+	throw_exce(EX_RUNTIME, "pq\\Types object must not be modified");
+}
+
+static void php_pqtypes_object_unset_dimension(zval *object, zval *offset)
+{
+	throw_exce(EX_RUNTIME, "pq\\Types object must not be modified");
+}
+
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtypes_construct, 0, 0, 1)
 	ZEND_ARG_OBJ_INFO(0, connection, pq\\Connection, 0)
 	ZEND_ARG_ARRAY_INFO(0, namespaces, 1)
@@ -301,14 +311,14 @@ PHP_MINIT_FUNCTION(pqtypes)
 	php_pqtypes_object_handlers.read_property = php_pq_object_read_prop;
 	php_pqtypes_object_handlers.write_property = php_pq_object_write_prop;
 	php_pqtypes_object_handlers.clone_obj = NULL;
-	php_pqtypes_object_handlers.get_property_ptr_ptr = NULL;
+	php_pqtypes_object_handlers.get_property_ptr_ptr = php_pq_object_get_prop_ptr_null;
 	php_pqtypes_object_handlers.get_gc = php_pq_object_get_gc;
 	php_pqtypes_object_handlers.get_properties = php_pq_object_properties;
 	php_pqtypes_object_handlers.get_debug_info = php_pq_object_debug_info;
 	php_pqtypes_object_handlers.has_dimension = php_pqtypes_object_has_dimension;
 	php_pqtypes_object_handlers.read_dimension = php_pqtypes_object_read_dimension;
-	php_pqtypes_object_handlers.unset_dimension = NULL;
-	php_pqtypes_object_handlers.write_dimension = NULL;
+	php_pqtypes_object_handlers.unset_dimension = php_pqtypes_object_unset_dimension;
+	php_pqtypes_object_handlers.write_dimension = php_pqtypes_object_write_dimension;
 
 	zend_hash_init(&php_pqtypes_object_prophandlers, 1, NULL, php_pq_object_prophandler_dtor, 1);
 

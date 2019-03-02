@@ -1192,7 +1192,7 @@ PHP_MINIT_FUNCTION(pqres)
 	php_pqres_object_handlers.read_property = php_pq_object_read_prop;
 	php_pqres_object_handlers.write_property = php_pq_object_write_prop;
 	php_pqres_object_handlers.clone_obj = NULL;
-	php_pqres_object_handlers.get_property_ptr_ptr = NULL;
+	php_pqres_object_handlers.get_property_ptr_ptr = php_pq_object_get_prop_ptr_null;
 	php_pqres_object_handlers.get_gc = php_pq_object_get_gc;
 	php_pqres_object_handlers.get_debug_info = php_pq_object_debug_info;
 	php_pqres_object_handlers.get_properties = php_pq_object_properties;

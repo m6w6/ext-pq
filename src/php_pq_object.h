@@ -49,7 +49,13 @@ extern HashTable *php_pq_object_properties(zval *object);
 HashTable *php_pq_object_get_gc(zval *object, zval **table, int *n);
 extern zend_class_entry *ancestor(zend_class_entry *ce);
 extern zval *php_pq_object_read_prop(zval *object, zval *member, int type, void **cache_slot, zval *tmp);
-extern void php_pq_object_write_prop(zval *object, zval *member, zval *value, void **cache_slot);
+#if PHP_VERSION_ID >= 70400
+typedef zval *php_pq_object_write_prop_t;
+#else
+typedef void php_pq_object_write_prop_t;
+#endif
+extern php_pq_object_write_prop_t php_pq_object_write_prop(zval *object, zval *member, zval *value, void **cache_slot);
+extern zval *php_pq_object_get_prop_ptr_null(zval *object, zval *member, int type, void **cache_slot);
 extern void php_pq_object_prophandler_dtor(zval *zv);
 
 #endif
