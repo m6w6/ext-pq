@@ -11,10 +11,6 @@ addons:
    - php-pear
    - valgrind
 
-compiler:
- - gcc
- - clang
-
 cache:
  directories:
   - $HOME/cache
@@ -29,9 +25,9 @@ env:
 <?php
 
 $gen = include "./travis/pecl/gen-matrix.php";
-$cur = "7.2";
+$cur = "7.3";
 $env = $gen([
-	"PHP" => ["7.0", "7.1", "7.3", "master"],
+	"PHP" => ["7.0", "7.1", "7.2", "master"],
 	"enable_debug" => "yes",
 	"enable_maintainer_zts" => "yes",
 	"enable_json" => "yes",
@@ -55,7 +51,18 @@ foreach ($env as $g) {
 		printf("  - %s\n", $e);
 	}
 }
+?>
 
+matrix:
+ fast_finish: true
+ allow_failures:
+<?php
+$allow_failures = array_merge( ... array_map(function($a) {
+	return preg_grep('/^PHP=master /', $a);
+}, $env));
+foreach ($allow_failures as $e) {
+	printf("  - env: %s\n", $e);
+}
 ?>
 
 install:
