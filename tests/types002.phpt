@@ -22,7 +22,6 @@ true as bool,
 1.1::float4 as float4,
 2.2::float8 as float8,
 '2013-01-01'::date as date,
-1::abstime as abstime,
 '2013-01-01 01:01:01'::timestamp as timestamp,
 '2013-01-01 01:01:01 UTC'::timestamptz as timestamptz,
 array[array[1,2,3],array[4,5,6],array[NULL::int,NULL::int,NULL::int]] as intarray,
@@ -33,7 +32,7 @@ var_dump($r->fetchRow(pq\Result::FETCH_ASSOC));
 DONE
 --EXPECTF--
 Test
-array(13) {
+array(12) {
   ["null"]=>
   NULL
   ["bool"]=>
@@ -58,17 +57,6 @@ array(13) {
     int(3)
     ["timezone"]=>
     string(3) "UTC"
-  }
-  ["abstime"]=>
-  object(pq\DateTime)#%d (4) {
-    ["format"]=>
-    string(11) "Y-m-d H:i:s"
-    ["date"]=>
-    string(%d) "1970-01-01 00:00:01%r(\.000000)?%r"
-    ["timezone_type"]=>
-    int(1)
-    ["timezone"]=>
-    string(6) "+00:00"
   }
   ["timestamp"]=>
   object(pq\DateTime)#%d (4) {

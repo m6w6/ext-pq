@@ -1,6 +1,10 @@
+
+/* Generated file. See scripts/gen_pq_type-pq11.php */
+
 #ifndef PHP_PQ_TYPE
 # define PHP_PQ_TYPE(t,o)
 #endif
+
 #ifndef PHP_PQ_OID_BOOL
 # define PHP_PQ_OID_BOOL 16
 #endif
@@ -61,6 +65,10 @@ PHP_PQ_TYPE("CID", 29)
 # define PHP_PQ_OID_OIDVECTOR 30
 #endif
 PHP_PQ_TYPE("OIDVECTOR", 30)
+#ifndef PHP_PQ_OID_PG_DDL_COMMAND
+# define PHP_PQ_OID_PG_DDL_COMMAND 32
+#endif
+PHP_PQ_TYPE("PG_DDL_COMMAND", 32)
 #ifndef PHP_PQ_OID_PG_TYPE
 # define PHP_PQ_OID_PG_TYPE 71
 #endif
@@ -89,30 +97,22 @@ PHP_PQ_TYPE("XML", 142)
 # define PHP_PQ_OID_XMLARRAY 143
 #endif
 PHP_PQ_TYPE("XMLARRAY", 143)
-#ifndef PHP_PQ_OID_JSONARRAY
-# define PHP_PQ_OID_JSONARRAY 199
-#endif
-PHP_PQ_TYPE("JSONARRAY", 199)
 #ifndef PHP_PQ_OID_PG_NODE_TREE
 # define PHP_PQ_OID_PG_NODE_TREE 194
 #endif
 PHP_PQ_TYPE("PG_NODE_TREE", 194)
-#ifndef PHP_PQ_OID_PG_NDISTINCT
-# define PHP_PQ_OID_PG_NDISTINCT 3361
+#ifndef PHP_PQ_OID_JSONARRAY
+# define PHP_PQ_OID_JSONARRAY 199
 #endif
-PHP_PQ_TYPE("PG_NDISTINCT", 3361)
-#ifndef PHP_PQ_OID_PG_DEPENDENCIES
-# define PHP_PQ_OID_PG_DEPENDENCIES 3402
-#endif
-PHP_PQ_TYPE("PG_DEPENDENCIES", 3402)
-#ifndef PHP_PQ_OID_PG_DDL_COMMAND
-# define PHP_PQ_OID_PG_DDL_COMMAND 32
-#endif
-PHP_PQ_TYPE("PG_DDL_COMMAND", 32)
+PHP_PQ_TYPE("JSONARRAY", 199)
 #ifndef PHP_PQ_OID_SMGR
 # define PHP_PQ_OID_SMGR 210
 #endif
 PHP_PQ_TYPE("SMGR", 210)
+#ifndef PHP_PQ_OID_INDEX_AM_HANDLER
+# define PHP_PQ_OID_INDEX_AM_HANDLER 325
+#endif
+PHP_PQ_TYPE("INDEX_AM_HANDLER", 325)
 #ifndef PHP_PQ_OID_POINT
 # define PHP_PQ_OID_POINT 600
 #endif
@@ -141,6 +141,14 @@ PHP_PQ_TYPE("LINE", 628)
 # define PHP_PQ_OID_LINEARRAY 629
 #endif
 PHP_PQ_TYPE("LINEARRAY", 629)
+#ifndef PHP_PQ_OID_CIDR
+# define PHP_PQ_OID_CIDR 650
+#endif
+PHP_PQ_TYPE("CIDR", 650)
+#ifndef PHP_PQ_OID_CIDRARRAY
+# define PHP_PQ_OID_CIDRARRAY 651
+#endif
+PHP_PQ_TYPE("CIDRARRAY", 651)
 #ifndef PHP_PQ_OID_FLOAT4
 # define PHP_PQ_OID_FLOAT4 700
 #endif
@@ -149,18 +157,6 @@ PHP_PQ_TYPE("FLOAT4", 700)
 # define PHP_PQ_OID_FLOAT8 701
 #endif
 PHP_PQ_TYPE("FLOAT8", 701)
-#ifndef PHP_PQ_OID_ABSTIME
-# define PHP_PQ_OID_ABSTIME 702
-#endif
-PHP_PQ_TYPE("ABSTIME", 702)
-#ifndef PHP_PQ_OID_RELTIME
-# define PHP_PQ_OID_RELTIME 703
-#endif
-PHP_PQ_TYPE("RELTIME", 703)
-#ifndef PHP_PQ_OID_TINTERVAL
-# define PHP_PQ_OID_TINTERVAL 704
-#endif
-PHP_PQ_TYPE("TINTERVAL", 704)
 #ifndef PHP_PQ_OID_UNKNOWN
 # define PHP_PQ_OID_UNKNOWN 705
 #endif
@@ -173,6 +169,14 @@ PHP_PQ_TYPE("CIRCLE", 718)
 # define PHP_PQ_OID_CIRCLEARRAY 719
 #endif
 PHP_PQ_TYPE("CIRCLEARRAY", 719)
+#ifndef PHP_PQ_OID_MACADDR8
+# define PHP_PQ_OID_MACADDR8 774
+#endif
+PHP_PQ_TYPE("MACADDR8", 774)
+#ifndef PHP_PQ_OID_MACADDR8ARRAY
+# define PHP_PQ_OID_MACADDR8ARRAY 775
+#endif
+PHP_PQ_TYPE("MACADDR8ARRAY", 775)
 #ifndef PHP_PQ_OID_MONEY
 # define PHP_PQ_OID_MONEY 790
 #endif
@@ -189,14 +193,6 @@ PHP_PQ_TYPE("MACADDR", 829)
 # define PHP_PQ_OID_INET 869
 #endif
 PHP_PQ_TYPE("INET", 869)
-#ifndef PHP_PQ_OID_CIDR
-# define PHP_PQ_OID_CIDR 650
-#endif
-PHP_PQ_TYPE("CIDR", 650)
-#ifndef PHP_PQ_OID_MACADDR8
-# define PHP_PQ_OID_MACADDR8 774
-#endif
-PHP_PQ_TYPE("MACADDR8", 774)
 #ifndef PHP_PQ_OID_BOOLARRAY
 # define PHP_PQ_OID_BOOLARRAY 1000
 #endif
@@ -233,10 +229,6 @@ PHP_PQ_TYPE("REGPROCARRAY", 1008)
 # define PHP_PQ_OID_TEXTARRAY 1009
 #endif
 PHP_PQ_TYPE("TEXTARRAY", 1009)
-#ifndef PHP_PQ_OID_OIDARRAY
-# define PHP_PQ_OID_OIDARRAY 1028
-#endif
-PHP_PQ_TYPE("OIDARRAY", 1028)
 #ifndef PHP_PQ_OID_TIDARRAY
 # define PHP_PQ_OID_TIDARRAY 1010
 #endif
@@ -289,22 +281,14 @@ PHP_PQ_TYPE("FLOAT4ARRAY", 1021)
 # define PHP_PQ_OID_FLOAT8ARRAY 1022
 #endif
 PHP_PQ_TYPE("FLOAT8ARRAY", 1022)
-#ifndef PHP_PQ_OID_ABSTIMEARRAY
-# define PHP_PQ_OID_ABSTIMEARRAY 1023
-#endif
-PHP_PQ_TYPE("ABSTIMEARRAY", 1023)
-#ifndef PHP_PQ_OID_RELTIMEARRAY
-# define PHP_PQ_OID_RELTIMEARRAY 1024
-#endif
-PHP_PQ_TYPE("RELTIMEARRAY", 1024)
-#ifndef PHP_PQ_OID_TINTERVALARRAY
-# define PHP_PQ_OID_TINTERVALARRAY 1025
-#endif
-PHP_PQ_TYPE("TINTERVALARRAY", 1025)
 #ifndef PHP_PQ_OID_POLYGONARRAY
 # define PHP_PQ_OID_POLYGONARRAY 1027
 #endif
 PHP_PQ_TYPE("POLYGONARRAY", 1027)
+#ifndef PHP_PQ_OID_OIDARRAY
+# define PHP_PQ_OID_OIDARRAY 1028
+#endif
+PHP_PQ_TYPE("OIDARRAY", 1028)
 #ifndef PHP_PQ_OID_ACLITEM
 # define PHP_PQ_OID_ACLITEM 1033
 #endif
@@ -317,22 +301,10 @@ PHP_PQ_TYPE("ACLITEMARRAY", 1034)
 # define PHP_PQ_OID_MACADDRARRAY 1040
 #endif
 PHP_PQ_TYPE("MACADDRARRAY", 1040)
-#ifndef PHP_PQ_OID_MACADDR8ARRAY
-# define PHP_PQ_OID_MACADDR8ARRAY 775
-#endif
-PHP_PQ_TYPE("MACADDR8ARRAY", 775)
 #ifndef PHP_PQ_OID_INETARRAY
 # define PHP_PQ_OID_INETARRAY 1041
 #endif
 PHP_PQ_TYPE("INETARRAY", 1041)
-#ifndef PHP_PQ_OID_CIDRARRAY
-# define PHP_PQ_OID_CIDRARRAY 651
-#endif
-PHP_PQ_TYPE("CIDRARRAY", 651)
-#ifndef PHP_PQ_OID_CSTRINGARRAY
-# define PHP_PQ_OID_CSTRINGARRAY 1263
-#endif
-PHP_PQ_TYPE("CSTRINGARRAY", 1263)
 #ifndef PHP_PQ_OID_BPCHAR
 # define PHP_PQ_OID_BPCHAR 1042
 #endif
@@ -385,6 +357,10 @@ PHP_PQ_TYPE("INTERVALARRAY", 1187)
 # define PHP_PQ_OID_NUMERICARRAY 1231
 #endif
 PHP_PQ_TYPE("NUMERICARRAY", 1231)
+#ifndef PHP_PQ_OID_CSTRINGARRAY
+# define PHP_PQ_OID_CSTRINGARRAY 1263
+#endif
+PHP_PQ_TYPE("CSTRINGARRAY", 1263)
 #ifndef PHP_PQ_OID_TIMETZ
 # define PHP_PQ_OID_TIMETZ 1266
 #endif
@@ -441,14 +417,6 @@ PHP_PQ_TYPE("REGCLASS", 2205)
 # define PHP_PQ_OID_REGTYPE 2206
 #endif
 PHP_PQ_TYPE("REGTYPE", 2206)
-#ifndef PHP_PQ_OID_REGROLE
-# define PHP_PQ_OID_REGROLE 4096
-#endif
-PHP_PQ_TYPE("REGROLE", 4096)
-#ifndef PHP_PQ_OID_REGNAMESPACE
-# define PHP_PQ_OID_REGNAMESPACE 4089
-#endif
-PHP_PQ_TYPE("REGNAMESPACE", 4089)
 #ifndef PHP_PQ_OID_REGPROCEDUREARRAY
 # define PHP_PQ_OID_REGPROCEDUREARRAY 2207
 #endif
@@ -469,14 +437,58 @@ PHP_PQ_TYPE("REGCLASSARRAY", 2210)
 # define PHP_PQ_OID_REGTYPEARRAY 2211
 #endif
 PHP_PQ_TYPE("REGTYPEARRAY", 2211)
-#ifndef PHP_PQ_OID_REGROLEARRAY
-# define PHP_PQ_OID_REGROLEARRAY 4097
+#ifndef PHP_PQ_OID_RECORD
+# define PHP_PQ_OID_RECORD 2249
 #endif
-PHP_PQ_TYPE("REGROLEARRAY", 4097)
-#ifndef PHP_PQ_OID_REGNAMESPACEARRAY
-# define PHP_PQ_OID_REGNAMESPACEARRAY 4090
+PHP_PQ_TYPE("RECORD", 2249)
+#ifndef PHP_PQ_OID_CSTRING
+# define PHP_PQ_OID_CSTRING 2275
 #endif
-PHP_PQ_TYPE("REGNAMESPACEARRAY", 4090)
+PHP_PQ_TYPE("CSTRING", 2275)
+#ifndef PHP_PQ_OID_ANY
+# define PHP_PQ_OID_ANY 2276
+#endif
+PHP_PQ_TYPE("ANY", 2276)
+#ifndef PHP_PQ_OID_ANYARRAY
+# define PHP_PQ_OID_ANYARRAY 2277
+#endif
+PHP_PQ_TYPE("ANYARRAY", 2277)
+#ifndef PHP_PQ_OID_VOID
+# define PHP_PQ_OID_VOID 2278
+#endif
+PHP_PQ_TYPE("VOID", 2278)
+#ifndef PHP_PQ_OID_TRIGGER
+# define PHP_PQ_OID_TRIGGER 2279
+#endif
+PHP_PQ_TYPE("TRIGGER", 2279)
+#ifndef PHP_PQ_OID_LANGUAGE_HANDLER
+# define PHP_PQ_OID_LANGUAGE_HANDLER 2280
+#endif
+PHP_PQ_TYPE("LANGUAGE_HANDLER", 2280)
+#ifndef PHP_PQ_OID_INTERNAL
+# define PHP_PQ_OID_INTERNAL 2281
+#endif
+PHP_PQ_TYPE("INTERNAL", 2281)
+#ifndef PHP_PQ_OID_OPAQUE
+# define PHP_PQ_OID_OPAQUE 2282
+#endif
+PHP_PQ_TYPE("OPAQUE", 2282)
+#ifndef PHP_PQ_OID_ANYELEMENT
+# define PHP_PQ_OID_ANYELEMENT 2283
+#endif
+PHP_PQ_TYPE("ANYELEMENT", 2283)
+#ifndef PHP_PQ_OID__RECORD
+# define PHP_PQ_OID__RECORD 2287
+#endif
+PHP_PQ_TYPE("_RECORD", 2287)
+#ifndef PHP_PQ_OID_ANYNONARRAY
+# define PHP_PQ_OID_ANYNONARRAY 2776
+#endif
+PHP_PQ_TYPE("ANYNONARRAY", 2776)
+#ifndef PHP_PQ_OID_TXID_SNAPSHOTARRAY
+# define PHP_PQ_OID_TXID_SNAPSHOTARRAY 2949
+#endif
+PHP_PQ_TYPE("TXID_SNAPSHOTARRAY", 2949)
 #ifndef PHP_PQ_OID_UUID
 # define PHP_PQ_OID_UUID 2950
 #endif
@@ -485,6 +497,14 @@ PHP_PQ_TYPE("UUID", 2950)
 # define PHP_PQ_OID_UUIDARRAY 2951
 #endif
 PHP_PQ_TYPE("UUIDARRAY", 2951)
+#ifndef PHP_PQ_OID_TXID_SNAPSHOT
+# define PHP_PQ_OID_TXID_SNAPSHOT 2970
+#endif
+PHP_PQ_TYPE("TXID_SNAPSHOT", 2970)
+#ifndef PHP_PQ_OID_FDW_HANDLER
+# define PHP_PQ_OID_FDW_HANDLER 3115
+#endif
+PHP_PQ_TYPE("FDW_HANDLER", 3115)
 #ifndef PHP_PQ_OID_PG_LSN
 # define PHP_PQ_OID_PG_LSN 3220
 #endif
@@ -493,26 +513,34 @@ PHP_PQ_TYPE("PG_LSN", 3220)
 # define PHP_PQ_OID_PG_LSNARRAY 3221
 #endif
 PHP_PQ_TYPE("PG_LSNARRAY", 3221)
+#ifndef PHP_PQ_OID_TSM_HANDLER
+# define PHP_PQ_OID_TSM_HANDLER 3310
+#endif
+PHP_PQ_TYPE("TSM_HANDLER", 3310)
+#ifndef PHP_PQ_OID_PG_NDISTINCT
+# define PHP_PQ_OID_PG_NDISTINCT 3361
+#endif
+PHP_PQ_TYPE("PG_NDISTINCT", 3361)
+#ifndef PHP_PQ_OID_PG_DEPENDENCIES
+# define PHP_PQ_OID_PG_DEPENDENCIES 3402
+#endif
+PHP_PQ_TYPE("PG_DEPENDENCIES", 3402)
+#ifndef PHP_PQ_OID_ANYENUM
+# define PHP_PQ_OID_ANYENUM 3500
+#endif
+PHP_PQ_TYPE("ANYENUM", 3500)
 #ifndef PHP_PQ_OID_TSVECTOR
 # define PHP_PQ_OID_TSVECTOR 3614
 #endif
 PHP_PQ_TYPE("TSVECTOR", 3614)
-#ifndef PHP_PQ_OID_GTSVECTOR
-# define PHP_PQ_OID_GTSVECTOR 3642
-#endif
-PHP_PQ_TYPE("GTSVECTOR", 3642)
 #ifndef PHP_PQ_OID_TSQUERY
 # define PHP_PQ_OID_TSQUERY 3615
 #endif
 PHP_PQ_TYPE("TSQUERY", 3615)
-#ifndef PHP_PQ_OID_REGCONFIG
-# define PHP_PQ_OID_REGCONFIG 3734
+#ifndef PHP_PQ_OID_GTSVECTOR
+# define PHP_PQ_OID_GTSVECTOR 3642
 #endif
-PHP_PQ_TYPE("REGCONFIG", 3734)
-#ifndef PHP_PQ_OID_REGDICTIONARY
-# define PHP_PQ_OID_REGDICTIONARY 3769
-#endif
-PHP_PQ_TYPE("REGDICTIONARY", 3769)
+PHP_PQ_TYPE("GTSVECTOR", 3642)
 #ifndef PHP_PQ_OID_TSVECTORARRAY
 # define PHP_PQ_OID_TSVECTORARRAY 3643
 #endif
@@ -525,10 +553,18 @@ PHP_PQ_TYPE("GTSVECTORARRAY", 3644)
 # define PHP_PQ_OID_TSQUERYARRAY 3645
 #endif
 PHP_PQ_TYPE("TSQUERYARRAY", 3645)
+#ifndef PHP_PQ_OID_REGCONFIG
+# define PHP_PQ_OID_REGCONFIG 3734
+#endif
+PHP_PQ_TYPE("REGCONFIG", 3734)
 #ifndef PHP_PQ_OID_REGCONFIGARRAY
 # define PHP_PQ_OID_REGCONFIGARRAY 3735
 #endif
 PHP_PQ_TYPE("REGCONFIGARRAY", 3735)
+#ifndef PHP_PQ_OID_REGDICTIONARY
+# define PHP_PQ_OID_REGDICTIONARY 3769
+#endif
+PHP_PQ_TYPE("REGDICTIONARY", 3769)
 #ifndef PHP_PQ_OID_REGDICTIONARYARRAY
 # define PHP_PQ_OID_REGDICTIONARYARRAY 3770
 #endif
@@ -541,14 +577,14 @@ PHP_PQ_TYPE("JSONB", 3802)
 # define PHP_PQ_OID_JSONBARRAY 3807
 #endif
 PHP_PQ_TYPE("JSONBARRAY", 3807)
-#ifndef PHP_PQ_OID_TXID_SNAPSHOT
-# define PHP_PQ_OID_TXID_SNAPSHOT 2970
+#ifndef PHP_PQ_OID_ANYRANGE
+# define PHP_PQ_OID_ANYRANGE 3831
 #endif
-PHP_PQ_TYPE("TXID_SNAPSHOT", 2970)
-#ifndef PHP_PQ_OID_TXID_SNAPSHOTARRAY
-# define PHP_PQ_OID_TXID_SNAPSHOTARRAY 2949
+PHP_PQ_TYPE("ANYRANGE", 3831)
+#ifndef PHP_PQ_OID_EVENT_TRIGGER
+# define PHP_PQ_OID_EVENT_TRIGGER 3838
 #endif
-PHP_PQ_TYPE("TXID_SNAPSHOTARRAY", 2949)
+PHP_PQ_TYPE("EVENT_TRIGGER", 3838)
 #ifndef PHP_PQ_OID_INT4RANGE
 # define PHP_PQ_OID_INT4RANGE 3904
 #endif
@@ -597,81 +633,26 @@ PHP_PQ_TYPE("INT8RANGE", 3926)
 # define PHP_PQ_OID_INT8RANGEARRAY 3927
 #endif
 PHP_PQ_TYPE("INT8RANGEARRAY", 3927)
-#ifndef PHP_PQ_OID_RECORD
-# define PHP_PQ_OID_RECORD 2249
+#ifndef PHP_PQ_OID_REGNAMESPACE
+# define PHP_PQ_OID_REGNAMESPACE 4089
 #endif
-PHP_PQ_TYPE("RECORD", 2249)
-#ifndef PHP_PQ_OID_RECORDARRAY
-# define PHP_PQ_OID_RECORDARRAY 2287
+PHP_PQ_TYPE("REGNAMESPACE", 4089)
+#ifndef PHP_PQ_OID_REGNAMESPACEARRAY
+# define PHP_PQ_OID_REGNAMESPACEARRAY 4090
 #endif
-PHP_PQ_TYPE("RECORDARRAY", 2287)
-#ifndef PHP_PQ_OID_CSTRING
-# define PHP_PQ_OID_CSTRING 2275
+PHP_PQ_TYPE("REGNAMESPACEARRAY", 4090)
+#ifndef PHP_PQ_OID_REGROLE
+# define PHP_PQ_OID_REGROLE 4096
 #endif
-PHP_PQ_TYPE("CSTRING", 2275)
-#ifndef PHP_PQ_OID_ANY
-# define PHP_PQ_OID_ANY 2276
+PHP_PQ_TYPE("REGROLE", 4096)
+#ifndef PHP_PQ_OID_REGROLEARRAY
+# define PHP_PQ_OID_REGROLEARRAY 4097
 #endif
-PHP_PQ_TYPE("ANY", 2276)
-#ifndef PHP_PQ_OID_ANYARRAY
-# define PHP_PQ_OID_ANYARRAY 2277
-#endif
-PHP_PQ_TYPE("ANYARRAY", 2277)
-#ifndef PHP_PQ_OID_VOID
-# define PHP_PQ_OID_VOID 2278
-#endif
-PHP_PQ_TYPE("VOID", 2278)
-#ifndef PHP_PQ_OID_TRIGGER
-# define PHP_PQ_OID_TRIGGER 2279
-#endif
-PHP_PQ_TYPE("TRIGGER", 2279)
-#ifndef PHP_PQ_OID_EVENT_TRIGGER
-# define PHP_PQ_OID_EVENT_TRIGGER 3838
-#endif
-PHP_PQ_TYPE("EVENT_TRIGGER", 3838)
-#ifndef PHP_PQ_OID_LANGUAGE_HANDLER
-# define PHP_PQ_OID_LANGUAGE_HANDLER 2280
-#endif
-PHP_PQ_TYPE("LANGUAGE_HANDLER", 2280)
-#ifndef PHP_PQ_OID_INTERNAL
-# define PHP_PQ_OID_INTERNAL 2281
-#endif
-PHP_PQ_TYPE("INTERNAL", 2281)
-#ifndef PHP_PQ_OID_OPAQUE
-# define PHP_PQ_OID_OPAQUE 2282
-#endif
-PHP_PQ_TYPE("OPAQUE", 2282)
-#ifndef PHP_PQ_OID_ANYELEMENT
-# define PHP_PQ_OID_ANYELEMENT 2283
-#endif
-PHP_PQ_TYPE("ANYELEMENT", 2283)
-#ifndef PHP_PQ_OID_ANYNONARRAY
-# define PHP_PQ_OID_ANYNONARRAY 2776
-#endif
-PHP_PQ_TYPE("ANYNONARRAY", 2776)
-#ifndef PHP_PQ_OID_ANYENUM
-# define PHP_PQ_OID_ANYENUM 3500
-#endif
-PHP_PQ_TYPE("ANYENUM", 3500)
-#ifndef PHP_PQ_OID_FDW_HANDLER
-# define PHP_PQ_OID_FDW_HANDLER 3115
-#endif
-PHP_PQ_TYPE("FDW_HANDLER", 3115)
-#ifndef PHP_PQ_OID_INDEX_AM_HANDLER
-# define PHP_PQ_OID_INDEX_AM_HANDLER 325
-#endif
-PHP_PQ_TYPE("INDEX_AM_HANDLER", 325)
-#ifndef PHP_PQ_OID_TSM_HANDLER
-# define PHP_PQ_OID_TSM_HANDLER 3310
-#endif
-PHP_PQ_TYPE("TSM_HANDLER", 3310)
-#ifndef PHP_PQ_OID_ANYRANGE
-# define PHP_PQ_OID_ANYRANGE 3831
-#endif
-PHP_PQ_TYPE("ANYRANGE", 3831)
+PHP_PQ_TYPE("REGROLEARRAY", 4097)
+
 #ifndef PHP_PQ_TYPE_IS_ARRAY
-# define PHP_PQ_TYPE_IS_ARRAY(oid) (\
-		0 \
+# define PHP_PQ_TYPE_IS_ARRAY(oid) ( \
+	0 \
 	||	((oid) == 143) \
 	||	((oid) == 199) \
 	||	((oid) == 629) \
@@ -701,9 +682,6 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	||	((oid) == 1020) \
 	||	((oid) == 1021) \
 	||	((oid) == 1022) \
-	||	((oid) == 1023) \
-	||	((oid) == 1024) \
-	||	((oid) == 1025) \
 	||	((oid) == 1027) \
 	||	((oid) == 1028) \
 	||	((oid) == 1034) \
@@ -725,7 +703,6 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	||	((oid) == 2209) \
 	||	((oid) == 2210) \
 	||	((oid) == 2211) \
-	||	((oid) == 2287) \
 	||	((oid) == 2949) \
 	||	((oid) == 2951) \
 	||	((oid) == 3221) \
@@ -745,8 +722,9 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	||	((oid) == 4097) \
 )
 #endif
+
 #ifndef PHP_PQ_TYPE_OF_ARRAY
-# define PHP_PQ_TYPE_OF_ARRAY(oid) (\
+# define PHP_PQ_TYPE_OF_ARRAY(oid) ( \
 	(oid) == 143 ? 142 : \
 	(oid) == 199 ? 114 : \
 	(oid) == 629 ? 628 : \
@@ -776,9 +754,6 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	(oid) == 1020 ? 603 : \
 	(oid) == 1021 ? 700 : \
 	(oid) == 1022 ? 701 : \
-	(oid) == 1023 ? 702 : \
-	(oid) == 1024 ? 703 : \
-	(oid) == 1025 ? 704 : \
 	(oid) == 1027 ? 604 : \
 	(oid) == 1028 ? 26 : \
 	(oid) == 1034 ? 1033 : \
@@ -800,7 +775,6 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	(oid) == 2209 ? 2204 : \
 	(oid) == 2210 ? 2205 : \
 	(oid) == 2211 ? 2206 : \
-	(oid) == 2287 ? 2249 : \
 	(oid) == 2949 ? 2970 : \
 	(oid) == 2951 ? 2950 : \
 	(oid) == 3221 ? 3220 : \
@@ -817,178 +791,15 @@ PHP_PQ_TYPE("ANYRANGE", 3831)
 	(oid) == 3913 ? 3912 : \
 	(oid) == 3927 ? 3926 : \
 	(oid) == 4090 ? 4089 : \
-	(oid) == 4097 ? 4096 : 0 \
-)
-#endif
-#ifndef PHP_PQ_DELIM_OF_ARRAY
-# define PHP_PQ_DELIM_OF_ARRAY(oid) (\
-	(oid) == 16 ? '\054' : \
-	(oid) == 17 ? '\054' : \
-	(oid) == 18 ? '\054' : \
-	(oid) == 19 ? '\054' : \
-	(oid) == 20 ? '\054' : \
-	(oid) == 21 ? '\054' : \
-	(oid) == 22 ? '\054' : \
-	(oid) == 23 ? '\054' : \
-	(oid) == 24 ? '\054' : \
-	(oid) == 25 ? '\054' : \
-	(oid) == 26 ? '\054' : \
-	(oid) == 27 ? '\054' : \
-	(oid) == 28 ? '\054' : \
-	(oid) == 29 ? '\054' : \
-	(oid) == 30 ? '\054' : \
-	(oid) == 32 ? '\054' : \
-	(oid) == 71 ? '\054' : \
-	(oid) == 75 ? '\054' : \
-	(oid) == 81 ? '\054' : \
-	(oid) == 83 ? '\054' : \
-	(oid) == 114 ? '\054' : \
-	(oid) == 142 ? '\054' : \
-	(oid) == 143 ? '\054' : \
-	(oid) == 194 ? '\054' : \
-	(oid) == 199 ? '\054' : \
-	(oid) == 210 ? '\054' : \
-	(oid) == 325 ? '\054' : \
-	(oid) == 600 ? '\054' : \
-	(oid) == 601 ? '\054' : \
-	(oid) == 602 ? '\054' : \
-	(oid) == 603 ? '\073' : \
-	(oid) == 604 ? '\054' : \
-	(oid) == 628 ? '\054' : \
-	(oid) == 629 ? '\054' : \
-	(oid) == 650 ? '\054' : \
-	(oid) == 651 ? '\054' : \
-	(oid) == 700 ? '\054' : \
-	(oid) == 701 ? '\054' : \
-	(oid) == 702 ? '\054' : \
-	(oid) == 703 ? '\054' : \
-	(oid) == 704 ? '\054' : \
-	(oid) == 705 ? '\054' : \
-	(oid) == 718 ? '\054' : \
-	(oid) == 719 ? '\054' : \
-	(oid) == 774 ? '\054' : \
-	(oid) == 775 ? '\054' : \
-	(oid) == 790 ? '\054' : \
-	(oid) == 791 ? '\054' : \
-	(oid) == 829 ? '\054' : \
-	(oid) == 869 ? '\054' : \
-	(oid) == 1000 ? '\054' : \
-	(oid) == 1001 ? '\054' : \
-	(oid) == 1002 ? '\054' : \
-	(oid) == 1003 ? '\054' : \
-	(oid) == 1005 ? '\054' : \
-	(oid) == 1006 ? '\054' : \
-	(oid) == 1007 ? '\054' : \
-	(oid) == 1008 ? '\054' : \
-	(oid) == 1009 ? '\054' : \
-	(oid) == 1010 ? '\054' : \
-	(oid) == 1011 ? '\054' : \
-	(oid) == 1012 ? '\054' : \
-	(oid) == 1013 ? '\054' : \
-	(oid) == 1014 ? '\054' : \
-	(oid) == 1015 ? '\054' : \
-	(oid) == 1016 ? '\054' : \
-	(oid) == 1017 ? '\054' : \
-	(oid) == 1018 ? '\054' : \
-	(oid) == 1019 ? '\054' : \
-	(oid) == 1020 ? '\073' : \
-	(oid) == 1021 ? '\054' : \
-	(oid) == 1022 ? '\054' : \
-	(oid) == 1023 ? '\054' : \
-	(oid) == 1024 ? '\054' : \
-	(oid) == 1025 ? '\054' : \
-	(oid) == 1027 ? '\054' : \
-	(oid) == 1028 ? '\054' : \
-	(oid) == 1033 ? '\054' : \
-	(oid) == 1034 ? '\054' : \
-	(oid) == 1040 ? '\054' : \
-	(oid) == 1041 ? '\054' : \
-	(oid) == 1042 ? '\054' : \
-	(oid) == 1043 ? '\054' : \
-	(oid) == 1082 ? '\054' : \
-	(oid) == 1083 ? '\054' : \
-	(oid) == 1114 ? '\054' : \
-	(oid) == 1115 ? '\054' : \
-	(oid) == 1182 ? '\054' : \
-	(oid) == 1183 ? '\054' : \
-	(oid) == 1184 ? '\054' : \
-	(oid) == 1185 ? '\054' : \
-	(oid) == 1186 ? '\054' : \
-	(oid) == 1187 ? '\054' : \
-	(oid) == 1231 ? '\054' : \
-	(oid) == 1263 ? '\054' : \
-	(oid) == 1266 ? '\054' : \
-	(oid) == 1270 ? '\054' : \
-	(oid) == 1560 ? '\054' : \
-	(oid) == 1561 ? '\054' : \
-	(oid) == 1562 ? '\054' : \
-	(oid) == 1563 ? '\054' : \
-	(oid) == 1700 ? '\054' : \
-	(oid) == 1790 ? '\054' : \
-	(oid) == 2201 ? '\054' : \
-	(oid) == 2202 ? '\054' : \
-	(oid) == 2203 ? '\054' : \
-	(oid) == 2204 ? '\054' : \
-	(oid) == 2205 ? '\054' : \
-	(oid) == 2206 ? '\054' : \
-	(oid) == 2207 ? '\054' : \
-	(oid) == 2208 ? '\054' : \
-	(oid) == 2209 ? '\054' : \
-	(oid) == 2210 ? '\054' : \
-	(oid) == 2211 ? '\054' : \
-	(oid) == 2249 ? '\054' : \
-	(oid) == 2275 ? '\054' : \
-	(oid) == 2276 ? '\054' : \
-	(oid) == 2277 ? '\054' : \
-	(oid) == 2278 ? '\054' : \
-	(oid) == 2279 ? '\054' : \
-	(oid) == 2280 ? '\054' : \
-	(oid) == 2281 ? '\054' : \
-	(oid) == 2282 ? '\054' : \
-	(oid) == 2283 ? '\054' : \
-	(oid) == 2287 ? '\054' : \
-	(oid) == 2776 ? '\054' : \
-	(oid) == 2949 ? '\054' : \
-	(oid) == 2950 ? '\054' : \
-	(oid) == 2951 ? '\054' : \
-	(oid) == 2970 ? '\054' : \
-	(oid) == 3115 ? '\054' : \
-	(oid) == 3220 ? '\054' : \
-	(oid) == 3221 ? '\054' : \
-	(oid) == 3310 ? '\054' : \
-	(oid) == 3361 ? '\054' : \
-	(oid) == 3402 ? '\054' : \
-	(oid) == 3500 ? '\054' : \
-	(oid) == 3614 ? '\054' : \
-	(oid) == 3615 ? '\054' : \
-	(oid) == 3642 ? '\054' : \
-	(oid) == 3643 ? '\054' : \
-	(oid) == 3644 ? '\054' : \
-	(oid) == 3645 ? '\054' : \
-	(oid) == 3734 ? '\054' : \
-	(oid) == 3735 ? '\054' : \
-	(oid) == 3769 ? '\054' : \
-	(oid) == 3770 ? '\054' : \
-	(oid) == 3802 ? '\054' : \
-	(oid) == 3807 ? '\054' : \
-	(oid) == 3831 ? '\054' : \
-	(oid) == 3838 ? '\054' : \
-	(oid) == 3904 ? '\054' : \
-	(oid) == 3905 ? '\054' : \
-	(oid) == 3906 ? '\054' : \
-	(oid) == 3907 ? '\054' : \
-	(oid) == 3908 ? '\054' : \
-	(oid) == 3909 ? '\054' : \
-	(oid) == 3910 ? '\054' : \
-	(oid) == 3911 ? '\054' : \
-	(oid) == 3912 ? '\054' : \
-	(oid) == 3913 ? '\054' : \
-	(oid) == 3926 ? '\054' : \
-	(oid) == 3927 ? '\054' : \
-	(oid) == 4089 ? '\054' : \
-	(oid) == 4090 ? '\054' : \
-	(oid) == 4096 ? '\054' : \
-	(oid) == 4097 ? '\054' : \
+	(oid) == 4097 ? 4096 : \
 	0 \
 )
+#endif
+
+#ifndef PHP_PQ_DELIM_OF_ARRAY
+# define PHP_PQ_DELIM_OF_ARRAY(oid) ((char) ( \
+	(oid) == 1020 ? ';' : \
+	(oid) == 603 ? ';' : \
+	',' \
+))
 #endif

@@ -81,13 +81,13 @@ static zend_string *object_param_to_string(php_pq_params_t *p, zval *zobj, Oid t
 
 	switch (type) {
 #if PHP_PQ_HAVE_PHP_JSON_H && defined(PHP_PQ_OID_JSON)
-#	ifdef PHP_PQ_OID_JSONB
+# ifdef PHP_PQ_OID_JSONB
 	case PHP_PQ_OID_JSONB:
-#	endif
+# endif
 	case PHP_PQ_OID_JSON:
-#	if PHP_VERSION_ID >= 70100
+# if PHP_VERSION_ID >= 70100
 		JSON_G(encode_max_depth) = PHP_JSON_PARSER_DEFAULT_DEPTH;
-#	endif
+# endif
 		php_json_encode(&str, zobj, PHP_JSON_UNESCAPED_UNICODE);
 		smart_str_0(&str);
 		return str.s;
@@ -95,10 +95,10 @@ static zend_string *object_param_to_string(php_pq_params_t *p, zval *zobj, Oid t
 
 	case PHP_PQ_OID_DATE:
 		return php_pqdt_to_string(zobj, "Y-m-d");
-
+#ifdef PHP_PQ_OID_ABSTIME
 	case PHP_PQ_OID_ABSTIME:
 		return php_pqdt_to_string(zobj, "Y-m-d H:i:s");
-
+#endif
 	case PHP_PQ_OID_TIMESTAMP:
 		return php_pqdt_to_string(zobj, "Y-m-d H:i:s.u");
 
@@ -208,9 +208,9 @@ static zend_string *array_param_to_string(php_pq_params_t *p, zval *zarr, Oid ty
 
 	switch (type) {
 #if PHP_PQ_HAVE_PHP_JSON_H && defined(PHP_PQ_OID_JSON)
-#	ifdef PHP_PQ_OID_JSONB
+# ifdef PHP_PQ_OID_JSONB
 	case PHP_PQ_OID_JSONB:
-#	endif
+# endif
 	case PHP_PQ_OID_JSON:
 		php_json_encode(&s, zarr, PHP_JSON_UNESCAPED_UNICODE);
 		break;

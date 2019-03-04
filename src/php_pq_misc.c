@@ -367,7 +367,7 @@ static ZEND_RESULT_CODE parse_element(ArrayParserState *a, char delim)
 
 static ZEND_RESULT_CODE parse_elements(ArrayParserState *a)
 {
-	char delims[] = {'}', PHP_PQ_DELIM_OF_ARRAY(a->typ), 0};
+	char delims[] = {'}', (char) PHP_PQ_DELIM_OF_ARRAY(a->typ), 0};
 
 	while (SUCCESS == parse_element(a, delims[1])) {
 		switch (caa(a, delims, 0)) {

@@ -137,7 +137,7 @@ if (!(defined("pq\\Types::JSON") && defined("pq\\Result::CONV_JSON"))) {
 $c->setConverter(new BoxConverter($t));
 
 $r = $c->execParams("SELECT \$1 as hs, \$2 as iv, \$3 as oids, \$4 as js, \$5 as ia, \$6 as ta, \$7 as ba, \$8 as da, \$9 as dbl, \$10 as bln, ".
-		"\$11 as dt1, \$12 as dt2, \$13 as dt3, \$14 as dt4, \$15 as dt5, \$16 as dt6, \$17 as dt7, \$18 as dt8, \$19 as txta, \$20 as boxa",
+		"\$11 as dt1, \$12 as dt3, \$13 as dt4, \$14 as dt5, \$15 as dt7, \$16 as dt8, \$17 as txta, \$18 as boxa",
 	array(
 		// hstore
 		array(
@@ -178,8 +178,6 @@ $r = $c->execParams("SELECT \$1 as hs, \$2 as iv, \$3 as oids, \$4 as js, \$5 as
 		new pq\Datetime,
 		new pq\Datetime,
 		new pq\Datetime,
-		new pq\Datetime,
-		new pq\Datetime,
 		// text array
 		[new Text(0), new Text(" or "), new Text(true)],
 		// box array
@@ -197,11 +195,9 @@ $r = $c->execParams("SELECT \$1 as hs, \$2 as iv, \$3 as oids, \$4 as js, \$5 as
 		$t["float4"]->oid,
 		$t["bool"]->oid,
 		$t["date"]->oid,
-		$t["abstime"]->oid,
 		$t["timestamp"]->oid,
 		$t["timestamptz"]->oid,
 		$t["date"]->oid,
-		$t["abstime"]->oid,
 		$t["timestamp"]->oid,
 		$t["timestamptz"]->oid,
 		$t["_text"]->oid,
@@ -326,17 +322,6 @@ array(1) {
     [11]=>
     object(pq\DateTime)#%d (4) {
       ["format"]=>
-      string(11) "Y-m-d H:i:s"
-      ["date"]=>
-      string(26) "%d-%d-%d %d:%d:%d.%d"
-      ["timezone_type"]=>
-      int(1)
-      ["timezone"]=>
-      string(%d) "%s"
-    }
-    [12]=>
-    object(pq\DateTime)#%d (4) {
-      ["format"]=>
       string(13) "Y-m-d H:i:s.u"
       ["date"]=>
       string(26) "%d-%d-%d %d:%d:%d.%d"
@@ -345,7 +330,7 @@ array(1) {
       ["timezone"]=>
       string(3) "UTC"
     }
-    [13]=>
+    [12]=>
     object(pq\DateTime)#%d (4) {
       ["format"]=>
       string(14) "Y-m-d H:i:s.uO"
@@ -356,7 +341,7 @@ array(1) {
       ["timezone"]=>
       string(%d) "%s"
     }
-    [14]=>
+    [13]=>
     object(pq\DateTime)#%d (4) {
       ["format"]=>
       string(5) "Y-m-d"
@@ -367,18 +352,7 @@ array(1) {
       ["timezone"]=>
       string(3) "UTC"
     }
-    [15]=>
-    object(pq\DateTime)#%d (4) {
-      ["format"]=>
-      string(11) "Y-m-d H:i:s"
-      ["date"]=>
-      string(26) "%d-%d-%d %d:%d:%d.%d"
-      ["timezone_type"]=>
-      int(1)
-      ["timezone"]=>
-      string(%d) "%s"
-    }
-    [16]=>
+    [14]=>
     object(pq\DateTime)#%d (4) {
       ["format"]=>
       string(13) "Y-m-d H:i:s.u"
@@ -389,7 +363,7 @@ array(1) {
       ["timezone"]=>
       string(3) "UTC"
     }
-    [17]=>
+    [15]=>
     object(pq\DateTime)#%d (4) {
       ["format"]=>
       string(14) "Y-m-d H:i:s.uO"
@@ -400,7 +374,7 @@ array(1) {
       ["timezone"]=>
       string(%d) "%s"
     }
-    [18]=>
+    [16]=>
     array(3) {
       [0]=>
       string(1) "0"
@@ -409,7 +383,7 @@ array(1) {
       [2]=>
       string(1) "1"
     }
-    [19]=>
+    [17]=>
     array(2) {
       [0]=>
       object(Box)#%d (2) {

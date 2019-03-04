@@ -193,14 +193,14 @@ zval *php_pqres_typed_zval(php_pqres_t *res, Oid typ, zval *zv)
 		}
 		php_pqdt_from_string(zv, NULL, str->val, str->len, "Y-m-d", NULL);
 		break;
-
+#ifdef PHP_PQ_OID_ABSTIME
 	case PHP_PQ_OID_ABSTIME:
 		if (!(res->auto_convert & PHP_PQRES_CONV_DATETIME)) {
 			goto noconversion;
 		}
 		php_pqdt_from_string(zv, NULL, str->val, str->len, "Y-m-d H:i:s", NULL);
 		break;
-
+#endif
 	case PHP_PQ_OID_TIMESTAMP:
 		if (!(res->auto_convert & PHP_PQRES_CONV_DATETIME)) {
 			goto noconversion;
@@ -216,9 +216,9 @@ zval *php_pqres_typed_zval(php_pqres_t *res, Oid typ, zval *zv)
 		break;
 
 #if PHP_PQ_HAVE_PHP_JSON_H && defined(PHP_PQ_OID_JSON)
-#	ifdef PHP_PQ_OID_JSONB
+# ifdef PHP_PQ_OID_JSONB
 	case PHP_PQ_OID_JSONB:
-#	endif
+# endif
 	case PHP_PQ_OID_JSON:
 		if (!(res->auto_convert & PHP_PQRES_CONV_JSON)) {
 			goto noconversion;
