@@ -491,6 +491,58 @@ static void php_pqres_object_read_error_message(zval *object, void *o, zval *ret
 	}
 }
 
+#ifndef PG_DIAG_SEVERITY
+# define PG_DIAG_SEVERITY 'S'
+#endif
+#ifndef PG_DIAG_SQLSTATE
+# define PG_DIAG_SQLSTATE 'C'
+#endif
+#ifndef PG_DIAG_MESSAGE_PRIMARY
+# define PG_DIAG_MESSAGE_PRIMARY 'M'
+#endif
+#ifndef PG_DIAG_MESSAGE_DETAIL
+# define PG_DIAG_MESSAGE_DETAIL 'D'
+#endif
+#ifndef PG_DIAG_MESSAGE_HINT
+# define PG_DIAG_MESSAGE_HINT 'H'
+#endif
+#ifndef PG_DIAG_STATEMENT_POSITION
+# define PG_DIAG_STATEMENT_POSITION 'P'
+#endif
+#ifndef PG_DIAG_INTERNAL_POSITION
+# define PG_DIAG_INTERNAL_POSITION 'p'
+#endif
+#ifndef PG_DIAG_INTERNAL_QUERY
+# define PG_DIAG_INTERNAL_QUERY 'q'
+#endif
+#ifndef PG_DIAG_CONTEXT
+# define PG_DIAG_CONTEXT 'W'
+#endif
+#ifndef PG_DIAG_SCHEMA_NAME
+# define PG_DIAG_SCHEMA_NAME 's'
+#endif
+#ifndef PG_DIAG_TABLE_NAME
+# define PG_DIAG_TABLE_NAME 't'
+#endif
+#ifndef PG_DIAG_COLUMN_NAME
+# define PG_DIAG_COLUMN_NAME 'c'
+#endif
+#ifndef PG_DIAG_DATATYPE_NAME
+# define PG_DIAG_DATATYPE_NAME 'd'
+#endif
+#ifndef PG_DIAG_CONSTRAINT_NAME
+# define PG_DIAG_CONSTRAINT_NAME 'n'
+#endif
+#ifndef PG_DIAG_SOURCE_FILE
+# define PG_DIAG_SOURCE_FILE 'F'
+#endif
+#ifndef PG_DIAG_SOURCE_LINE
+# define PG_DIAG_SOURCE_LINE 'L'
+#endif
+#ifndef PG_DIAG_SOURCE_FUNCTION
+# define PG_DIAG_SOURCE_FUNCTION 'R'
+#endif
+
 static void php_pqres_object_read_diag(zval *object, void *o, zval *return_value)
 {
 	php_pqres_object_t *obj = o;
@@ -499,57 +551,23 @@ static void php_pqres_object_read_diag(zval *object, void *o, zval *return_value
 		char code;
 		const char *const name;
 	} diag[] = {
-#ifdef PG_DIAG_SEVERITY
-			{PG_DIAG_SEVERITY,			"severity"},
-#endif
-#ifdef PG_DIAG_SQLSTATE
-			{PG_DIAG_SQLSTATE,			"sqlstate"},
-#endif
-#ifdef PG_DIAG_MESSAGE_PRIMARY
-			{PG_DIAG_MESSAGE_PRIMARY,	"message_primary"},
-#endif
-#ifdef PG_DIAG_MESSAGE_DETAIL
-			{PG_DIAG_MESSAGE_DETAIL,	"message_detail"},
-#endif
-#ifdef PG_DIAG_MESSAGE_HINT
-			{PG_DIAG_MESSAGE_HINT,		"message_hint"},
-#endif
-#ifdef PG_DIAG_STATEMENT_POSITION
-			{PG_DIAG_STATEMENT_POSITION,"statement_position"},
-#endif
-#ifdef PG_DIAG_INTERNAL_POSITION
-			{PG_DIAG_INTERNAL_POSITION,	"internal_position"},
-#endif
-#ifdef PG_DIAG_INTERNAL_QUERY
-			{PG_DIAG_INTERNAL_QUERY,	"internal_query"},
-#endif
-#ifdef PG_DIAG_CONTEXT
-			{PG_DIAG_CONTEXT,			"context"},
-#endif
-#ifdef PG_DIAG_SCHEMA_NAME
-			{PG_DIAG_SCHEMA_NAME,		"schema_name"},
-#endif
-#ifdef PG_DIAG_TABLE_NAME
-			{PG_DIAG_TABLE_NAME,		"table_name"},
-#endif
-#ifdef PG_DIAG_COLUMN_NAME
-			{PG_DIAG_COLUMN_NAME,		"column_name"},
-#endif
-#ifdef PG_DIAG_DATATYPE_NAME
-			{PG_DIAG_DATATYPE_NAME,		"datatype_name"},
-#endif
-#ifdef PG_DIAG_CONSTRAINT_NAME
-			{PG_DIAG_CONSTRAINT_NAME,	"constraint_name"},
-#endif
-#ifdef PG_DIAG_SOURCE_FILE
-			{PG_DIAG_SOURCE_FILE,		"source_file"},
-#endif
-#ifdef PG_DIAG_SOURCE_LINE
-			{PG_DIAG_SOURCE_LINE,		"source_line"},
-#endif
-#ifdef PG_DIAG_SOURCE_FUNCTION
-			{PG_DIAG_SOURCE_FUNCTION,	"source_function"},
-#endif
+		{PG_DIAG_SEVERITY,			"severity"},
+		{PG_DIAG_SQLSTATE,			"sqlstate"},
+		{PG_DIAG_MESSAGE_PRIMARY,	"message_primary"},
+		{PG_DIAG_MESSAGE_DETAIL,	"message_detail"},
+		{PG_DIAG_MESSAGE_HINT,		"message_hint"},
+		{PG_DIAG_STATEMENT_POSITION,"statement_position"},
+		{PG_DIAG_INTERNAL_POSITION,	"internal_position"},
+		{PG_DIAG_INTERNAL_QUERY,	"internal_query"},
+		{PG_DIAG_CONTEXT,			"context"},
+		{PG_DIAG_SCHEMA_NAME,		"schema_name"},
+		{PG_DIAG_TABLE_NAME,		"table_name"},
+		{PG_DIAG_COLUMN_NAME,		"column_name"},
+		{PG_DIAG_DATATYPE_NAME,		"datatype_name"},
+		{PG_DIAG_CONSTRAINT_NAME,	"constraint_name"},
+		{PG_DIAG_SOURCE_FILE,		"source_file"},
+		{PG_DIAG_SOURCE_LINE,		"source_line"},
+		{PG_DIAG_SOURCE_FUNCTION,	"source_function"},
 	};
 
 	array_init_size(return_value, 32);
