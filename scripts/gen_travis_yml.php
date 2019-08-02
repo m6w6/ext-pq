@@ -7,7 +7,7 @@ addons:
  postgresql: 9.4
  apt:
   packages:
-   - php5-cli
+   - php-cli
    - php-pear
    - valgrind
 
