@@ -318,6 +318,9 @@ static ZEND_RESULT_CODE parse_element(ArrayParserState *a, char delim)
 	case '{':
 		return parse_array(a);
 
+	case '}':
+		return SUCCESS;
+
 	case '"':
 		a->quotes = 1;
 		++a->ptr;
