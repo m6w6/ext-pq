@@ -42,7 +42,7 @@ static void php_pq_callback_hash_dtor(zval *p)
 }
 
 /*
-static void php_pqconn_del_eventhandler(php_pqconn_object_t *obj, const char *type_str, size_t type_len, ulong id)
+static void php_pqconn_del_eventhandler(php_pqconn_object_t *obj, const char *type_str, size_t type_len, unsigned long id)
 {
 	zval **evhs;
 

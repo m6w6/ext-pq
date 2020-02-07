@@ -46,7 +46,7 @@ typedef struct php_pqconn_object {
 
 typedef struct php_pqconn_resource_factory_data {
 	char *dsn;
-	uint32_t flags;
+	unsigned long flags;
 } php_pqconn_resource_factory_data_t;
 
 extern php_resource_factory_ops_t *php_pqconn_get_resource_factory_ops(void);
