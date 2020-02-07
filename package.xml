@@ -41,9 +41,9 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </developer>
- <date>2020-01-18</date>
+ <date>2020-02-07</date>
  <version>
-  <release>2.1.6</release>
+  <release>2.1.7</release>
   <api>2.1.0</api>
  </version>
  <stability>
@@ -52,9 +52,7 @@
  </stability>
  <license uri="http://copyfree.org/content/standard/licenses/2bsd/license.txt">BSD-2-Clause</license>
  <notes><![CDATA[
-  * Fix PgSQL-12 compatibility
-  * Fix PHP-7.4 compatibility
-  * Fix empty arrays parsing (Dmitry Simushev)
+  * Fix PHP-7.4 compatibility (undefined ulong on some platforms)
 ]]></notes>
  <contents>
   <dir name="/">
