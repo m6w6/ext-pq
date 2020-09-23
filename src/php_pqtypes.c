@@ -54,13 +54,13 @@ static zend_object *php_pqtypes_create_object(zend_class_entry *class_type)
 	return &php_pqtypes_create_object_ex(class_type, NULL)->zo;
 }
 
-static void php_pqtypes_object_read_connection(zval *object, void *o, zval *return_value)
+static void php_pqtypes_object_read_connection(void *o, zval *return_value)
 {
 	php_pqtypes_object_t *obj = o;
 
 	php_pq_object_to_zval(obj->intern->conn, return_value);
 }
-static void php_pqtypes_object_gc_connection(zval *object, void *o, zval *return_value)
+static void php_pqtypes_object_gc_connection(void *o, zval *return_value)
 {
 	php_pqtypes_object_t *obj = o;
 	zval zconn;
@@ -94,9 +94,14 @@ static int has_dimension(HashTable *ht, zval *member, zend_string **key, zend_lo
 	}
 }
 
-static int php_pqtypes_object_has_dimension(zval *object, zval *member, int check_empty)
+#if PHP_VERSION_ID >= 80000
+# define php_pqtypes_object_has_dimension php_pqtypes_object_has_dimension_80
+#else
+# define php_pqtypes_object_has_dimension php_pqtypes_object_has_dimension_70
+#endif
+static int php_pqtypes_object_has_dimension_80(zend_object *object, zval *member, int check_empty)
 {
-	php_pqtypes_object_t *obj = PHP_PQ_OBJ(object, NULL);
+	php_pqtypes_object_t *obj = PHP_PQ_OBJ(NULL, object);
 	zend_string *key = NULL;
 	zend_long index = 0;
 
@@ -123,10 +128,19 @@ static int php_pqtypes_object_has_dimension(zval *object, zval *member, int chec
 
 	return 0;
 }
-
-static zval *php_pqtypes_object_read_dimension(zval *object, zval *member, int type, zval *rv)
+static int php_pqtypes_object_has_dimension_70(zval *object, zval *member, int check_empty)
 {
-	php_pqtypes_object_t *obj = PHP_PQ_OBJ(object, NULL);
+	return php_pqtypes_object_has_dimension_80(Z_OBJ_P(object), member, check_empty);
+}
+
+#if PHP_VERSION_ID >= 80000
+# define php_pqtypes_object_read_dimension php_pqtypes_object_read_dimension_80
+#else
+# define php_pqtypes_object_read_dimension php_pqtypes_object_read_dimension_70
+#endif
+static zval *php_pqtypes_object_read_dimension_80(zend_object *object, zval *member, int type, zval *rv)
+{
+	php_pqtypes_object_t *obj = PHP_PQ_OBJ(NULL, object);
 	zend_string *key = NULL;
 	zend_long index = 0;
 	zval *data = NULL;
@@ -142,13 +156,35 @@ static zval *php_pqtypes_object_read_dimension(zval *object, zval *member, int t
 
 	return data;
 }
+static zval *php_pqtypes_object_read_dimension_70(zval *object, zval *member, int type, zval *rv)
+{
+	return php_pqtypes_object_read_dimension_80(Z_OBJ_P(object), member, type, rv);
+}
 
-static void php_pqtypes_object_write_dimension(zval *object, zval *offset, zval *value)
+#if PHP_VERSION_ID >= 80000
+# define php_pqtypes_object_write_dimension php_pqtypes_object_write_dimension_80
+#else
+# define php_pqtypes_object_write_dimension php_pqtypes_object_write_dimension_70
+#endif
+static void php_pqtypes_object_write_dimension_80(zend_object *object, zval *offset, zval *value)
+{
+	throw_exce(EX_RUNTIME, "pq\\Types object must not be modified");
+}
+static void php_pqtypes_object_write_dimension_70(zval *object, zval *offset, zval *value)
 {
 	throw_exce(EX_RUNTIME, "pq\\Types object must not be modified");
 }
 
-static void php_pqtypes_object_unset_dimension(zval *object, zval *offset)
+#if PHP_VERSION_ID >= 80000
+# define php_pqtypes_object_unset_dimension php_pqtypes_object_unset_dimension_80
+#else
+# define php_pqtypes_object_unset_dimension php_pqtypes_object_unset_dimension_70
+#endif
+static void php_pqtypes_object_unset_dimension_80(zend_object *object, zval *offset)
+{
+	throw_exce(EX_RUNTIME, "pq\\Types object must not be modified");
+}
+static void php_pqtypes_object_unset_dimension_70(zval *object, zval *offset)
 {
 	throw_exce(EX_RUNTIME, "pq\\Types object must not be modified");
 }
@@ -180,9 +216,9 @@ static PHP_METHOD(pqtypes, __construct) {
 			zend_hash_init(&obj->intern->types, 512, NULL, ZVAL_PTR_DTOR, 0);
 
 			if (znsp) {
-				zend_call_method_with_1_params(getThis(), Z_OBJCE_P(getThis()), NULL, "refresh", NULL, znsp);
+				php_pq_call_method(getThis(), "refresh", 1, NULL, znsp);
 			} else {
-				zend_call_method_with_0_params(getThis(), Z_OBJCE_P(getThis()), NULL, "refresh", NULL);
+				php_pq_call_method(getThis(), "refresh", 0, NULL);
 			}
 		}
 	}

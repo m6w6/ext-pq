@@ -107,21 +107,21 @@ static zend_object *php_pqconn_create_object(zend_class_entry *class_type)
 	return &php_pqconn_create_object_ex(class_type, NULL)->zo;
 }
 
-static void php_pqconn_object_read_status(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_status(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 
 	RETVAL_LONG(PQstatus(obj->intern->conn));
 }
 
-static void php_pqconn_object_read_transaction_status(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_transaction_status(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 
 	RETVAL_LONG(PQtransactionStatus(obj->intern->conn));
 }
 
-static void php_pqconn_object_read_error_message(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_error_message(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 	char *error = PHP_PQerrorMessage(obj->intern->conn);
@@ -176,21 +176,21 @@ void php_pqconn_notify_listeners(php_pqconn_object_t *obj)
 	}
 }
 
-static void php_pqconn_object_read_busy(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_busy(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 
 	RETVAL_BOOL(PQisBusy(obj->intern->conn));
 }
 
-static void php_pqconn_object_read_encoding(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_encoding(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 
 	RETVAL_STRING(pg_encoding_to_char(PQclientEncoding(obj->intern->conn)));
 }
 
-static void php_pqconn_object_write_encoding(zval *object, void *o, zval *value)
+static void php_pqconn_object_write_encoding(void *o, zval *value)
 {
 	php_pqconn_object_t *obj = o;
 	zend_string *zenc = zval_get_string(value);
@@ -202,35 +202,35 @@ static void php_pqconn_object_write_encoding(zval *object, void *o, zval *value)
 	zend_string_release(zenc);
 }
 
-static void php_pqconn_object_read_unbuffered(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_unbuffered(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 
 	RETVAL_BOOL(obj->intern->unbuffered);
 }
 
-static void php_pqconn_object_write_unbuffered(zval *object, void *o, zval *value)
+static void php_pqconn_object_write_unbuffered(void *o, zval *value)
 {
 	php_pqconn_object_t *obj = o;
 
 	obj->intern->unbuffered = z_is_true(value);
 }
 
-static void php_pqconn_object_read_nonblocking(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_nonblocking(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 
 	RETVAL_BOOL(PQisnonblocking(obj->intern->conn));
 }
 
-static void php_pqconn_object_write_nonblocking(zval *object, void *o, zval *value)
+static void php_pqconn_object_write_nonblocking(void *o, zval *value)
 {
 	php_pqconn_object_t *obj = o;
 
 	PQsetnonblocking(obj->intern->conn, z_is_true(value));
 }
 
-static void php_pqconn_object_read_db(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_db(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 	char *db = PQdb(obj->intern->conn);
@@ -242,7 +242,7 @@ static void php_pqconn_object_read_db(zval *object, void *o, zval *return_value)
 	}
 }
 
-static void php_pqconn_object_read_user(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_user(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 	char *user = PQuser(obj->intern->conn);
@@ -254,7 +254,7 @@ static void php_pqconn_object_read_user(zval *object, void *o, zval *return_valu
 	}
 }
 
-static void php_pqconn_object_read_pass(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_pass(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 	char *pass = PQpass(obj->intern->conn);
@@ -266,7 +266,7 @@ static void php_pqconn_object_read_pass(zval *object, void *o, zval *return_valu
 	}
 }
 
-static void php_pqconn_object_read_host(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_host(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 	char *host = PQhost(obj->intern->conn);
@@ -278,7 +278,7 @@ static void php_pqconn_object_read_host(zval *object, void *o, zval *return_valu
 	}
 }
 
-static void php_pqconn_object_read_port(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_port(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 	char *port = PQport(obj->intern->conn);
@@ -291,7 +291,7 @@ static void php_pqconn_object_read_port(zval *object, void *o, zval *return_valu
 }
 
 #if HAVE_PQCONNINFO
-static void php_pqconn_object_read_params(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_params(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 	PQconninfoOption *ptr, *params = PQconninfo(obj->intern->conn);
@@ -311,7 +311,7 @@ static void php_pqconn_object_read_params(zval *object, void *o, zval *return_va
 }
 #endif
 
-static void php_pqconn_object_read_options(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_options(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 	char *options = PQoptions(obj->intern->conn);
@@ -350,7 +350,7 @@ static int apply_read_callbacks(zval *p, int argc, va_list argv, zend_hash_key *
 
 	return ZEND_HASH_APPLY_KEEP;
 }
-static void php_pqconn_object_read_event_handlers(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_event_handlers(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 
@@ -358,7 +358,7 @@ static void php_pqconn_object_read_event_handlers(zval *object, void *o, zval *r
 	zend_hash_apply_with_arguments(&obj->intern->eventhandlers, apply_read_callbacks, 1, Z_ARRVAL_P(return_value));
 }
 
-static void php_pqconn_object_gc_event_handlers(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_gc_event_handlers(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 	zval *evhs;
@@ -378,7 +378,7 @@ static void php_pqconn_object_gc_event_handlers(zval *object, void *o, zval *ret
 	ZEND_HASH_FOREACH_END();
 }
 
-static void php_pqconn_object_read_listeners(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_listeners(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 
@@ -386,7 +386,7 @@ static void php_pqconn_object_read_listeners(zval *object, void *o, zval *return
 	zend_hash_apply_with_arguments(&obj->intern->listeners, apply_read_callbacks, 1, Z_ARRVAL_P(return_value));
 }
 
-static void php_pqconn_object_gc_listeners(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_gc_listeners(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 	zval *listeners;
@@ -406,7 +406,7 @@ static void php_pqconn_object_gc_listeners(zval *object, void *o, zval *return_v
 	ZEND_HASH_FOREACH_END();
 }
 
-static void php_pqconn_object_read_converters(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_converters(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 
@@ -414,7 +414,7 @@ static void php_pqconn_object_read_converters(zval *object, void *o, zval *retur
 	zend_hash_copy(Z_ARRVAL_P(return_value), &obj->intern->converters, zval_add_ref);
 }
 
-static void php_pqconn_object_gc_converters(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_gc_converters(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 	zval *converter;
@@ -426,65 +426,65 @@ static void php_pqconn_object_gc_converters(zval *object, void *o, zval *return_
 	ZEND_HASH_FOREACH_END();
 }
 
-static void php_pqconn_object_read_def_fetch_type(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_def_fetch_type(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 
 	RETVAL_LONG(obj->intern->default_fetch_type);
 }
-static void php_pqconn_object_write_def_fetch_type(zval *object, void *o, zval *value)
+static void php_pqconn_object_write_def_fetch_type(void *o, zval *value)
 {
 	php_pqconn_object_t *obj = o;
 
 	obj->intern->default_fetch_type = zval_get_long(value) & 0x3; /* two bits only */
 }
 
-static void php_pqconn_object_read_def_txn_isolation(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_def_txn_isolation(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 
 	RETVAL_LONG(obj->intern->default_txn_isolation);
 }
-static void php_pqconn_object_write_def_txn_isolation(zval *object, void *o, zval *value)
+static void php_pqconn_object_write_def_txn_isolation(void *o, zval *value)
 {
 	php_pqconn_object_t *obj = o;
 
 	obj->intern->default_txn_isolation = zval_get_long(value) & 0x3; /* two bits only */
 }
 
-static void php_pqconn_object_read_def_txn_readonly(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_def_txn_readonly(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 
 	RETVAL_BOOL(obj->intern->default_txn_readonly);
 }
-static void php_pqconn_object_write_def_txn_readonly(zval *object, void *o, zval *value)
+static void php_pqconn_object_write_def_txn_readonly(void *o, zval *value)
 {
 	php_pqconn_object_t *obj = o;
 
 	obj->intern->default_txn_readonly = z_is_true(value);
 }
 
-static void php_pqconn_object_read_def_txn_deferrable(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_def_txn_deferrable(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 
 	RETVAL_BOOL(obj->intern->default_txn_deferrable);
 }
-static void php_pqconn_object_write_def_txn_deferrable(zval *object, void *o, zval *value)
+static void php_pqconn_object_write_def_txn_deferrable(void *o, zval *value)
 {
 	php_pqconn_object_t *obj = o;
 
 	obj->intern->default_txn_deferrable = zend_is_true(value);
 }
 
-static void php_pqconn_object_read_def_auto_conv(zval *object, void *o, zval *return_value)
+static void php_pqconn_object_read_def_auto_conv(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 
 	RETVAL_LONG(obj->intern->default_auto_convert);
 }
-static void php_pqconn_object_write_def_auto_conv(zval*object, void *o, zval *value)
+static void php_pqconn_object_write_def_auto_conv(void *o, zval *value)
 {
 	php_pqconn_object_t *obj = o;
 
@@ -514,7 +514,11 @@ static ZEND_RESULT_CODE php_pqconn_update_socket(zval *zobj, php_pqconn_object_t
 		ZVAL_NULL(&zsocket);
 		retval = FAILURE;
 	}
+#if PHP_VERSION_ID >= 80000
+	zend_get_std_object_handlers()->write_property(Z_OBJ_P(zobj), Z_STR(zmember), &zsocket, NULL);
+#else
 	zend_get_std_object_handlers()->write_property(zobj, &zmember, &zsocket, NULL);
+#endif
 	zval_ptr_dtor(&zsocket);
 	zval_ptr_dtor(&zmember);
 
@@ -870,7 +874,7 @@ static PHP_METHOD(pqconn, listen) {
 	zend_error_handling zeh;
 	char *channel_str = NULL;
 	size_t channel_len = 0;
-	php_pq_callback_t listener = {{0}};
+	php_pq_callback_t listener = PHP_PQ_CALLBACK_INIT;
 	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
@@ -924,7 +928,7 @@ static PHP_METHOD(pqconn, listenAsync) {
 	zend_error_handling zeh;
 	char *channel_str = NULL;
 	size_t channel_len = 0;
-	php_pq_callback_t listener = {{0}};
+	php_pq_callback_t listener = PHP_PQ_CALLBACK_INIT;
 	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
@@ -1165,7 +1169,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_exec_async, 0, 0, 1)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, execAsync) {
 	zend_error_handling zeh;
-	php_pq_callback_t resolver = {{0}};
+	php_pq_callback_t resolver = PHP_PQ_CALLBACK_INIT;
 	char *query_str;
 	size_t query_len;
 	ZEND_RESULT_CODE rv;
@@ -1246,7 +1250,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqconn_exec_params_async, 0, 0, 2)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqconn, execParamsAsync) {
 	zend_error_handling zeh;
-	php_pq_callback_t resolver = {{0}};
+	php_pq_callback_t resolver = PHP_PQ_CALLBACK_INIT;
 	char *query_str;
 	size_t query_len;
 	zval *zparams;
@@ -1831,7 +1835,7 @@ static PHP_METHOD(pqconn, on) {
 	zend_error_handling zeh;
 	char *type_str;
 	size_t type_len;
-	php_pq_callback_t cb = {{0}};
+	php_pq_callback_t cb = PHP_PQ_CALLBACK_INIT;
 	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
@@ -1892,7 +1896,7 @@ static PHP_METHOD(pqconn, setConverter) {
 			struct apply_set_converter_arg arg = {NULL};
 
 			ZVAL_NULL(&zoids);
-			zend_call_method_with_0_params(zcnv, NULL, NULL, "converttypes", &zoids);
+			php_pq_call_method(zcnv, "converttypes", 0, &zoids);
 			ZVAL_DUP(&tmp, &zoids);
 			convert_to_array(&tmp);
 
@@ -1930,7 +1934,7 @@ static PHP_METHOD(pqconn, unsetConverter) {
 			struct apply_set_converter_arg arg = {NULL};
 
 			ZVAL_NULL(&zoids);
-			zend_call_method_with_0_params(zcnv, NULL, NULL, "converttypes", &zoids);
+			php_pq_call_method(zcnv, "converttypes", 0, &zoids);
 			ZVAL_DUP(&tmp, &zoids);
 			convert_to_array(&tmp);
 

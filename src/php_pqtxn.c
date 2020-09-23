@@ -79,14 +79,14 @@ static zend_object *php_pqtxn_create_object(zend_class_entry *class_type)
 	return &php_pqtxn_create_object_ex(class_type, NULL)->zo;
 }
 
-static void php_pqtxn_object_read_connection(zval *object, void *o, zval *return_value)
+static void php_pqtxn_object_read_connection(void *o, zval *return_value)
 {
 	php_pqtxn_object_t *obj = o;
 
 	php_pq_object_to_zval(obj->intern->conn, return_value);
 }
 
-static void php_pqtxn_object_gc_connection(zval *object, void *o, zval *return_value)
+static void php_pqtxn_object_gc_connection(void *o, zval *return_value)
 {
 	php_pqtxn_object_t *obj = o;
 	zval zconn;
@@ -95,28 +95,28 @@ static void php_pqtxn_object_gc_connection(zval *object, void *o, zval *return_v
 	add_next_index_zval(return_value, &zconn);
 }
 
-static void php_pqtxn_object_read_isolation(zval *object, void *o, zval *return_value)
+static void php_pqtxn_object_read_isolation(void *o, zval *return_value)
 {
 	php_pqtxn_object_t *obj = o;
 
 	RETVAL_LONG(obj->intern->isolation);
 }
 
-static void php_pqtxn_object_read_readonly(zval *object, void *o, zval *return_value)
+static void php_pqtxn_object_read_readonly(void *o, zval *return_value)
 {
 	php_pqtxn_object_t *obj = o;
 
 	RETVAL_BOOL(obj->intern->readonly);
 }
 
-static void php_pqtxn_object_read_deferrable(zval *object, void *o, zval *return_value)
+static void php_pqtxn_object_read_deferrable(void *o, zval *return_value)
 {
 	php_pqtxn_object_t *obj = o;
 
 	RETVAL_BOOL(obj->intern->deferrable);
 }
 
-static void php_pqtxn_object_write_isolation(zval *object, void *o, zval *value)
+static void php_pqtxn_object_write_isolation(void *o, zval *value)
 {
 	php_pqtxn_object_t *obj = o;
 	php_pqtxn_isolation_t orig = obj->intern->isolation;
@@ -144,7 +144,7 @@ static void php_pqtxn_object_write_isolation(zval *object, void *o, zval *value)
 	}
 }
 
-static void php_pqtxn_object_write_readonly(zval *object, void *o, zval *value)
+static void php_pqtxn_object_write_readonly(void *o, zval *value)
 {
 	php_pqtxn_object_t *obj = o;
 	PGresult *res;
@@ -161,7 +161,7 @@ static void php_pqtxn_object_write_readonly(zval *object, void *o, zval *value)
 	}
 }
 
-static void php_pqtxn_object_write_deferrable(zval *object, void *o, zval *value)
+static void php_pqtxn_object_write_deferrable(void *o, zval *value)
 {
 	php_pqtxn_object_t *obj = o;
 	PGresult *res;

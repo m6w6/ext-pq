@@ -41,7 +41,13 @@ extern char *php_pq_rtrim(char *e);
 extern const char *php_pq_strmode(long mode);
 
 /* compare array index */
-extern int php_pq_compare_index(const void *lptr, const void *rptr);
+#if PHP_VERSION_ID >= 80000
+# define php_pq_compare_index php_pq_compare_index_80
+#else
+# define php_pq_compare_index php_pq_compare_index_70
+#endif
+extern int php_pq_compare_index_80(Bucket *lptr, Bucket *rptr);
+extern int php_pq_compare_index_70(const void *lptr, const void *rptr);
 
 /* free zval ptr values (as hash dtor) */
 extern void php_pq_hash_ptr_dtor(zval *p);
@@ -50,12 +56,44 @@ extern void php_pq_hash_ptr_dtor(zval *p);
 #define PHP_PQresultErrorMessage(r) php_pq_rtrim(PQresultErrorMessage((r)))
 
 extern zend_class_entry *php_pqdt_class_entry;
-extern zval *php_pqdt_from_string(zval *zv, char *input_fmt, char *dt_str, size_t dt_len, char *output_fmt, zval *ztimezone);
+extern zval *php_pqdt_from_string(zval *zv, char *input_fmt, char *dt_str, size_t dt_len, const char *output_fmt, zval *ztimezone);
 extern zend_string *php_pqdt_to_string(zval *zdt, const char *format);
 
 extern zend_class_entry *php_pqconv_class_entry;
 
 extern HashTable *php_pq_parse_array(php_pqres_t *res, const char *val_str, size_t val_len, Oid typ);
+
+/* ZE compat */
+#if PHP_VERSION_ID >= 80000
+# define php_pq_call_method(objval_ptr, method_name, num_args, ...) \
+		zend_call_method_with_ ## num_args ## _params( \
+				Z_OBJ_P(objval_ptr), Z_OBJCE_P(objval_ptr), NULL, \
+				(method_name), __VA_ARGS__)
+# define php_pq_read_property(objval_ptr, prop_name, tmpval_ptr) \
+		zend_read_property(Z_OBJCE_P(objval_ptr), Z_OBJ_P(objval_ptr), \
+				(prop_name), strlen(prop_name), 0, (tmpval_ptr))
+# define php_pq_update_property(objval_ptr, prop_name, newval_ptr) \
+		zend_update_property(Z_OBJCE_P(objval_ptr), Z_OBJ_P(objval_ptr), \
+				(prop_name), strlen(prop_name), (newval_ptr))
+#define php_pq_cast_object(objval_ptr, cast_type, retval_ptr) \
+		(Z_OBJ_HT_P(objval_ptr)->cast_object && \
+				SUCCESS == Z_OBJ_HT_P(objval_ptr)->cast_object(Z_OBJ_P(objval_ptr), (retval_ptr), (cast_type)))
+#else
+# define php_pq_call_method(objval_ptr, method_name, num_args, ...) \
+		zend_call_method_with_ ## num_args ## _params( \
+				(objval_ptr), NULL, NULL, \
+				(method_name), __VA_ARGS__)
+# define php_pq_read_property(objval_ptr, prop_name, tmpval_ptr) \
+		zend_read_property(Z_OBJCE_P(objval_ptr), (objval_ptr), \
+				(prop_name), strlen(prop_name), 0, (tmpval_ptr))
+# define php_pq_update_property(objval_ptr, prop_name, newval_ptr) \
+		zend_update_property(Z_OBJCE_P(objval_ptr), (objval_ptr), \
+				(prop_name), strlen(prop_name), (newval_ptr))
+#define php_pq_cast_object(objval_ptr, cast_type, retval_ptr) \
+		(Z_OBJ_HT_P(objval_ptr)->cast_object && \
+				SUCCESS == Z_OBJ_HT_P(objval_ptr)->cast_object(objval_ptr, (retval_ptr), (cast_type)))
+#endif
+
 
 
 extern PHP_MINIT_FUNCTION(pq_misc);

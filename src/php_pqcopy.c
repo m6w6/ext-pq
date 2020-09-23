@@ -58,14 +58,14 @@ static zend_object *php_pqcopy_create_object(zend_class_entry *class_type)
 	return &php_pqcopy_create_object_ex(class_type, NULL)->zo;
 }
 
-static void php_pqcopy_object_read_connection(zval *object, void *o, zval *return_value)
+static void php_pqcopy_object_read_connection(void *o, zval *return_value)
 {
 	php_pqcopy_object_t *obj = o;
 
 	php_pq_object_to_zval(obj->intern->conn, return_value);
 }
 
-static void php_pqcopy_object_gc_connection(zval *object, void *o, zval *return_value)
+static void php_pqcopy_object_gc_connection(void *o, zval *return_value)
 {
 	php_pqcopy_object_t *obj = o;
 	zval zconn;
@@ -74,21 +74,21 @@ static void php_pqcopy_object_gc_connection(zval *object, void *o, zval *return_
 	add_next_index_zval(return_value, &zconn);
 }
 
-static void php_pqcopy_object_read_direction(zval *object, void *o, zval *return_value)
+static void php_pqcopy_object_read_direction(void *o, zval *return_value)
 {
 	php_pqcopy_object_t *obj = o;
 
 	RETVAL_LONG(obj->intern->direction);
 }
 
-static void php_pqcopy_object_read_expression(zval *object, void *o, zval *return_value)
+static void php_pqcopy_object_read_expression(void *o, zval *return_value)
 {
 	php_pqcopy_object_t *obj = o;
 
 	RETURN_STRING(obj->intern->expression);
 }
 
-static void php_pqcopy_object_read_options(zval *object, void *o, zval *return_value)
+static void php_pqcopy_object_read_options(void *o, zval *return_value)
 {
 	php_pqcopy_object_t *obj = o;
 

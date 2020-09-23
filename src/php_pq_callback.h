@@ -21,6 +21,8 @@ typedef struct php_pq_callback {
 	struct php_pq_callback *recursion;
 } php_pq_callback_t;
 
+#define PHP_PQ_CALLBACK_INIT {{0},{0},NULL}
+
 extern void php_pq_callback_dtor(php_pq_callback_t *cb);
 extern void php_pq_callback_addref(php_pq_callback_t *cb);
 extern zval *php_pq_callback_to_zval(php_pq_callback_t *cb, zval *tmp);

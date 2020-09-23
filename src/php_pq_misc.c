@@ -103,10 +103,10 @@ const char *php_pq_strmode(long mode)
 	}
 }
 
-int php_pq_compare_index(const void *lptr, const void *rptr)
+int php_pq_compare_index_80(Bucket *lptr, Bucket *rptr)
 {
-	zend_ulong l = ((const Bucket *) lptr)->h;
-	zend_ulong r = ((const Bucket *) rptr)->h;
+	zend_ulong l = lptr->h;
+	zend_ulong r = rptr->h;
 
 	if (l < r) {
 		return -1;
@@ -115,6 +115,9 @@ int php_pq_compare_index(const void *lptr, const void *rptr)
 		return 1;
 	}
 	return 0;
+}
+int php_pq_compare_index_70(const void *lptr, const void *rptr) {
+	return php_pq_compare_index_80((Bucket *) lptr, (Bucket *) rptr);
 }
 
 void php_pq_hash_ptr_dtor(zval *p)
@@ -131,8 +134,7 @@ static PHP_METHOD(pqdt, __toString)
 	zval rv, tmp;
 
 	ZVAL_NULL(&rv);
-	zend_call_method_with_1_params(getThis(), php_pqdt_class_entry, NULL, "format", &rv,
-			zend_read_property(php_pqdt_class_entry, getThis(), ZEND_STRL("format"), 0, &tmp));
+	php_pq_call_method(getThis(), "format", 1, &rv, php_pq_read_property(getThis(), "format", &tmp));
 	RETVAL_ZVAL(&rv, 1, 1);
 }
 
@@ -169,7 +171,7 @@ static zend_function_entry php_pqdt_methods[] = {
 	{0}
 };
 
-zval *php_pqdt_from_string(zval *zv, char *input_fmt, char *dt_str, size_t dt_len, char *output_fmt, zval *ztimezone)
+zval *php_pqdt_from_string(zval *zv, char *input_fmt, char *dt_str, size_t dt_len, const char *output_fmt, zval *ztimezone)
 {
 	php_date_obj *dobj;
 
@@ -179,7 +181,10 @@ zval *php_pqdt_from_string(zval *zv, char *input_fmt, char *dt_str, size_t dt_le
 		zval_dtor(zv);
 		ZVAL_NULL(zv);
 	} else if (output_fmt) {
-		zend_update_property_string(php_pqdt_class_entry, zv, ZEND_STRL("format"), output_fmt);
+		zval fmt;
+		ZVAL_STRING(&fmt, output_fmt);
+		php_pq_update_property(zv, "format", &fmt);
+		zval_ptr_dtor(&fmt);
 	}
 
 	return zv;
@@ -191,16 +196,14 @@ zend_string *php_pqdt_to_string(zval *zdt, const char *format)
 
 	ZVAL_NULL(&rv);
 
-	if (Z_OBJ_HT_P(zdt)->cast_object
-	&&	SUCCESS == Z_OBJ_HT_P(zdt)->cast_object(zdt, &rv, IS_STRING)
-	) {
+	if (php_pq_cast_object(zdt, IS_STRING, &rv)) {
 		return Z_STR(rv);
 	} else if (instanceof_function(Z_OBJCE_P(zdt), php_date_get_date_ce())) {
 		zval rv, zfmt;
 
 		ZVAL_NULL(&rv);
 		ZVAL_STRING(&zfmt, format);
-		zend_call_method_with_1_params(zdt, Z_OBJCE_P(zdt), NULL, "format", &rv, &zfmt);
+		php_pq_call_method(zdt, "format", 1, &rv, &zfmt);
 		zval_ptr_dtor(&zfmt);
 
 		if (Z_TYPE(rv) == IS_STRING) {

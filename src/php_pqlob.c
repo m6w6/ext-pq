@@ -61,14 +61,14 @@ static zend_object *php_pqlob_create_object(zend_class_entry *class_type)
 	return &php_pqlob_create_object_ex(class_type, NULL)->zo;
 }
 
-static void php_pqlob_object_read_transaction(zval *object, void *o, zval *return_value)
+static void php_pqlob_object_read_transaction(void *o, zval *return_value)
 {
 	php_pqlob_object_t *obj = o;
 
 	php_pq_object_to_zval(obj->intern->txn, return_value);
 }
 
-static void php_pqlob_object_gc_transaction(zval *object, void *o, zval *return_value)
+static void php_pqlob_object_gc_transaction(void *o, zval *return_value)
 {
 	php_pqlob_object_t *obj = o;
 	zval ztxn;
@@ -77,22 +77,22 @@ static void php_pqlob_object_gc_transaction(zval *object, void *o, zval *return_
 	add_next_index_zval(return_value, &ztxn);
 }
 
-static void php_pqlob_object_read_oid(zval *object, void *o, zval *return_value)
+static void php_pqlob_object_read_oid(void *o, zval *return_value)
 {
 	php_pqlob_object_t *obj = o;
 
 	RETVAL_LONG(obj->intern->loid);
 }
 
-static void php_pqlob_object_update_stream(zval *this_ptr, php_pqlob_object_t *obj, zval *zstream);
+static void php_pqlob_object_update_stream(php_pqlob_object_t *obj, zval *zstream);
 
-static void php_pqlob_object_read_stream(zval *object, void *o, zval *return_value)
+static void php_pqlob_object_read_stream(void *o, zval *return_value)
 {
 	php_pqlob_object_t *obj = o;
 	zval zstream;
 
 	if (!obj->intern->stream) {
-		php_pqlob_object_update_stream(object, obj, &zstream);
+		php_pqlob_object_update_stream(obj, &zstream);
 	} else {
 		php_stream_to_zval(obj->intern->stream, &zstream);
 	}
@@ -100,10 +100,10 @@ static void php_pqlob_object_read_stream(zval *object, void *o, zval *return_val
 	RETVAL_ZVAL(&zstream, 1, 0);
 }
 
-static size_t php_pqlob_stream_write(php_stream *stream, const char *buffer, size_t length)
+static ssize_t php_pqlob_stream_write(php_stream *stream, const char *buffer, size_t length)
 {
 	php_pqlob_object_t *obj = stream->abstract;
-	int written = 0;
+	ssize_t written = 0;
 
 	if (obj) {
 		written = lo_write(obj->intern->txn->intern->conn->intern->conn, obj->intern->lofd, buffer, length);
@@ -118,10 +118,10 @@ static size_t php_pqlob_stream_write(php_stream *stream, const char *buffer, siz
 	return written;
 }
 
-static size_t php_pqlob_stream_read(php_stream *stream, char *buffer, size_t length)
+static ssize_t php_pqlob_stream_read(php_stream *stream, char *buffer, size_t length)
 {
 	php_pqlob_object_t *obj = stream->abstract;
-	int read = 0;
+	ssize_t read = 0;
 
 	if (obj) {
 
@@ -191,20 +191,22 @@ static php_stream_ops php_pqlob_stream_ops = {
 	NULL, /* set_option */
 };
 
-static void php_pqlob_object_update_stream(zval *zpqlob, php_pqlob_object_t *obj, zval *zstream)
+static void php_pqlob_object_update_stream(php_pqlob_object_t *obj, zval *zstream)
 {
-	zval zmember;
+	zval zobj, zmember;
 
 	ZVAL_STRINGL(&zmember, "stream", sizeof("stream")-1);
 
-	if (!obj) {
-		obj = PHP_PQ_OBJ(zpqlob, NULL);
-	}
 	obj->intern->stream = php_stream_alloc(&php_pqlob_stream_ops, obj, NULL, "r+b");
 	obj->intern->stream->flags |= PHP_STREAM_FLAG_NO_FCLOSE;
 	php_stream_to_zval(obj->intern->stream, zstream);
 
+#if PHP_VERSION_ID >= 80000
+	zend_get_std_object_handlers()->write_property(&obj->zo, Z_STR(zmember), zstream, NULL);
+#else
+	ZVAL_OBJ(&zobj, &obj->zo);
 	zend_get_std_object_handlers()->write_property(zpqlob, &zmember, zstream, NULL);
+#endif
 	zval_ptr_dtor(&zmember);
 }
 

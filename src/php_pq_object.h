@@ -30,7 +30,9 @@ static inline void *PHP_PQ_OBJ(zval *zv, zend_object *zo) {
 	return (void *) (((char *) zo) - zo->handlers->offset);
 }
 
-typedef void (*php_pq_object_prophandler_func_t)(zval *object, void *o, zval *return_value);
+extern zend_class_entry *ancestor(zend_class_entry *ce);
+
+typedef void (*php_pq_object_prophandler_func_t)(void *o, zval *return_value);
 
 typedef struct php_pq_object_prophandler {
 	php_pq_object_prophandler_func_t read;
@@ -38,25 +40,68 @@ typedef struct php_pq_object_prophandler {
 	php_pq_object_prophandler_func_t gc;
 } php_pq_object_prophandler_t;
 
+extern void php_pq_object_prophandler_dtor(zval *zv);
+
 extern void *php_pq_object_create(zend_class_entry *ce, void *intern, size_t obj_size, zend_object_handlers *oh, HashTable *ph);
 extern void php_pq_object_dtor(zend_object *obj);
 extern void php_pq_object_to_zval(void *o, zval *zv);
 extern void php_pq_object_to_zval_no_addref(void *o, zval *zv);
 extern void php_pq_object_addref(void *o);
 extern void php_pq_object_delref(void *o);
-extern HashTable *php_pq_object_debug_info(zval *object, int *temp);
-extern HashTable *php_pq_object_properties(zval *object);
-HashTable *php_pq_object_get_gc(zval *object, zval **table, int *n);
-extern zend_class_entry *ancestor(zend_class_entry *ce);
-extern zval *php_pq_object_read_prop(zval *object, zval *member, int type, void **cache_slot, zval *tmp);
-#if PHP_VERSION_ID >= 70400
-typedef zval *php_pq_object_write_prop_t;
+
+#if PHP_VERSION_ID >= 80000
+# define php_pq_object_debug_info php_pq_object_debug_info_80
 #else
-typedef void php_pq_object_write_prop_t;
+# define php_pq_object_debug_info php_pq_object_debug_info_70
 #endif
-extern php_pq_object_write_prop_t php_pq_object_write_prop(zval *object, zval *member, zval *value, void **cache_slot);
-extern zval *php_pq_object_get_prop_ptr_null(zval *object, zval *member, int type, void **cache_slot);
-extern void php_pq_object_prophandler_dtor(zval *zv);
+extern HashTable *php_pq_object_debug_info_80(zend_object *object, int *temp);
+extern HashTable *php_pq_object_debug_info_70(zval *object, int *temp);
+
+#if PHP_VERSION_ID >= 80000
+# define php_pq_object_properties php_pq_object_properties_80
+#else
+# define php_pq_object_properties php_pq_object_properties_70
+#endif
+extern HashTable *php_pq_object_properties_80(zend_object *object);
+extern HashTable *php_pq_object_properties_70(zval *object);
+
+#if PHP_VERSION_ID >= 80000
+# define php_pq_object_get_gc php_pq_object_get_gc_80
+#else
+# define php_pq_object_get_gc php_pq_object_get_gc_70
+#endif
+extern HashTable *php_pq_object_get_gc_80(zend_object *object, zval **table, int *n);
+extern HashTable *php_pq_object_get_gc_70(zval *object, zval **table, int *n);
+
+#if PHP_VERSION_ID >= 80000
+# define php_pq_object_read_prop php_pq_object_read_prop_80
+#elif PHP_VERSION_ID >= 70400
+# define php_pq_object_read_prop php_pq_object_read_prop_74
+#else
+# define php_pq_object_read_prop php_pq_object_read_prop_70
+#endif
+extern zval *php_pq_object_read_prop_80(zend_object *object, zend_string *member, int type, void **cache_slot, zval *tmp);
+extern zval *php_pq_object_read_prop_74(zval *object, zval *member, int type, void **cache_slot, zval *tmp);
+extern void php_pq_object_read_prop_70(zval *object, zval *member, int type, void **cache_slot, zval *tmp);
+
+#if PHP_VERSION_ID >= 80000
+# define php_pq_object_write_prop php_pq_object_write_prop_80
+#elif PHP_VERSION_ID >= 70400
+# define php_pq_object_write_prop php_pq_object_write_prop_74
+#else
+# define php_pq_object_write_prop php_pq_object_write_prop_70
+#endif
+extern zval *php_pq_object_write_prop_80(zend_object *object, zend_string *member, zval *value, void **cache_slot);
+extern zval *php_pq_object_write_prop_74(zval *object, zval *member, zval *value, void **cache_slot);
+extern void php_pq_object_write_prop_70(zval *object, zval *member, zval *value, void **cache_slot);
+
+#if PHP_VERSION_ID >= 80000
+# define php_pq_object_get_prop_ptr_null php_pq_object_get_prop_ptr_null_80
+#else
+# define php_pq_object_get_prop_ptr_null php_pq_object_get_prop_ptr_null_70
+#endif
+extern zval *php_pq_object_get_prop_ptr_null_80(zend_object *object, zend_string *member, int type, void **cache_slot);
+extern zval *php_pq_object_get_prop_ptr_null_70(zval *object, zval *member, int type, void **cache_slot);
 
 #endif
 

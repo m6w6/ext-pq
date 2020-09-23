@@ -133,7 +133,7 @@ static int apply_to_param_from_array(zval *zparam, void *arg_ptr)
 		zval ztype, rv;
 
 		ZVAL_LONG(&ztype, arg->type);
-		zend_call_method_with_2_params(arg->zconv, NULL, NULL, "converttostring", &rv, zparam, &ztype);
+		php_pq_call_method(arg->zconv, "converttostring", 2, &rv, zparam, &ztype);
 		tmpstr = zval_get_string(&rv);
 		zval_ptr_dtor(&rv);
 		goto append_string;
@@ -243,7 +243,7 @@ static void php_pq_params_set_param(php_pq_params_t *p, unsigned index, zval *zp
 
 		ZVAL_NULL(&rv);
 		ZVAL_LONG(&ztype, type);
-		zend_call_method_with_2_params(zconv, NULL, NULL, "converttostring", &rv, zpp, &ztype);
+		php_pq_call_method(zconv, "converttostring", 2, &rv, zpp, &ztype);
 		convert_to_string(&rv);
 		p->param.strings[index] = Z_STRVAL_P(&rv);
 		zend_hash_next_index_insert(&p->param.dtor, &rv);

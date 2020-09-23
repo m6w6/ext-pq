@@ -98,7 +98,7 @@ static void cur_fetch_or_move(INTERNAL_FUNCTION_PARAMETERS, const char *action, 
 	char *spec_str = "1";
 	size_t spec_len = 1;
 	ZEND_RESULT_CODE rv;
-	php_pq_callback_t resolver = {{0}};
+	php_pq_callback_t resolver = PHP_PQ_CALLBACK_INIT;
 	zend_error_handling zeh;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
@@ -176,21 +176,21 @@ static zend_object *php_pqcur_create_object(zend_class_entry *class_type)
 	return &php_pqcur_create_object_ex(class_type, NULL)->zo;
 }
 
-static void php_pqcur_object_read_name(zval *object, void *o, zval *return_value)
+static void php_pqcur_object_read_name(void *o, zval *return_value)
 {
 	php_pqcur_object_t *obj = o;
 
 	RETVAL_STRING(obj->intern->name);
 }
 
-static void php_pqcur_object_read_connection(zval *object, void *o, zval *return_value)
+static void php_pqcur_object_read_connection(void *o, zval *return_value)
 {
 	php_pqcur_object_t *obj = o;
 
 	php_pq_object_to_zval(obj->intern->conn, return_value);
 }
 
-static void php_pqcur_object_gc_connection(zval *object, void *o, zval *return_value)
+static void php_pqcur_object_gc_connection(void *o, zval *return_value)
 {
 	php_pqcur_object_t *obj = o;
 	zval zconn;
@@ -199,14 +199,14 @@ static void php_pqcur_object_gc_connection(zval *object, void *o, zval *return_v
 	add_next_index_zval(return_value, &zconn);
 }
 
-static void php_pqcur_object_read_query(zval *object, void *o, zval *return_value)
+static void php_pqcur_object_read_query(void *o, zval *return_value)
 {
 	php_pqcur_object_t *obj = o;
 
 	RETVAL_STRING(obj->intern->decl + obj->intern->query_offset);
 }
 
-static void php_pqcur_object_read_flags(zval *object, void *o, zval *return_value)
+static void php_pqcur_object_read_flags(void *o, zval *return_value)
 {
 	php_pqcur_object_t *obj = o;
 
@@ -409,7 +409,7 @@ static zend_function_entry php_pqcur_methods[] = {
 	PHP_ME(pqcur, move, ai_pqcur_move, ZEND_ACC_PUBLIC)
 	PHP_ME(pqcur, fetchAsync, ai_pqcur_fetchAsync, ZEND_ACC_PUBLIC)
 	PHP_ME(pqcur, moveAsync, ai_pqcur_moveAsync, ZEND_ACC_PUBLIC)
-	{NULL, NULL, NULL}
+	{0}
 };
 
 PHP_MSHUTDOWN_FUNCTION(pqcur)

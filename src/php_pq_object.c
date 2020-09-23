@@ -78,7 +78,6 @@ void php_pq_object_delref(void *o)
 
 struct apply_pi_to_ht_arg {
 	HashTable *ht;
-	zval *object;
 	php_pq_object_t *pq_obj;
 	unsigned gc:1;
 };
@@ -96,19 +95,19 @@ static int apply_pi_to_ht(zval *p, void *a)
 
 			ZVAL_STR(&member, pi->name);
 			ZVAL_ARR(&return_value, arg->ht);
-			handler->gc(arg->object, arg->pq_obj, &return_value);
+			handler->gc(arg->pq_obj, &return_value);
 		}
 	} else {
 		zval tmp_prop, *property = NULL;
 
-		property = zend_read_property(arg->pq_obj->zo.ce, arg->object, pi->name->val, pi->name->len, 0, &tmp_prop);
+		property = php_pq_object_read_prop_80(&arg->pq_obj->zo, pi->name, BP_VAR_R, NULL, &tmp_prop);
 		zend_hash_update(arg->ht, pi->name, property);
 	}
 
 	return ZEND_HASH_APPLY_KEEP;
 }
 
-HashTable *php_pq_object_debug_info(zval *object, int *temp)
+HashTable *php_pq_object_debug_info_80(zend_object *object, int *temp)
 {
 	struct apply_pi_to_ht_arg arg = {NULL};
 
@@ -116,35 +115,41 @@ HashTable *php_pq_object_debug_info(zval *object, int *temp)
 	ALLOC_HASHTABLE(arg.ht);
 	ZEND_INIT_SYMTABLE(arg.ht);
 
-	arg.object = object;
-	arg.pq_obj = PHP_PQ_OBJ(object, NULL);
+	arg.pq_obj = PHP_PQ_OBJ(NULL, object);
 	arg.gc = 0;
 
 	zend_hash_apply_with_argument(&arg.pq_obj->zo.ce->properties_info, apply_pi_to_ht, &arg);
 
 	return arg.ht;
 }
+HashTable *php_pq_object_debug_info_70(zval *object, int *temp)
+{
+	return php_pq_object_debug_info_80(Z_OBJ_P(object), temp);
+}
 
-HashTable *php_pq_object_properties(zval *object)
+HashTable *php_pq_object_properties_80(zend_object *object)
 {
 	struct apply_pi_to_ht_arg arg = {NULL};
 
 	arg.ht = zend_get_std_object_handlers()->get_properties(object);
-	arg.object = object;
-	arg.pq_obj = PHP_PQ_OBJ(object, NULL);
+	arg.pq_obj = PHP_PQ_OBJ(NULL, object);
 	arg.gc = 0;
 
 	zend_hash_apply_with_argument(&arg.pq_obj->zo.ce->properties_info, apply_pi_to_ht, &arg);
 
 	return arg.ht;
+
+}
+HashTable *php_pq_object_properties_70(zval *object)
+{
+	return php_pq_object_properties_80(Z_OBJ_P(object));
 }
 
-HashTable *php_pq_object_get_gc(zval *object, zval **table, int *n)
+HashTable *php_pq_object_get_gc_80(zend_object *object, zval **table, int *n)
 {
 	struct apply_pi_to_ht_arg arg = {NULL};
 
-	arg.object = object;
-	arg.pq_obj = PHP_PQ_OBJ(object, NULL);
+	arg.pq_obj = PHP_PQ_OBJ(NULL, object);
 	arg.ht = &arg.pq_obj->gc;
 	arg.gc = 1;
 
@@ -157,6 +162,10 @@ HashTable *php_pq_object_get_gc(zval *object, zval **table, int *n)
 
 	return arg.ht;
 }
+HashTable *php_pq_object_get_gc_70(zval *object, zval **table, int *n)
+{
+	return php_pq_object_get_gc_80(Z_OBJ_P(object), table, n);
+}
 
 zend_class_entry *ancestor(zend_class_entry *ce)
 {
@@ -166,9 +175,9 @@ zend_class_entry *ancestor(zend_class_entry *ce)
 	return ce;
 }
 
-zval *php_pq_object_read_prop(zval *object, zval *member, int type, void **cache_slot, zval *tmp)
+zval *php_pq_object_read_prop_80(zend_object *object, zend_string *member, int type, void **cache_slot, zval *tmp)
 {
-	php_pq_object_t *obj = PHP_PQ_OBJ(object, NULL);
+	php_pq_object_t *obj = PHP_PQ_OBJ(NULL, object);
 	php_pq_object_prophandler_t *handler;
 	zval *return_value = NULL;
 
@@ -176,24 +185,14 @@ zval *php_pq_object_read_prop(zval *object, zval *member, int type, void **cache
 
 	if (!obj->intern) {
 		php_error(E_RECOVERABLE_ERROR, "%s not initialized", ancestor(obj->zo.ce)->name->val);
-	} else if (!(handler = zend_hash_find_ptr(obj->prophandler, Z_STR_P(member))) || !handler->read) {
+	} else if (!(handler = zend_hash_find_ptr(obj->prophandler, member)) || !handler->read) {
 		/* default handler */
 	} else if (type != BP_VAR_R) {
 		php_error(E_WARNING, "Cannot access %s properties by reference or array key/index", ancestor(obj->zo.ce)->name->val);
 	} else {
-		handler->read(object, obj, tmp);
+		handler->read(obj, tmp);
 		zend_get_std_object_handlers()->write_property(object, member, tmp, cache_slot);
 		return_value = tmp;
-
-		/*
-		zval dtor;
-
-		ZVAL_COPY_VALUE(&dtor, return_value);
-
-		ZVAL_ZVAL(return_value, tmp, 0, 0);
-		zval_ptr_dtor(&dtor);
-
-		*/
 
 		if (cache_slot) {
 			*cache_slot = NULL;
@@ -202,28 +201,52 @@ zval *php_pq_object_read_prop(zval *object, zval *member, int type, void **cache
 
 	return return_value;
 }
-
-php_pq_object_write_prop_t php_pq_object_write_prop(zval *object, zval *member, zval *value, void **cache_slot)
+zval *php_pq_object_read_prop_74(zval *object, zval *member, int type, void **cache_slot, zval *tmp)
 {
-	php_pq_object_t *obj = PHP_PQ_OBJ(object, NULL);
+	zend_string *member_str = zval_get_string(member);
+	zval *return_value = php_pq_object_read_prop_80(Z_OBJ_P(object), member_str, type, cache_slot, tmp);
+	zend_string_release(member_str);
+	return return_value;
+}
+void php_pq_object_read_prop_70(zval *object, zval *member, int type, void **cache_slot, zval *tmp)
+{
+	(void) php_pq_object_read_prop_74(object, member, type, cache_slot, tmp);
+}
+
+zval *php_pq_object_write_prop_80(zend_object *object, zend_string *member, zval *value, void **cache_slot)
+{
+	php_pq_object_t *obj = PHP_PQ_OBJ(NULL, object);
 	php_pq_object_prophandler_t *handler;
 
 	if (!obj->intern) {
 		php_error(E_RECOVERABLE_ERROR, "%s not initialized", ancestor(obj->zo.ce)->name->val);
 		zend_get_std_object_handlers()->write_property(object, member, value, cache_slot);
-	} else if ((handler = zend_hash_find_ptr(obj->prophandler, Z_STR_P(member)))) {
+	} else if ((handler = zend_hash_find_ptr(obj->prophandler, member))) {
 		if (handler->write) {
-			handler->write(object, obj, value);
+			handler->write(obj, value);
 		}
 	} else {
 		zend_get_std_object_handlers()->write_property(object, member, value, cache_slot);
 	}
-#if PHP_VERSION_ID >= 70400
 	return value;
-#endif
+}
+zval *php_pq_object_write_prop_74(zval *object, zval *member, zval *value, void **cache_slot)
+{
+	zend_string *member_str = zval_get_string(member);
+	zval *return_value = php_pq_object_write_prop_80(Z_OBJ_P(object), member_str, value, cache_slot);
+	zend_string_release(member_str);
+	return return_value;
+}
+void php_pq_object_write_prop_70(zval *object, zval *member, zval *value, void **cache_slot)
+{
+	(void) php_pq_object_write_prop_74(object, member, value, cache_slot);
 }
 
-zval *php_pq_object_get_prop_ptr_null(zval *object, zval *member, int type, void **cache_slot)
+zval *php_pq_object_get_prop_ptr_null_80(zend_object *object, zend_string *member, int type, void **cache_slot)
+{
+	return NULL;
+}
+zval *php_pq_object_get_prop_ptr_null_70(zval *object, zval *member, int type, void **cache_slot)
 {
 	return NULL;
 }

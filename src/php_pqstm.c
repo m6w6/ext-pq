@@ -102,21 +102,21 @@ static zend_object *php_pqstm_create_object(zend_class_entry *class_type)
 	return &php_pqstm_create_object_ex(class_type, NULL)->zo;
 }
 
-static void php_pqstm_object_read_name(zval *object, void *o, zval *return_value)
+static void php_pqstm_object_read_name(void *o, zval *return_value)
 {
 	php_pqstm_object_t *obj = o;
 
 	RETVAL_STRING(obj->intern->name);
 }
 
-static void php_pqstm_object_read_connection(zval *object, void *o, zval *return_value)
+static void php_pqstm_object_read_connection(void *o, zval *return_value)
 {
 	php_pqstm_object_t *obj = o;
 
 	php_pq_object_to_zval(obj->intern->conn, return_value);
 }
 
-static void php_pqstm_object_gc_connection(zval *object, void *o, zval *return_value)
+static void php_pqstm_object_gc_connection(void *o, zval *return_value)
 {
 	php_pqstm_object_t *obj = o;
 	zval zconn;
@@ -125,14 +125,14 @@ static void php_pqstm_object_gc_connection(zval *object, void *o, zval *return_v
 	add_next_index_zval(return_value, &zconn);
 }
 
-static void php_pqstm_object_read_query(zval *object, void *o, zval *return_value)
+static void php_pqstm_object_read_query(void *o, zval *return_value)
 {
 	php_pqstm_object_t *obj = o;
 
 	RETVAL_STRING(obj->intern->query);
 }
 
-static void php_pqstm_object_read_types(zval *object, void *o, zval *return_value)
+static void php_pqstm_object_read_types(void *o, zval *return_value)
 {
 	int i;
 	php_pqstm_object_t *obj = o;
@@ -275,7 +275,7 @@ ZEND_END_ARG_INFO();
 static PHP_METHOD(pqstm, execAsync) {
 	zend_error_handling zeh;
 	zval *zparams = NULL;
-	php_pq_callback_t resolver = {{0}};
+	php_pq_callback_t resolver = PHP_PQ_CALLBACK_INIT;
 	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
@@ -355,7 +355,7 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqstm_desc_async, 0, 0, 1)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqstm, descAsync) {
 	zend_error_handling zeh;
-	php_pq_callback_t resolver = {{0}};
+	php_pq_callback_t resolver = PHP_PQ_CALLBACK_INIT;
 	ZEND_RESULT_CODE rv;
 
 	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);

@@ -11,12 +11,8 @@ include "_setup.inc";
 try {
 	new pq\Connection(1,2,3,4);
 	foo();
-} catch (pq\Exception $e) {
-assert($e->getCode() == pq\Exception::INVALID_ARGUMENT, $e->getCode()."!=".pq\Exception::INVALID_ARGUMENT);
-}
-try {
-	new pq\Connection(1,2,3,4);
-	foo();
+} catch (ArgumentCountError $e) {
+	// PHP 8
 } catch (pq\Exception\InvalidArgumentException $e) {
 	assert($e->getCode() == pq\Exception::INVALID_ARGUMENT, $e->getCode()."!=".pq\Exception::INVALID_ARGUMENT);
 }

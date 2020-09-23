@@ -54,14 +54,14 @@ static zend_object *php_pqcancel_create_object(zend_class_entry *class_type)
 	return &php_pqcancel_create_object_ex(class_type, NULL)->zo;
 }
 
-static void php_pqcancel_object_read_connection(zval *object, void *o, zval *return_value)
+static void php_pqcancel_object_read_connection(void *o, zval *return_value)
 {
 	php_pqcancel_object_t *obj = o;
 
 	php_pq_object_to_zval(obj->intern->conn, return_value);
 }
 
-static void php_pqcancel_object_gc_connection(zval *object, void *o, zval *return_value)
+static void php_pqcancel_object_gc_connection(void *o, zval *return_value)
 {
 	php_pqcancel_object_t *obj = o;
 	zval zconn;
