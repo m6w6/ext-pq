@@ -75,14 +75,11 @@ extern HashTable *php_pq_object_get_gc_70(zval *object, zval **table, int *n);
 
 #if PHP_VERSION_ID >= 80000
 # define php_pq_object_read_prop php_pq_object_read_prop_80
-#elif PHP_VERSION_ID >= 70400
-# define php_pq_object_read_prop php_pq_object_read_prop_74
 #else
 # define php_pq_object_read_prop php_pq_object_read_prop_70
 #endif
 extern zval *php_pq_object_read_prop_80(zend_object *object, zend_string *member, int type, void **cache_slot, zval *tmp);
-extern zval *php_pq_object_read_prop_74(zval *object, zval *member, int type, void **cache_slot, zval *tmp);
-extern void php_pq_object_read_prop_70(zval *object, zval *member, int type, void **cache_slot, zval *tmp);
+extern zval *php_pq_object_read_prop_70(zval *object, zval *member, int type, void **cache_slot, zval *tmp);
 
 #if PHP_VERSION_ID >= 80000
 # define php_pq_object_write_prop php_pq_object_write_prop_80

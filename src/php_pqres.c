@@ -1195,8 +1195,22 @@ ZEND_BEGIN_ARG_INFO_EX(ai_pqres_getIterator, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, getIterator)
 {
-	ZEND_PARSE_PARAMETERS_NONE();
-	zend_create_internal_iterator_zval(return_value, ZEND_THIS);
+	zend_error_handling zeh;
+	ZEND_RESULT_CODE rv;
+
+	zend_replace_error_handling(EH_THROW, exce(EX_INVALID_ARGUMENT), &zeh);
+	rv = zend_parse_parameters_none();
+	zend_restore_error_handling(&zeh);
+
+	if (SUCCESS == rv) {
+		php_pqres_object_t *obj = PHP_PQ_OBJ(getThis(), NULL);
+
+		if (!obj->intern) {
+			throw_exce(EX_UNINITIALIZED, "pq\\Result not initialized");
+		} else {
+			zend_create_internal_iterator_zval(return_value, getThis());
+		}
+	}
 }
 
 static zend_function_entry php_pqres_methods[] = {

@@ -205,7 +205,7 @@ static void php_pqlob_object_update_stream(php_pqlob_object_t *obj, zval *zstrea
 	zend_get_std_object_handlers()->write_property(&obj->zo, Z_STR(zmember), zstream, NULL);
 #else
 	ZVAL_OBJ(&zobj, &obj->zo);
-	zend_get_std_object_handlers()->write_property(zpqlob, &zmember, zstream, NULL);
+	zend_get_std_object_handlers()->write_property(&zobj, &zmember, zstream, NULL);
 #endif
 	zval_ptr_dtor(&zmember);
 }
