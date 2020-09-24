@@ -2139,6 +2139,15 @@ PHP_MINIT_FUNCTION(pqconn)
 	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("AUTH_OK"), CONNECTION_AUTH_OK);
 	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("SSL_STARTUP"), CONNECTION_SSL_STARTUP);
 	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("SETENV"), CONNECTION_SETENV);
+#ifdef HAVE_CONNECTION_CHECK_WRITABLE
+	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("CHECK_WRITABLE"), CONNECTION_CHECK_WRITABLE);
+#endif
+#ifdef HAVE_CONNECTION_CONSUME
+	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("CONSUME"), CONNECTION_CONSUME);
+#endif
+#ifdef HAVE_CONNECTION_GSS_STARTUP
+	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("GSS_STARTUP"), CONNECTION_GSS_STARTUP);
+#endif
 
 	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("TRANS_IDLE"), PQTRANS_IDLE);
 	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("TRANS_ACTIVE"), PQTRANS_ACTIVE);
