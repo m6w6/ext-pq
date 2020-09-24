@@ -103,11 +103,13 @@ static int apply_pi_to_ht(zval *p, void *a)
 		zval zobj;
 
 		ZVAL_OBJ(&zobj, &arg->pq_obj->zo);
+# if PHP_VERSION_ID < 70100
+		property = zend_read_property(arg->pq_obj->zo.ce, &zobj, pi->name->val, pi->name->len, 0, &tmp_prop);
+# else
 		property = zend_read_property_ex(arg->pq_obj->zo.ce, &zobj, pi->name, 0, &tmp_prop);
-#elif PHP_VERSION_ID >= 70100
-		property = zend_read_property_ex(arg->pq_obj->zo.ce, &arg->pq_obj->zo, pi->name, 0, &tmp_prop);
+# endif
 #else
-		property = zend_read_property(arg->pq_obj->zo.ce, &arg->pq_obj->zo, pi->name->val, pi->name->len, 0, &tmp_prop);
+		property = zend_read_property_ex(arg->pq_obj->zo.ce, &arg->pq_obj->zo, pi->name, 0, &tmp_prop);
 #endif
 		zend_hash_update(arg->ht, pi->name, property);
 	}
