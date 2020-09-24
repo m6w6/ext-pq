@@ -90,9 +90,6 @@ extern HashTable *php_pq_parse_array(php_pqres_t *res, const char *val_str, size
 #define php_pq_cast_object(objval_ptr, cast_type, retval_ptr) \
 		(Z_OBJ_HT_P(objval_ptr)->cast_object && \
 				SUCCESS == Z_OBJ_HT_P(objval_ptr)->cast_object(objval_ptr, (retval_ptr), (cast_type)))
-# if PHP_VERSION_ID <= 70200
-zval *zend_std_read_property(zval *object, zval *member, int type, void **cache_slot, zval *rv);
-# endif
 #endif
 
 
