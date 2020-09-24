@@ -83,8 +83,6 @@ struct apply_pi_to_ht_arg {
 	unsigned gc:1;
 };
 
-static inline int php_pq_object_read_prop_ex(zend_object *object, zend_string *member, int type, zval *return_value);
-
 static int apply_pi_to_ht(zval *p, void *a)
 {
 	zend_property_info *pi = Z_PTR_P(p);
@@ -102,13 +100,12 @@ static int apply_pi_to_ht(zval *p, void *a)
 	} else {
 		zval tmp_prop, *property;
 #if PHP_VERSION_ID < 80000
-		zval zobj, zprop;
+		zval zobj;
 
 		ZVAL_OBJ(&zobj, &arg->pq_obj->zo);
-		ZVAL_STR(&zprop, pi->name);
-		property = php_pq_object_read_prop(&zobj, &zprop, BP_VAR_R, NULL, &tmp_prop);
+		property = zend_read_property_ex(arg->pq_obj->zo.ce, &zobj, pi->name, 0, &tmp_prop);
 #else
-		property = php_pq_object_read_prop(&arg->pq_obj->zo, pi->name, BP_VAR_R, NULL, &tmp_prop);
+		property = zend_read_property_ex(arg->pq_obj->zo.ce, &arg->pq_obj->zo, pi->name, 0, &tmp_prop);
 #endif
 		zend_hash_update(arg->ht, pi->name, property);
 	}
@@ -229,7 +226,8 @@ zval *php_pq_object_read_prop(zend_object *object, zend_string *member, int type
 		return zend_std_read_property(object, member, type, cache_slot, tmp);
 	}
 
-	tmp = zend_std_write_property(object, member, tmp, cache_slot);
+	zend_std_write_property(object, member, tmp, cache_slot);
+
 	if (cache_slot) {
 		*cache_slot = NULL;
 	}
@@ -246,10 +244,8 @@ zval *php_pq_object_read_prop(zval *object, zval *member, int type, void **cache
 	}
 	zend_string_release(member_str);
 
-#if PHP_VERSON_ID >= 70400
-	tmp =
-#endif
-			zend_std_write_property(object, member, tmp, cache_slot);
+	zend_std_write_property(object, member, tmp, cache_slot);
+
 	if (cache_slot) {
 		*cache_slot = NULL;
 	}
