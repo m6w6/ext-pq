@@ -4,7 +4,7 @@ language: c
 sudo: false
 
 addons:
- postgresql: 9.4
+ postgresql: 10
  apt:
   packages:
    - php-cli
