@@ -170,12 +170,12 @@
     <min>7.0.0</min>
    </php>
    <pearinstaller>
-    <min>1.4.0</min>
+    <min>1.10.0</min>
    </pearinstaller>
    <package>
     <name>raphf</name>
     <channel>pecl.php.net</channel>
-    <min>2.0.0dev</min>
+    <min>2.0.0</min>
     <providesextension>raphf</providesextension>
    </package>
   </required>
