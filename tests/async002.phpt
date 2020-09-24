@@ -55,7 +55,7 @@ DONE
 --EXPECTREGEX--
 Test
 (WP(RP)*)+S
-2(,\d)*,0
+2(,\d*)*,0
 (WP(RP)*)+S
-2(,\d)*,0
+2(,\d*)*,0
 DONE
