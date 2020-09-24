@@ -42,12 +42,10 @@ extern const char *php_pq_strmode(long mode);
 
 /* compare array index */
 #if PHP_VERSION_ID >= 80000
-# define php_pq_compare_index php_pq_compare_index_80
+extern int php_pq_compare_index(Bucket *lptr, Bucket *rptr);
 #else
-# define php_pq_compare_index php_pq_compare_index_70
+extern int php_pq_compare_index(const void *lptr, const void *rptr);
 #endif
-extern int php_pq_compare_index_80(Bucket *lptr, Bucket *rptr);
-extern int php_pq_compare_index_70(const void *lptr, const void *rptr);
 
 /* free zval ptr values (as hash dtor) */
 extern void php_pq_hash_ptr_dtor(zval *p);
@@ -92,7 +90,11 @@ extern HashTable *php_pq_parse_array(php_pqres_t *res, const char *val_str, size
 #define php_pq_cast_object(objval_ptr, cast_type, retval_ptr) \
 		(Z_OBJ_HT_P(objval_ptr)->cast_object && \
 				SUCCESS == Z_OBJ_HT_P(objval_ptr)->cast_object(objval_ptr, (retval_ptr), (cast_type)))
+# if PHP_VERSION_ID <= 70200
+zval *zend_std_read_property(zval *object, zval *member, int type, void **cache_slot, zval *rv);
+# endif
 #endif
+
 
 
 

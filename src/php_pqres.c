@@ -383,12 +383,7 @@ static zend_object_iterator_funcs php_pqres_iterator_funcs = {
 #endif
 };
 
-#if PHP_VERSION_ID >= 80000
-# define php_pqres_count_elements php_pqres_count_elements_80
-#else
-# define php_pqres_count_elements php_pqres_count_elements_70
-#endif
-static ZEND_RESULT_CODE php_pqres_count_elements_80(zend_object *object, long *count)
+static inline ZEND_RESULT_CODE php_pqres_count_elements_ex(zend_object *object, long *count)
 {
 	php_pqres_object_t *obj = PHP_PQ_OBJ(NULL, object);
 
@@ -399,10 +394,17 @@ static ZEND_RESULT_CODE php_pqres_count_elements_80(zend_object *object, long *c
 		return SUCCESS;
 	}
 }
-static ZEND_RESULT_CODE php_pqres_count_elements_70(zval *object, long *count)
+#if PHP_VERSION_ID >= 80000
+static ZEND_RESULT_CODE php_pqres_count_elements(zend_object *object, long *count)
 {
-	return php_pqres_count_elements_80(Z_OBJ_P(object), count);
+	return php_pqres_count_elements_ex(object, count);
 }
+#else
+static ZEND_RESULT_CODE php_pqres_count_elements(zval *object, long *count)
+{
+	return php_pqres_count_elements_ex(Z_OBJ_P(object), count);
+}
+#endif
 
 ZEND_RESULT_CODE php_pqres_success(PGresult *res)
 {
@@ -1157,7 +1159,7 @@ static PHP_METHOD(pqres, count) {
 	if (SUCCESS == rv) {
 		long count;
 
-		if (SUCCESS != php_pqres_count_elements_70(getThis(), &count)) {
+		if (SUCCESS != php_pqres_count_elements_ex(Z_OBJ_P(getThis()), &count)) {
 			throw_exce(EX_UNINITIALIZED, "pq\\Result not initialized");
 		} else {
 			RETVAL_LONG(count);
@@ -1191,6 +1193,7 @@ static PHP_METHOD(pqres, desc) {
 	}
 }
 
+#if PHP_VERSION_ID >= 80000
 ZEND_BEGIN_ARG_INFO_EX(ai_pqres_getIterator, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, getIterator)
@@ -1212,6 +1215,7 @@ static PHP_METHOD(pqres, getIterator)
 		}
 	}
 }
+#endif
 
 static zend_function_entry php_pqres_methods[] = {
 	PHP_ME(pqres, bind, ai_pqres_bind, ZEND_ACC_PUBLIC)
@@ -1223,7 +1227,9 @@ static zend_function_entry php_pqres_methods[] = {
 	PHP_ME(pqres, count, ai_pqres_count, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, map, ai_pqres_map, ZEND_ACC_PUBLIC)
 	PHP_ME(pqres, desc, ai_pqres_desc, ZEND_ACC_PUBLIC)
+#if PHP_VERSION_ID >= 80000
 	PHP_ME(pqres, getIterator, ai_pqres_getIterator, ZEND_ACC_PUBLIC)
+#endif
 	{0}
 };
 
@@ -1242,7 +1248,11 @@ PHP_MINIT_FUNCTION(pqres)
 	php_pqres_class_entry = zend_register_internal_class_ex(&ce, NULL);
 	php_pqres_class_entry->create_object = php_pqres_create_object;
 	php_pqres_class_entry->get_iterator = php_pqres_iterator_init;
+#if PHP_VERSION_ID >= 80000
 	zend_class_implements(php_pqres_class_entry, 2, zend_ce_aggregate, spl_ce_Countable);
+#else
+	zend_class_implements(php_pqres_class_entry, 2, zend_ce_traversable, spl_ce_Countable);
+#endif
 
 	memcpy(&php_pqres_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 	php_pqres_object_handlers.offset = XtOffsetOf(php_pqres_object_t, zo);

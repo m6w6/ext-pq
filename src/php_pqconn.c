@@ -515,9 +515,9 @@ static ZEND_RESULT_CODE php_pqconn_update_socket(zval *zobj, php_pqconn_object_t
 		retval = FAILURE;
 	}
 #if PHP_VERSION_ID >= 80000
-	zend_get_std_object_handlers()->write_property(Z_OBJ_P(zobj), Z_STR(zmember), &zsocket, NULL);
+	zend_std_write_property(Z_OBJ_P(zobj), Z_STR(zmember), &zsocket, NULL);
 #else
-	zend_get_std_object_handlers()->write_property(zobj, &zmember, &zsocket, NULL);
+	zend_std_write_property(zobj, &zmember, &zsocket, NULL);
 #endif
 	zval_ptr_dtor(&zsocket);
 	zval_ptr_dtor(&zmember);

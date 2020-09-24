@@ -50,55 +50,24 @@ extern void php_pq_object_addref(void *o);
 extern void php_pq_object_delref(void *o);
 
 #if PHP_VERSION_ID >= 80000
-# define php_pq_object_debug_info php_pq_object_debug_info_80
+extern HashTable *php_pq_object_debug_info(zend_object *object, int *temp);
+extern HashTable *php_pq_object_properties(zend_object *object);
+extern HashTable *php_pq_object_get_gc(zend_object *object, zval **table, int *n);
+extern zval *php_pq_object_read_prop(zend_object *object, zend_string *member, int type, void **cache_slot, zval *tmp);
+extern zval *php_pq_object_write_prop(zend_object *object, zend_string *member, zval *value, void **cache_slot);
+extern zval *php_pq_object_get_prop_ptr_null(zend_object *object, zend_string *member, int type, void **cache_slot);
 #else
-# define php_pq_object_debug_info php_pq_object_debug_info_70
+extern HashTable *php_pq_object_debug_info(zval *object, int *temp);
+extern HashTable *php_pq_object_properties(zval *object);
+extern HashTable *php_pq_object_get_gc(zval *object, zval **table, int *n);
+extern zval *php_pq_object_read_prop(zval *object, zval *member, int type, void **cache_slot, zval *tmp);
+# if PHP_VERSION_ID >= 70400
+extern zval *php_pq_object_write_prop(zval *object, zval *member, zval *value, void **cache_slot);
+# else
+extern void php_pq_object_write_prop(zval *object, zval *member, zval *value, void **cache_slot);
+# endif
+extern zval *php_pq_object_get_prop_ptr_null(zval *object, zval *member, int type, void **cache_slot);
 #endif
-extern HashTable *php_pq_object_debug_info_80(zend_object *object, int *temp);
-extern HashTable *php_pq_object_debug_info_70(zval *object, int *temp);
-
-#if PHP_VERSION_ID >= 80000
-# define php_pq_object_properties php_pq_object_properties_80
-#else
-# define php_pq_object_properties php_pq_object_properties_70
-#endif
-extern HashTable *php_pq_object_properties_80(zend_object *object);
-extern HashTable *php_pq_object_properties_70(zval *object);
-
-#if PHP_VERSION_ID >= 80000
-# define php_pq_object_get_gc php_pq_object_get_gc_80
-#else
-# define php_pq_object_get_gc php_pq_object_get_gc_70
-#endif
-extern HashTable *php_pq_object_get_gc_80(zend_object *object, zval **table, int *n);
-extern HashTable *php_pq_object_get_gc_70(zval *object, zval **table, int *n);
-
-#if PHP_VERSION_ID >= 80000
-# define php_pq_object_read_prop php_pq_object_read_prop_80
-#else
-# define php_pq_object_read_prop php_pq_object_read_prop_70
-#endif
-extern zval *php_pq_object_read_prop_80(zend_object *object, zend_string *member, int type, void **cache_slot, zval *tmp);
-extern zval *php_pq_object_read_prop_70(zval *object, zval *member, int type, void **cache_slot, zval *tmp);
-
-#if PHP_VERSION_ID >= 80000
-# define php_pq_object_write_prop php_pq_object_write_prop_80
-#elif PHP_VERSION_ID >= 70400
-# define php_pq_object_write_prop php_pq_object_write_prop_74
-#else
-# define php_pq_object_write_prop php_pq_object_write_prop_70
-#endif
-extern zval *php_pq_object_write_prop_80(zend_object *object, zend_string *member, zval *value, void **cache_slot);
-extern zval *php_pq_object_write_prop_74(zval *object, zval *member, zval *value, void **cache_slot);
-extern void php_pq_object_write_prop_70(zval *object, zval *member, zval *value, void **cache_slot);
-
-#if PHP_VERSION_ID >= 80000
-# define php_pq_object_get_prop_ptr_null php_pq_object_get_prop_ptr_null_80
-#else
-# define php_pq_object_get_prop_ptr_null php_pq_object_get_prop_ptr_null_70
-#endif
-extern zval *php_pq_object_get_prop_ptr_null_80(zend_object *object, zend_string *member, int type, void **cache_slot);
-extern zval *php_pq_object_get_prop_ptr_null_70(zval *object, zval *member, int type, void **cache_slot);
 
 #endif
 

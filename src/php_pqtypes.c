@@ -69,7 +69,7 @@ static void php_pqtypes_object_gc_connection(void *o, zval *return_value)
 	add_next_index_zval(return_value, &zconn);
 }
 
-static int has_dimension(HashTable *ht, zval *member, zend_string **key, zend_long *index)
+static inline int has_dimension(HashTable *ht, zval *member, zend_string **key, zend_long *index)
 {
 	if (Z_TYPE_P(member) == IS_LONG) {
 		*index = Z_LVAL_P(member);
@@ -94,12 +94,7 @@ static int has_dimension(HashTable *ht, zval *member, zend_string **key, zend_lo
 	}
 }
 
-#if PHP_VERSION_ID >= 80000
-# define php_pqtypes_object_has_dimension php_pqtypes_object_has_dimension_80
-#else
-# define php_pqtypes_object_has_dimension php_pqtypes_object_has_dimension_70
-#endif
-static int php_pqtypes_object_has_dimension_80(zend_object *object, zval *member, int check_empty)
+static inline int php_pqtypes_object_has_dimension_ex(zend_object *object, zval *member, int check_empty)
 {
 	php_pqtypes_object_t *obj = PHP_PQ_OBJ(NULL, object);
 	zend_string *key = NULL;
@@ -128,17 +123,19 @@ static int php_pqtypes_object_has_dimension_80(zend_object *object, zval *member
 
 	return 0;
 }
-static int php_pqtypes_object_has_dimension_70(zval *object, zval *member, int check_empty)
-{
-	return php_pqtypes_object_has_dimension_80(Z_OBJ_P(object), member, check_empty);
-}
-
 #if PHP_VERSION_ID >= 80000
-# define php_pqtypes_object_read_dimension php_pqtypes_object_read_dimension_80
+static int php_pqtypes_object_has_dimension(zend_object *object, zval *member, int check_empty)
+{
+	return php_pqtypes_object_has_dimension_ex(object, member, check_empty);
+}
 #else
-# define php_pqtypes_object_read_dimension php_pqtypes_object_read_dimension_70
+static int php_pqtypes_object_has_dimension(zval *object, zval *member, int check_empty)
+{
+	return php_pqtypes_object_has_dimension_ex(Z_OBJ_P(object), member, check_empty);
+}
 #endif
-static zval *php_pqtypes_object_read_dimension_80(zend_object *object, zval *member, int type, zval *rv)
+
+static inline zval *php_pqtypes_object_read_dimension_ex(zend_object *object, zval *member, int type, zval *rv)
 {
 	php_pqtypes_object_t *obj = PHP_PQ_OBJ(NULL, object);
 	zend_string *key = NULL;
@@ -156,38 +153,41 @@ static zval *php_pqtypes_object_read_dimension_80(zend_object *object, zval *mem
 
 	return data;
 }
-static zval *php_pqtypes_object_read_dimension_70(zval *object, zval *member, int type, zval *rv)
+#if PHP_VERSION_ID >= 80000
+static zval *php_pqtypes_object_read_dimension(zend_object *object, zval *member, int type, zval *rv)
 {
-	return php_pqtypes_object_read_dimension_80(Z_OBJ_P(object), member, type, rv);
+	return php_pqtypes_object_read_dimension_ex(object, member, type, rv);
 }
+#else
+static zval *php_pqtypes_object_read_dimension(zval *object, zval *member, int type, zval *rv)
+{
+	return php_pqtypes_object_read_dimension_ex(Z_OBJ_P(object), member, type, rv);
+}
+#endif
 
 #if PHP_VERSION_ID >= 80000
-# define php_pqtypes_object_write_dimension php_pqtypes_object_write_dimension_80
+static void php_pqtypes_object_write_dimension(zend_object *object, zval *offset, zval *value)
+{
+	throw_exce(EX_RUNTIME, "pq\\Types object must not be modified");
+}
 #else
-# define php_pqtypes_object_write_dimension php_pqtypes_object_write_dimension_70
+static void php_pqtypes_object_write_dimension(zval *object, zval *offset, zval *value)
+{
+	throw_exce(EX_RUNTIME, "pq\\Types object must not be modified");
+}
 #endif
-static void php_pqtypes_object_write_dimension_80(zend_object *object, zval *offset, zval *value)
-{
-	throw_exce(EX_RUNTIME, "pq\\Types object must not be modified");
-}
-static void php_pqtypes_object_write_dimension_70(zval *object, zval *offset, zval *value)
-{
-	throw_exce(EX_RUNTIME, "pq\\Types object must not be modified");
-}
 
 #if PHP_VERSION_ID >= 80000
-# define php_pqtypes_object_unset_dimension php_pqtypes_object_unset_dimension_80
+static void php_pqtypes_object_unset_dimension(zend_object *object, zval *offset)
+{
+	throw_exce(EX_RUNTIME, "pq\\Types object must not be modified");
+}
 #else
-# define php_pqtypes_object_unset_dimension php_pqtypes_object_unset_dimension_70
+static void php_pqtypes_object_unset_dimension(zval *object, zval *offset)
+{
+	throw_exce(EX_RUNTIME, "pq\\Types object must not be modified");
+}
 #endif
-static void php_pqtypes_object_unset_dimension_80(zend_object *object, zval *offset)
-{
-	throw_exce(EX_RUNTIME, "pq\\Types object must not be modified");
-}
-static void php_pqtypes_object_unset_dimension_70(zval *object, zval *offset)
-{
-	throw_exce(EX_RUNTIME, "pq\\Types object must not be modified");
-}
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqtypes_construct, 0, 0, 1)
 	ZEND_ARG_OBJ_INFO(0, connection, pq\\Connection, 0)

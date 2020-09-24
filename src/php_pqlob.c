@@ -202,10 +202,10 @@ static void php_pqlob_object_update_stream(php_pqlob_object_t *obj, zval *zstrea
 	php_stream_to_zval(obj->intern->stream, zstream);
 
 #if PHP_VERSION_ID >= 80000
-	zend_get_std_object_handlers()->write_property(&obj->zo, Z_STR(zmember), zstream, NULL);
+	zend_std_write_property(&obj->zo, Z_STR(zmember), zstream, NULL);
 #else
 	ZVAL_OBJ(&zobj, &obj->zo);
-	zend_get_std_object_handlers()->write_property(&zobj, &zmember, zstream, NULL);
+	zend_std_write_property(&zobj, &zmember, zstream, NULL);
 #endif
 	zval_ptr_dtor(&zmember);
 }

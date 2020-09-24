@@ -103,11 +103,8 @@ const char *php_pq_strmode(long mode)
 	}
 }
 
-int php_pq_compare_index_80(Bucket *lptr, Bucket *rptr)
+static inline int compare_index(zend_ulong l, zend_ulong r)
 {
-	zend_ulong l = lptr->h;
-	zend_ulong r = rptr->h;
-
 	if (l < r) {
 		return -1;
 	}
@@ -116,9 +113,16 @@ int php_pq_compare_index_80(Bucket *lptr, Bucket *rptr)
 	}
 	return 0;
 }
-int php_pq_compare_index_70(const void *lptr, const void *rptr) {
-	return php_pq_compare_index_80((Bucket *) lptr, (Bucket *) rptr);
+#if PHP_VERSION_ID >= 80000
+int php_pq_compare_index(Bucket *lptr, Bucket *rptr)
+{
+	return compare_index(lptr->h, rptr->h);
 }
+#else
+int php_pq_compare_index(const void *lptr, const void *rptr) {
+	return compare_index(((const Bucket *) lptr)->h, ((const Bucket *) rptr)->h);
+}
+#endif
 
 void php_pq_hash_ptr_dtor(zval *p)
 {
