@@ -9,6 +9,7 @@ echo "Test\n";
 include "_setup.inc";
 
 $c = new pq\Connection(PQ_DSN);
+$c->exec("SET lc_messages TO 'C'");
 
 $x = new pq\Cancel($c);
 
