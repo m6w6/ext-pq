@@ -100,7 +100,11 @@ static void php_pqlob_object_read_stream(void *o, zval *return_value)
 	RETVAL_ZVAL(&zstream, 1, 0);
 }
 
+#if PHP_VERSION_ID < 70400
+static size_t php_pqlob_stream_write(php_stream *stream, const char *buffer, size_t length)
+#else
 static ssize_t php_pqlob_stream_write(php_stream *stream, const char *buffer, size_t length)
+#endif
 {
 	php_pqlob_object_t *obj = stream->abstract;
 	ssize_t written = 0;
@@ -115,10 +119,18 @@ static ssize_t php_pqlob_stream_write(php_stream *stream, const char *buffer, si
 		php_pqconn_notify_listeners(obj->intern->txn->intern->conn);
 	}
 
+#if PHP_VERSION_ID < 70400
+	return (written < 0 ? 0 : written);
+#else
 	return written;
+#endif
 }
 
+#if PHP_VERSION_ID < 70400
+static size_t php_pqlob_stream_read(php_stream *stream, char *buffer, size_t length)
+#else
 static ssize_t php_pqlob_stream_read(php_stream *stream, char *buffer, size_t length)
+#endif
 {
 	php_pqlob_object_t *obj = stream->abstract;
 	ssize_t read = 0;
@@ -140,7 +152,11 @@ static ssize_t php_pqlob_stream_read(php_stream *stream, char *buffer, size_t le
 		php_pqconn_notify_listeners(obj->intern->txn->intern->conn);
 	}
 
+#if PHP_VERSION_ID < 70400
+	return (read < 0 ? 0 : read);
+#else
 	return read;
+#endif
 }
 
 static ZEND_RESULT_CODE php_pqlob_stream_close(php_stream *stream, int close_handle)
