@@ -1351,6 +1351,7 @@ PHP_MINIT_FUNCTION(pqres)
 #if PHP_PQ_HAVE_PHP_JSON_H
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_JSON"), PHP_PQRES_CONV_JSON);
 #endif
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_BYTEA"), PHP_PQRES_CONV_BYTEA);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_ALL"), PHP_PQRES_CONV_ALL);
 
 	return SUCCESS;
