@@ -26,14 +26,16 @@ true as bool,
 '2013-01-01 01:01:01 UTC'::timestamptz as timestamptz,
 array[array[1,2,3],array[4,5,6],array[NULL::int,NULL::int,NULL::int]] as intarray,
 array[box(point(1,2),point(2,3)),box(point(4,5),point(5,6))] as boxarray,
-array[]::text[] as emptyarray
+array[]::text[] as emptyarray,
+'foo\n'::bytea as bytea,
+'foo\n'::bytea::text as bytea_text
 ");
 var_dump($r->fetchRow(pq\Result::FETCH_ASSOC));
 ?>
 DONE
 --EXPECTF--
 Test
-array(13) {
+array(15) {
   ["null"]=>
   NULL
   ["bool"]=>
@@ -121,5 +123,10 @@ array(13) {
   ["emptyarray"]=>
   array(0) {
   }
+  ["bytea"]=>
+  string(4) "foo
+"
+  ["bytea_text"]=>
+  string(10) "\x666f6f0a"
 }
 DONE

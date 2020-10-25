@@ -227,6 +227,23 @@ zval *php_pqres_typed_zval(php_pqres_t *res, Oid typ, zval *zv)
 		break;
 #endif
 
+	case PHP_PQ_OID_BYTEA:
+		if (!(res->auto_convert & PHP_PQRES_CONV_BYTEA)) {
+			goto noconversion;
+		} else {
+			size_t to_len;
+			char *to_str = (char *) PQunescapeBytea((unsigned char *) str->val, &to_len);
+
+			if (!to_str) {
+				ZVAL_NULL(zv);
+				php_error_docref(NULL, E_WARNING, "Failed to unsescape BYTEA: '%s'", str->val);
+			} else {
+				ZVAL_STRINGL(zv, to_str, to_len);
+				PQfreemem(to_str);
+			}
+		}
+		break;
+
 	default:
 		if (!(res->auto_convert & PHP_PQRES_CONV_ARRAY)) {
 			goto noconversion;
@@ -1336,6 +1353,7 @@ PHP_MINIT_FUNCTION(pqres)
 #if PHP_PQ_HAVE_PHP_JSON_H
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_JSON"), PHP_PQRES_CONV_JSON);
 #endif
+	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_BYTEA"), PHP_PQRES_CONV_BYTEA);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_ALL"), PHP_PQRES_CONV_ALL);
 
 	return SUCCESS;
