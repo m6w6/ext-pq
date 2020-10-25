@@ -153,6 +153,21 @@ zval *php_pqres_typed_zval(php_pqres_t *res, Oid typ, zval *zv)
 		ZVAL_BOOL(zv, *str->val == 't');
 		break;
 
+	case PHP_PQ_OID_BYTEA:
+		if (!(res->auto_convert & PHP_PQRES_CONV_BYTEA)) {
+			goto noconversion;
+		}
+		size_t unescaped_len;
+		char *unescaped_str = (char *) PQunescapeBytea(ZSTR_VAL(str), &unescaped_len);
+
+		if (!unescaped_str) {
+			zval_dtor(zv);
+			ZVAL_NULL(zv);
+		} else {
+			ZVAL_STRINGL(zv, unescaped_str, unescaped_len);
+			free(unescaped_str);
+		}
+		break;
 	case PHP_PQ_OID_INT8:
 	case PHP_PQ_OID_TID:
 	case PHP_PQ_OID_INT4:

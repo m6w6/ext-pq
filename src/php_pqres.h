@@ -28,6 +28,7 @@ typedef enum php_pqres_fetch {
 #define PHP_PQRES_CONV_SCALAR	0x000f
 #define PHP_PQRES_CONV_ARRAY	0x0010
 #define PHP_PQRES_CONV_DATETIME	0x0020
+#define PHP_PQRES_CONV_BYTEA	0x0030
 #define PHP_PQRES_CONV_JSON		0x0100
 #define PHP_PQRES_CONV_ALL		0xffff
 
