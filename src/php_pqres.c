@@ -165,7 +165,7 @@ zval *php_pqres_typed_zval(php_pqres_t *res, Oid typ, zval *zv)
 			ZVAL_NULL(zv);
 		} else {
 			ZVAL_STRINGL(zv, unescaped_str, unescaped_len);
-			free(unescaped_str);
+			PQfreemem(unescaped_str);
 		}
 		break;
 	case PHP_PQ_OID_INT8:
