@@ -307,7 +307,8 @@ static int apply_to_params(zval *zp, void *arg_ptr)
 {
 	struct apply_to_params_arg *arg = arg_ptr;
 
-	SEPARATE_ZVAL_IF_NOT_REF(zp);
+	ZVAL_DEREF(zp);
+	SEPARATE_ZVAL(zp);
 	php_pq_params_set_param(arg->params, arg->index++, zp);
 	return ZEND_HASH_APPLY_KEEP;
 }
