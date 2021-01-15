@@ -18,28 +18,21 @@ $job = $gen->github([
 	"enable_debug" => "yes",
 	"enable_maintainer_zts" => "yes",
 	"enable_json" => "yes",
-	"enable_spl" => "yes",
 ], 
 "master" => [
     "PHP" => ["master"],
     "enable_debug" => "yes",
     "enable_zts" => "yes",
-    "enable_spl" => "yes",
-], 
-"cur-none" => [
-    "PHP" => $cur,
 ], 
 "cur-dbg-zts" => [
     "PHP" => $cur,
     "enable_debug",
     "enable_zts",
-    "enable_spl" => "yes",
 ], 
 "cur-cov" => [
     "CFLAGS" => "-O0 -g --coverage",
     "CXXFLAGS" => "-O0 -g --coverage",
     "PHP" => $cur,
-    "enable_spl" => "yes",
 ]]);
 foreach ($job as $id => $env) {
     printf("  %s:\n", $id);
@@ -52,6 +45,7 @@ foreach ($job as $id => $env) {
         printf("      %s: \"%s\"\n", $key, $val);
     }
 ?>
+      PQ_DSN: "postgres:///runner"
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2

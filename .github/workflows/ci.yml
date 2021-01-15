@@ -14,7 +14,7 @@ jobs:
       enable_debug: "yes"
       enable_maintainer_zts: "yes"
       enable_json: "yes"
-      enable_spl: "yes"
+      PQ_DSN: "postgres:///runner"
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -50,7 +50,7 @@ jobs:
       enable_debug: "yes"
       enable_maintainer_zts: "yes"
       enable_json: "yes"
-      enable_spl: "yes"
+      PQ_DSN: "postgres:///runner"
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -86,7 +86,7 @@ jobs:
       enable_debug: "yes"
       enable_maintainer_zts: "yes"
       enable_json: "yes"
-      enable_spl: "yes"
+      PQ_DSN: "postgres:///runner"
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -122,7 +122,7 @@ jobs:
       enable_debug: "yes"
       enable_maintainer_zts: "yes"
       enable_json: "yes"
-      enable_spl: "yes"
+      PQ_DSN: "postgres:///runner"
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -158,7 +158,7 @@ jobs:
       enable_debug: "yes"
       enable_maintainer_zts: "yes"
       enable_json: "yes"
-      enable_spl: "yes"
+      PQ_DSN: "postgres:///runner"
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -194,39 +194,7 @@ jobs:
       PHP: "master"
       enable_debug: "yes"
       enable_zts: "yes"
-      enable_spl: "yes"
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: true
-      - name: Install
-        run: |
-          sudo apt-get install -y \
-            php-cli \
-            php-pear \
-            libpq-dev \
-            re2c
-      - name: Prepare
-        run: |
-          make -f scripts/ci/Makefile php || make -f scripts/ci/Makefile clean php
-          make -f scripts/ci/Makefile pecl PECL=m6w6/ext-raphf.git:raphf:master
-      - name: Build
-        run: |
-          make -f scripts/ci/Makefile ext PECL=pq
-      - name: Prepare Test
-        run: |
-          sudo systemctl start postgresql
-          sudo -u postgres createuser --login runner
-          sudo -u postgres createdb -O runner runner
-      - name: Test
-        run: |
-          make -f scripts/ci/Makefile test
-
-  cur-none-0:
-    name: cur-none-0
-    env:
-      PHP: "8.0"
+      PQ_DSN: "postgres:///runner"
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -261,7 +229,7 @@ jobs:
       PHP: "8.0"
       enable_debug: "yes"
       enable_zts: "yes"
-      enable_spl: "yes"
+      PQ_DSN: "postgres:///runner"
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -296,7 +264,7 @@ jobs:
       PHP: "8.0"
       enable_debug: "no"
       enable_zts: "yes"
-      enable_spl: "yes"
+      PQ_DSN: "postgres:///runner"
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -331,7 +299,7 @@ jobs:
       PHP: "8.0"
       enable_debug: "yes"
       enable_zts: "no"
-      enable_spl: "yes"
+      PQ_DSN: "postgres:///runner"
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -366,7 +334,7 @@ jobs:
       PHP: "8.0"
       enable_debug: "no"
       enable_zts: "no"
-      enable_spl: "yes"
+      PQ_DSN: "postgres:///runner"
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -401,7 +369,7 @@ jobs:
       CFLAGS: "-O0 -g --coverage"
       CXXFLAGS: "-O0 -g --coverage"
       PHP: "8.0"
-      enable_spl: "yes"
+      PQ_DSN: "postgres:///runner"
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
