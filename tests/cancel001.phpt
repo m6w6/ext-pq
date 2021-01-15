@@ -9,7 +9,11 @@ echo "Test\n";
 include "_setup.inc";
 
 $c = new pq\Connection(PQ_DSN);
-$c->exec("SET lc_messages TO 'C'");
+try {
+	$c->exec("SET lc_messages TO 'C'");
+} catch (pq\Exception $e) {
+	// no not fail if we are not superuser
+}
 
 $x = new pq\Cancel($c);
 

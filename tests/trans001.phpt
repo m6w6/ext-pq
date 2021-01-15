@@ -11,7 +11,11 @@ include "_setup.inc";
 $c = new pq\Connection(PQ_DSN);
 $c->exec("DROP TABLE IF EXISTS test CASCADE");
 $c->exec("SET client_min_messages TO NOTICE");
-$c->exec("SET lc_messages TO 'C'");
+try {
+	$c->exec("SET lc_messages TO 'C'");
+} catch (pq\Exception $e) {
+	// do not die if we are not superuser
+}
 $c->on(pq\Connection::EVENT_NOTICE, function($c, $notice) {
 	echo "Got notice: $notice\n";
 });
