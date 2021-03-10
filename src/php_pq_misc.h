@@ -40,13 +40,6 @@ extern char *php_pq_rtrim(char *e);
 /* R, W, RW */
 extern const char *php_pq_strmode(long mode);
 
-/* compare array index */
-#if PHP_VERSION_ID >= 80000
-extern int php_pq_compare_index(Bucket *lptr, Bucket *rptr);
-#else
-extern int php_pq_compare_index(const void *lptr, const void *rptr);
-#endif
-
 /* free zval ptr values (as hash dtor) */
 extern void php_pq_hash_ptr_dtor(zval *p);
 
@@ -63,6 +56,8 @@ extern HashTable *php_pq_parse_array(php_pqres_t *res, const char *val_str, size
 
 /* ZE compat */
 #if PHP_VERSION_ID >= 80000
+extern int php_pq_compare_index(Bucket *lptr, Bucket *rptr);
+
 # define php_pq_call_method(objval_ptr, method_name, num_args, ...) \
 		zend_call_method_with_ ## num_args ## _params( \
 				Z_OBJ_P(objval_ptr), Z_OBJCE_P(objval_ptr), NULL, \
@@ -77,6 +72,11 @@ extern HashTable *php_pq_parse_array(php_pqres_t *res, const char *val_str, size
 		(Z_OBJ_HT_P(objval_ptr)->cast_object && \
 				SUCCESS == Z_OBJ_HT_P(objval_ptr)->cast_object(Z_OBJ_P(objval_ptr), (retval_ptr), (cast_type)))
 #else
+
+extern int php_pq_compare_index(const void *lptr, const void *rptr);
+
+# define zend_ze_countable spl_ce_Countable
+
 # define php_pq_call_method(objval_ptr, method_name, num_args, ...) \
 		zend_call_method_with_ ## num_args ## _params( \
 				(objval_ptr), NULL, NULL, \

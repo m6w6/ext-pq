@@ -1249,9 +1249,9 @@ PHP_MINIT_FUNCTION(pqres)
 	php_pqres_class_entry->create_object = php_pqres_create_object;
 	php_pqres_class_entry->get_iterator = php_pqres_iterator_init;
 #if PHP_VERSION_ID >= 80000
-	zend_class_implements(php_pqres_class_entry, 2, zend_ce_aggregate, spl_ce_Countable);
+	zend_class_implements(php_pqres_class_entry, 2, zend_ce_aggregate, zend_ce_countable);
 #else
-	zend_class_implements(php_pqres_class_entry, 2, zend_ce_traversable, spl_ce_Countable);
+	zend_class_implements(php_pqres_class_entry, 2, zend_ce_traversable, zend_ce_countable);
 #endif
 
 	memcpy(&php_pqres_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
