@@ -75,7 +75,7 @@ extern int php_pq_compare_index(Bucket *lptr, Bucket *rptr);
 
 extern int php_pq_compare_index(const void *lptr, const void *rptr);
 
-# define zend_ze_countable spl_ce_Countable
+# define zend_ce_countable spl_ce_Countable
 
 # define php_pq_call_method(objval_ptr, method_name, num_args, ...) \
 		zend_call_method_with_ ## num_args ## _params( \
