@@ -133,10 +133,10 @@ zend_class_entry *php_pqdt_class_entry;
 
 #if PHP_VERSION_ID >= 80100
 ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_TYPE_INFO_EX(ai_pqdt_jsonserialize, 0, 0, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 #else
 #define ai_pqdt_jsonserialize ai_pqdt_to_string
 #endif
-ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(ai_pqdt_to_string, 0, 0, 0)
 ZEND_END_ARG_INFO();
