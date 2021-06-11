@@ -131,6 +131,13 @@ void php_pq_hash_ptr_dtor(zval *p)
 
 zend_class_entry *php_pqdt_class_entry;
 
+#if PHP_VERSION_ID >= 80100
+ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_TYPE_INFO_EX(ai_pqdt_jsonserialize, 0, 0, IS_MIXED, 0)
+#else
+#define ai_pqdt_jsonserialize ai_pqdt_to_string
+#endif
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(ai_pqdt_to_string, 0, 0, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqdt, __toString)
@@ -142,7 +149,11 @@ static PHP_METHOD(pqdt, __toString)
 	RETVAL_ZVAL(&rv, 1, 1);
 }
 
+#if PHP_VERSION_ID >= 80100
+ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_OBJ_TYPE_MASK_EX(ai_pqdt_create_from_format, 0, 2, DateTime, MAY_BE_FALSE)
+#else
 ZEND_BEGIN_ARG_INFO_EX(ai_pqdt_create_from_format, 0, 0, 2)
+#endif
 	ZEND_ARG_INFO(0, format)
 	ZEND_ARG_INFO(0, datetime)
 #if PHP_VERSION_ID >= 70200
@@ -171,7 +182,7 @@ static PHP_METHOD(pqdt, createFromFormat)
 static zend_function_entry php_pqdt_methods[] = {
 	PHP_ME(pqdt, createFromFormat, ai_pqdt_create_from_format, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	PHP_ME(pqdt, __toString, ai_pqdt_to_string, ZEND_ACC_PUBLIC)
-	PHP_MALIAS(pqdt, jsonSerialize, __toString, ai_pqdt_to_string, ZEND_ACC_PUBLIC)
+	PHP_MALIAS(pqdt, jsonSerialize, __toString, ai_pqdt_jsonserialize, ZEND_ACC_PUBLIC)
 	{0}
 };
 
