@@ -1146,7 +1146,7 @@ static PHP_METHOD(pqres, fetchAll) {
 	}
 }
 
-ZEND_BEGIN_ARG_INFO_EX(ai_pqres_count, 0, 0, 0)
+ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_TYPE_INFO_EX(ai_pqres_count, 0, 0, IS_LONG, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, count) {
 	zend_error_handling zeh;
@@ -1194,7 +1194,7 @@ static PHP_METHOD(pqres, desc) {
 }
 
 #if PHP_VERSION_ID >= 80000
-ZEND_BEGIN_ARG_INFO_EX(ai_pqres_getIterator, 0, 0, 0)
+ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_OBJ_INFO_EX(ai_pqres_getIterator, 0, 0, Traversable, 0)
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqres, getIterator)
 {

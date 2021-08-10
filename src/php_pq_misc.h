@@ -92,7 +92,12 @@ extern int php_pq_compare_index(const void *lptr, const void *rptr);
 				SUCCESS == Z_OBJ_HT_P(objval_ptr)->cast_object(objval_ptr, (retval_ptr), (cast_type)))
 #endif
 
-
+#if PHP_VERSION_ID < 80100
+# define ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_TYPE_INFO_EX(name, return_reference, required_num_args, type, allow_null) \
+		 ZEND_BEGIN_ARG_INFO_EX(name, 0, return_reference, required_num_args)
+# define ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_OBJ_INFO_EX(name, return_reference, required_num_args, type, allow_null) \
+		 ZEND_BEGIN_ARG_INFO_EX(name, 0, return_reference, required_num_args)
+#endif
 
 
 extern PHP_MINIT_FUNCTION(pq_misc);
