@@ -176,9 +176,11 @@ static inline HashTable *php_pq_object_get_gc_ex(zend_object *object, HashTable 
 	arg.ht = &arg.pq_obj->gc;
 	arg.gc = 1;
 
-	zend_hash_clean(arg.ht);
-	zend_hash_copy(arg.ht, props, NULL);
-	zend_hash_apply_with_argument(&arg.pq_obj->zo.ce->properties_info, apply_pi_to_ht, &arg);
+	if (GC_REFCOUNT(arg.ht) == 1) {
+		zend_hash_clean(arg.ht);
+		zend_hash_copy(arg.ht, props, NULL);
+		zend_hash_apply_with_argument(&arg.pq_obj->zo.ce->properties_info, apply_pi_to_ht, &arg);
+	}
 
 	*table = NULL;
 	*n = 0;
