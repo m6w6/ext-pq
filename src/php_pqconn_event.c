@@ -55,7 +55,7 @@ static inline PGresult *relisten(PGconn *conn, const char *channel_str, size_t c
 		smart_str_appends(&cmd, quoted_channel);
 		smart_str_0(&cmd);
 
-		res = PQexec(conn, smart_str_v(&cmd));
+		res = php_pq_exec(conn, smart_str_v(&cmd));
 
 		smart_str_free(&cmd);
 		PQfreemem(quoted_channel);

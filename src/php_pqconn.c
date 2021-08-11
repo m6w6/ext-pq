@@ -590,7 +590,7 @@ static inline PGresult *unlisten(PGconn *conn, const char *channel_str, size_t c
 		smart_str_appends(&cmd, quoted_channel);
 		smart_str_0(&cmd);
 
-		res = PQexec(conn, smart_str_v(&cmd));
+		res = php_pq_exec(conn, smart_str_v(&cmd));
 
 		smart_str_free(&cmd);
 		PQfreemem(quoted_channel);
@@ -990,7 +990,7 @@ static PHP_METHOD(pqconn, notify) {
 			PGresult *res;
 			char *params[2] = {channel_str, message_str};
 
-			res = PQexecParams(obj->intern->conn, "select pg_notify($1, $2)", 2, NULL, (const char *const*) params, NULL, NULL, 0);
+			res = php_pq_exec_params(obj->intern->conn, "select pg_notify($1, $2)", 2, NULL, (const char *const*) params, NULL, NULL, 0);
 
 			if (!res) {
 				throw_exce(EX_RUNTIME, "Failed to notify listeners (%s)", PHP_PQerrorMessage(obj->intern->conn));
@@ -1224,7 +1224,7 @@ static PHP_METHOD(pqconn, execParams) {
 			php_pq_params_t *params;
 
 			params = php_pq_params_init(&obj->intern->converters, ztypes ? Z_ARRVAL_P(ztypes) : NULL, Z_ARRVAL_P(zparams));
-			res = PQexecParams(obj->intern->conn, query_str, params->param.count, params->type.oids, (const char *const*) params->param.strings, NULL, NULL, 0);
+			res = php_pq_exec_params(obj->intern->conn, query_str, params->param.count, params->type.oids, (const char *const*) params->param.strings, NULL, NULL, 0);
 			php_pq_params_free(&params);
 
 			if (!res) {
