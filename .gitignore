@@ -3,6 +3,8 @@
 *~
 /*.tgz
 .deps
+*.dep
+*.o
 *.lo
 *.la
 /config.[^m]*
