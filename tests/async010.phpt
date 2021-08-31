@@ -61,7 +61,7 @@ array(1) {
   ["execParams"]=>
   array(1) {
     [0]=>
-    string(3) "123"
+    int(123)
   }
 }
 DONE
