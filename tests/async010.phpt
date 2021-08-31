@@ -18,7 +18,7 @@ var_dump([
 ]);
 
 var_dump([
-	"execParams" => $c->execParams("select \$1", [123])->fetchRow()
+	"execParams" => $c->execParams("select \$1::int4", [123])->fetchRow()
 ]);
 ?>
 DONE
