@@ -138,7 +138,11 @@ ZEND_END_ARG_INFO()
 #define ai_pqdt_jsonserialize ai_pqdt_to_string
 #endif
 
+#if PHP_VERSION_ID >= 80200
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(ai_pqdt_to_string, 0, 0, IS_STRING, 0)
+#else
 ZEND_BEGIN_ARG_INFO_EX(ai_pqdt_to_string, 0, 0, 0)
+#endif
 ZEND_END_ARG_INFO();
 static PHP_METHOD(pqdt, __toString)
 {
