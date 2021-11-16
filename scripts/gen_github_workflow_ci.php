@@ -18,17 +18,17 @@ $job = $gen->github([
 	"enable_debug" => "yes",
 	"enable_maintainer_zts" => "yes",
 	"enable_json" => "yes",
-], 
-"master" => [
-    "PHP" => ["master"],
+],
+"next" => [
+    "PHP" => ["8.1", "master"],
     "enable_debug" => "yes",
     "enable_zts" => "yes",
-], 
+],
 "cur-dbg-zts" => [
     "PHP" => $cur,
     "enable_debug",
     "enable_zts",
-], 
+],
 "cur-cov" => [
     "CFLAGS" => "-O0 -g --coverage",
     "CXXFLAGS" => "-O0 -g --coverage",
@@ -36,7 +36,7 @@ $job = $gen->github([
 ]]);
 foreach ($job as $id => $env) {
     printf("  %s:\n", $id);
-    printf("    name: %s\n", $id);
+    printf("    name: \"%s (%s)\"\n", $id, $env["PHP"]);
     if ($env["PHP"] == "master") {
         printf("    continue-on-error: true\n");
     }
