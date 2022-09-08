@@ -2001,6 +2001,9 @@ PHP_MINIT_FUNCTION(pqconn)
 	INIT_NS_CLASS_ENTRY(ce, "pq", "Connection", php_pqconn_methods);
 	php_pqconn_class_entry = zend_register_internal_class_ex(&ce, NULL);
 	php_pqconn_class_entry->create_object = php_pqconn_create_object;
+#if PHP_VERSION_ID >= 80200
+	php_pqconn_class_entry->ce_flags |= ZEND_ACC_ALLOW_DYNAMIC_PROPERTIES;
+#endif
 
 	memcpy(&php_pqconn_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 	php_pqconn_object_handlers.offset = XtOffsetOf(php_pqconn_object_t, zo);
