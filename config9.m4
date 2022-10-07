@@ -7,7 +7,7 @@ if test "$PHP_PQ" != "no"; then
 	if test "$PHP_PQ" != "yes"; then
 		SEARCH_PATH="$PHP_PQ $SEARCH_PATH"
 	fi
-	
+
 	AC_MSG_CHECKING(for pg_config)
 	for i in $SEARCH_PATH; do
 		if test -x "$i/bin/pg_config"; then
@@ -15,20 +15,20 @@ if test "$PHP_PQ" != "no"; then
 			break
 		fi
 	done
-	
+
 	if test -z "$PG_CONFIG"; then
 		AC_PATH_PROG(PG_CONFIG, pg_config, no)
 	fi
-	
+
 	AC_MSG_RESULT($PG_CONFIG)
-	
+
 	if test "$PG_CONFIG" = "no"; then
 		AC_MSG_ERROR(could not find a usable pg_config in $SEARCH_PATH)
 	else
 		if test "$PHP_PQ" != "yes" -a "$PHP_PQ/bin/pg_config" != "$PG_CONFIG"; then
 			AC_MSG_WARN(Found pg_config is not in $PHP_PQ)
 		fi
-		
+
 		AC_MSG_CHECKING(for PostgreSQL version)
 		PQ_VERSION=$($PG_CONFIG --version | $SED 's/PostgreSQL //')
 
@@ -39,7 +39,7 @@ if test "$PHP_PQ" != "no"; then
 			AC_MSG_RESULT($PQ_VERSION)
 			AC_DEFINE_UNQUOTED(PHP_PQ_LIBVERSION, "$PQ_VERSION", [ ])
 		fi
-		
+
 		PQ_INCDIR=$($PG_CONFIG --includedir)
 		PQ_LIBDIR=$($PG_CONFIG --libdir)
 	fi
@@ -175,26 +175,4 @@ if test "$PHP_PQ" != "no"; then
 		AC_MSG_ERROR([Please install pecl/raphf and activate extension=raphf.$SHLIB_DL_SUFFIX_NAME in your php.ini])
 	])
 	PHP_ADD_EXTENSION_DEP(pq, raphf, true)
-	PQ_HAVE_PHP_EXT([json], [
-		AC_MSG_CHECKING([for php_json.h])
-		PQ_EXT_JSON_INCDIR=
-		for i in `echo $INCLUDES | $SED -e's/-I//g'` $abs_srcdir ../json ../jsonc ../jsond; do
-			if test -d $i; then
-				if test -f $i/php_json.h; then
-					PQ_EXT_JSON_INCDIR=$i
-					break
-				elif test -f $i/ext/json/php_json.h; then
-					PQ_EXT_JSON_INCDIR=$i/ext/json
-					break
-				fi
-			fi
-		done
-		if test "x$PQ_EXT_JSON_INCDIR" = "x"; then
-			AC_MSG_ERROR([not found])
-		else
-			AC_MSG_RESULT([$PQ_EXT_JSON_INCDIR])
-			AC_DEFINE([PHP_PQ_HAVE_PHP_JSON_H], [1], [Have ext/json support])
-			PHP_ADD_INCLUDE([$PQ_EXT_JSON_INCDIR])
-		fi
-	])
 fi
