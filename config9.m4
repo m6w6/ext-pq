@@ -76,19 +76,22 @@ if test "$PHP_PQ" != "no"; then
 	dnl PQ_CHECK_FUNC(sym, fail-hard)
 	dnl
 	AC_DEFUN([PQ_CHECK_FUNC], [
+		PQ_SYM=$1
 		FAIL_HARD=$2
-
+		save_LIBS="$LIBS"
+		LIBS=
 		PHP_CHECK_LIBRARY(pq, $1, [
 			AC_DEFINE([HAVE_]translit($1,a-z,A-Z), 1, Have $1)
 		], [
 			if test -n "$FAIL_HARD"; then
-				if "$FAIL_HARD"; then
-					AC_MSG_ERROR(could not find $PQ_SYM in -lpq)
+				if $FAIL_HARD; then
+					AC_MSG_ERROR(could not find $PQ_SYM in -lpq -L$PQ_LIBDIR)
 				fi
 			fi
 		], [
 			-L$PQ_LIBDIR
 		])
+		LIBS="$save_LIBS"
 	])
 
 	PQ_CHECK_FUNC(PQregisterEventProc, true)
