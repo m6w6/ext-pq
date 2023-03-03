@@ -41,9 +41,9 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </developer>
- <date>2021-08-30</date>
+ <date>2023-03-03</date>
  <version>
-  <release>2.2.0</release>
+  <release>2.2.1</release>
   <api>2.1.0</api>
  </version>
  <stability>
@@ -52,11 +52,7 @@
  </stability>
  <license uri="http://copyfree.org/content/standard/licenses/2bsd/license.txt">BSD-2-Clause</license>
  <notes><![CDATA[
-  * Fixed PHP-8.1 compatibility (see gh issues #40 and #41)
-  * Fixed asynchronous actions not cleared prior some synchronous actions
-  * Added connection constants of PostgreSQL-10+ to pq\Connection:
-    CHECK_WRITABLE, CONSUME, and GSS_STARTUP
-  * Added BYTEA unescaping support (see gh issue #38)
+  * Fixed PHP-8.2 compatibility (see gh issue #46)
 ]]></notes>
  <contents>
   <dir name="/">
