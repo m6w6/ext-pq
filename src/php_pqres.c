@@ -17,9 +17,7 @@
 #include <php.h>
 
 #include <ext/spl/spl_iterators.h>
-#if PHP_PQ_HAVE_PHP_JSON_H
-#include <php_json.h> /* we've added the include directory to INCLUDES */
-#endif
+#include <ext/json/php_json.h>
 
 #include <libpq-events.h>
 
@@ -215,7 +213,7 @@ zval *php_pqres_typed_zval(php_pqres_t *res, Oid typ, zval *zv)
 		php_pqdt_from_string(zv, NULL, str->val, str->len, "Y-m-d H:i:s.uO", NULL);
 		break;
 
-#if PHP_PQ_HAVE_PHP_JSON_H && defined(PHP_PQ_OID_JSON)
+#ifdef PHP_PQ_OID_JSON
 # ifdef PHP_PQ_OID_JSONB
 	case PHP_PQ_OID_JSONB:
 # endif
@@ -1350,9 +1348,7 @@ PHP_MINIT_FUNCTION(pqres)
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_SCALAR"), PHP_PQRES_CONV_SCALAR);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_ARRAY"), PHP_PQRES_CONV_ARRAY);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_DATETIME"), PHP_PQRES_CONV_DATETIME);
-#if PHP_PQ_HAVE_PHP_JSON_H
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_JSON"), PHP_PQRES_CONV_JSON);
-#endif
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_BYTEA"), PHP_PQRES_CONV_BYTEA);
 	zend_declare_class_constant_long(php_pqres_class_entry, ZEND_STRL("CONV_ALL"), PHP_PQRES_CONV_ALL);
 

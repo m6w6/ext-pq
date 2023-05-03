@@ -16,9 +16,7 @@
 
 #include <php.h>
 #include <ext/standard/php_string.h>
-#if PHP_PQ_HAVE_PHP_JSON_H
-#include <php_json.h> /* we've added the include directory to INCLUDES */
-#endif
+#include <ext/json/php_json.h>
 
 #include <Zend/zend_smart_str.h>
 #include <Zend/zend_interfaces.h>
@@ -75,12 +73,12 @@ unsigned php_pq_params_add_type_oid(php_pq_params_t *p, Oid type)
 
 static zend_string *object_param_to_string(php_pq_params_t *p, zval *zobj, Oid type)
 {
-#if PHP_PQ_HAVE_PHP_JSON_H && defined(PHP_PQ_OID_JSON)
+#ifdef PHP_PQ_OID_JSON
 	smart_str str = {0};
 #endif
 
 	switch (type) {
-#if PHP_PQ_HAVE_PHP_JSON_H && defined(PHP_PQ_OID_JSON)
+#ifdef PHP_PQ_OID_JSON
 # ifdef PHP_PQ_OID_JSONB
 	case PHP_PQ_OID_JSONB:
 # endif
@@ -207,7 +205,7 @@ static zend_string *array_param_to_string(php_pq_params_t *p, zval *zarr, Oid ty
 	struct apply_to_param_from_array_arg arg = {NULL};
 
 	switch (type) {
-#if PHP_PQ_HAVE_PHP_JSON_H && defined(PHP_PQ_OID_JSON)
+#ifdef PHP_PQ_OID_JSON
 # ifdef PHP_PQ_OID_JSONB
 	case PHP_PQ_OID_JSONB:
 # endif
