@@ -11,16 +11,16 @@ jobs:
 <?php
 
 $gen = include __DIR__ . "/ci/gen-matrix.php";
-$cur = "8.0";
+$cur = "8.2";
 $job = $gen->github([
 "old-matrix" => [
-	"PHP" => ["7.0", "7.1", "7.2", "7.3", "7.4"],
+	"PHP" => ["7.0", "7.1", "7.2", "7.3", "7.4", "8.0", "8.1"],
 	"enable_debug" => "yes",
 	"enable_maintainer_zts" => "yes",
 	"enable_json" => "yes",
 ],
 "next" => [
-    "PHP" => ["8.1", "master"],
+    "PHP" => ["master"],
     "enable_debug" => "yes",
     "enable_zts" => "yes",
 ],
@@ -46,7 +46,7 @@ foreach ($job as $id => $env) {
     }
 ?>
       PQ_DSN: "postgres:///runner"
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
         with:
