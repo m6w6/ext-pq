@@ -105,7 +105,11 @@ static PHP_MINFO_FUNCTION(pq)
 	php_info_print_table_header(3, "Used Library", "Compiled", "Linked");
 #ifdef HAVE_PQLIBVERSION
 	libpq_v = PQlibVersion();
-	slprintf(libpq_version, sizeof(libpq_version), "%d.%d.%d", libpq_v/10000%100, libpq_v/100%100, libpq_v%100);
+	if (libpq_v < 100000) {
+		slprintf(libpq_version, sizeof(libpq_version), "%d.%d.%d", libpq_v/10000, libpq_v/100%100, libpq_v%100);
+	} else {
+		slprintf(libpq_version, sizeof(libpq_version), "%d.%d", libpq_v/10000, libpq_v%100);
+	}
 #endif
 	php_info_print_table_row(3, "libpq", PHP_PQ_LIBVERSION, libpq_version);
 	php_info_print_table_end();
