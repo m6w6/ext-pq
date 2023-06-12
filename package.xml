@@ -118,6 +118,7 @@
     <file role="test" name="async010.phpt" />
     <file role="test" name="basic001.phpt" />
     <file role="test" name="basic002.phpt" />
+    <file role="test" name="basic003.phpt" />
     <file role="test" name="bound002.phpt" />
     <file role="test" name="callback001.phpt" />
     <file role="test" name="callback002.phpt" />
