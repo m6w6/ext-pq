@@ -41,9 +41,9 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </developer>
- <date>2023-03-03</date>
+ <date>2023-06-12</date>
  <version>
-  <release>2.2.1</release>
+  <release>2.2.2</release>
   <api>2.1.0</api>
  </version>
  <stability>
@@ -52,7 +52,7 @@
  </stability>
  <license uri="http://copyfree.org/content/standard/licenses/2bsd/license.txt">BSD-2-Clause</license>
  <notes><![CDATA[
-  * Fixed PHP-8.2 compatibility (see gh issue #46)
+  * Fix JSON coversion (see gh issue #47)
 ]]></notes>
  <contents>
   <dir name="/">
@@ -138,6 +138,7 @@
     <file role="test" name="flush001.phpt" />
     <file role="test" name="gh-issue015_listeners.phpt" />
     <file role="test" name="gh-issue015_statements.phpt" />
+    <file role="test" name="gh-issue047_jsonb.phpt" />
     <file role="test" name="info001.phpt" />
     <file role="test" name="info002.phpt" />
     <file role="test" name="lob001.phpt" />
