@@ -491,6 +491,40 @@ static void php_pqconn_object_write_def_auto_conv(void *o, zval *value)
 	obj->intern->default_auto_convert = zval_get_long(value) & PHP_PQRES_CONV_ALL;
 }
 
+#ifdef HAVE_PQLIBVERSION
+static void php_pqconn_object_read_lib_version(void *o, zval *return_value)
+{
+	char ver[16];
+	int v = PQlibVersion();
+
+	if (v < 100000) {
+		slprintf(ver, sizeof(ver), "%d.%d.%d", v/10000, v/100%100, v%100);
+	} else {
+		slprintf(ver, sizeof(ver), "%d.%d", v/10000, v%100);
+	}
+	RETVAL_STRING(ver);
+}
+#endif
+static void php_pqconn_object_read_protocol_version(void *o, zval *return_value)
+{
+	php_pqconn_object_t *obj = o;
+
+	RETVAL_LONG(PQprotocolVersion(obj->intern->conn));
+}
+static void php_pqconn_object_read_server_version(void *o, zval *return_value)
+{
+	php_pqconn_object_t *obj = o;
+	char ver[16];
+	int v = PQserverVersion(obj->intern->conn);
+
+	if (v < 100000) {
+		slprintf(ver, sizeof(ver), "%d.%d.%d", v/10000, v/100%100, v%100);
+	} else {
+		slprintf(ver, sizeof(ver), "%d.%d", v/10000, v%100);
+	}
+	RETVAL_STRING(ver);
+}
+
 static ZEND_RESULT_CODE php_pqconn_update_socket(zval *zobj, php_pqconn_object_t *obj)
 {
 	zval zsocket, zmember;
@@ -2130,6 +2164,20 @@ PHP_MINIT_FUNCTION(pqconn)
 	ph.write = php_pqconn_object_write_def_auto_conv;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "defaultAutoConvert", sizeof("defaultAutoConvert")-1, (void *) &ph, sizeof(ph));
 	ph.write = NULL;
+
+#ifdef HAVE_PQLIBVERSION
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("libraryVersion"), ZEND_ACC_PUBLIC);
+	ph.read = php_pqconn_object_read_lib_version;
+	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, ZEND_STRL("libraryVersion"), (void *) &ph, sizeof(ph));
+#endif
+
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("protocolVersion"), ZEND_ACC_PUBLIC);
+	ph.read = php_pqconn_object_read_protocol_version;
+	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, ZEND_STRL("protocolVersion"), (void *) &ph, sizeof(ph));
+
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("serverVersion"), ZEND_ACC_PUBLIC);
+	ph.read = php_pqconn_object_read_server_version;
+	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, ZEND_STRL("serverVersion"), (void *) &ph, sizeof(ph));
 
 	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("OK"), CONNECTION_OK);
 	zend_declare_class_constant_long(php_pqconn_class_entry, ZEND_STRL("BAD"), CONNECTION_BAD);
