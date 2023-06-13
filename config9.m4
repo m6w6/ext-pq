@@ -99,6 +99,8 @@ if test "$PHP_PQ" != "no"; then
 	PHP_SUBST(PQ_SHARED_LIBADD)
 
 	PQ_CHECK_FUNC(PQlibVersion)
+	PQ_CHECK_FUNC(PQprotocolVersion)
+	PQ_CHECK_FUNC(PQserverVersion)
 	PQ_CHECK_FUNC(PQconninfo)
 	PQ_CHECK_FUNC(PQsetSingleRowMode)
 
