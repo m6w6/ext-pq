@@ -33,6 +33,8 @@ extern PGresult *php_pq_exec_params(PGconn *conn, const char *command, int nPara
 extern PGresult *php_pq_prepare(PGconn *conn, const char *stmtName, const char *query, int nParams, const Oid *paramTypes);
 extern PGresult *php_pq_exec_prepared(PGconn *conn, const char *stmtName, int nParams, const char *const * paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
 
+/* convert version to string */
+extern void php_pq_version_to_string(int version, char *buffer, int len);
 
 /* trim LF from EOL */
 extern char *php_pq_rtrim(char *e);

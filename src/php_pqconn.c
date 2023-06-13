@@ -495,13 +495,8 @@ static void php_pqconn_object_write_def_auto_conv(void *o, zval *value)
 static void php_pqconn_object_read_lib_version(void *o, zval *return_value)
 {
 	char ver[16];
-	int v = PQlibVersion();
 
-	if (v < 100000) {
-		slprintf(ver, sizeof(ver), "%d.%d.%d", v/10000, v/100%100, v%100);
-	} else {
-		slprintf(ver, sizeof(ver), "%d.%d", v/10000, v%100);
-	}
+	php_pq_version_to_string(PQlibVersion(), ver, sizeof(ver));
 	RETVAL_STRING(ver);
 }
 #endif
@@ -518,13 +513,8 @@ static void php_pqconn_object_read_server_version(void *o, zval *return_value)
 {
 	php_pqconn_object_t *obj = o;
 	char ver[16];
-	int v = PQserverVersion(obj->intern->conn);
 
-	if (v < 100000) {
-		slprintf(ver, sizeof(ver), "%d.%d.%d", v/10000, v/100%100, v%100);
-	} else {
-		slprintf(ver, sizeof(ver), "%d.%d", v/10000, v%100);
-	}
+	php_pq_version_to_string(PQserverVersion(obj->intern->conn), ver, sizeof(ver));
 	RETVAL_STRING(ver);
 }
 #endif
