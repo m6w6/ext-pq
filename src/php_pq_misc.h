@@ -101,6 +101,9 @@ extern int php_pq_compare_index(const void *lptr, const void *rptr);
 		 ZEND_BEGIN_ARG_INFO_EX(name, 0, return_reference, required_num_args)
 #endif
 
+#ifndef ZEND_ACC_READONLY
+#define ZEND_ACC_READONLY 0
+#endif
 
 extern PHP_MINIT_FUNCTION(pq_misc);
 

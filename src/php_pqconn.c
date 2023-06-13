@@ -2160,19 +2160,19 @@ PHP_MINIT_FUNCTION(pqconn)
 	ph.write = NULL;
 
 #ifdef HAVE_PQLIBVERSION
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("libraryVersion"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("libraryVersion"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_lib_version;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, ZEND_STRL("libraryVersion"), (void *) &ph, sizeof(ph));
 #endif
 
 #ifdef HAVE_PQPROTOCOLVERSION
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("protocolVersion"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("protocolVersion"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_protocol_version;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, ZEND_STRL("protocolVersion"), (void *) &ph, sizeof(ph));
 #endif
 
 #ifdef HAVE_PQSERVERVERSION
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("serverVersion"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("serverVersion"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_server_version;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, ZEND_STRL("serverVersion"), (void *) &ph, sizeof(ph));
 #endif
