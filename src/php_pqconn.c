@@ -2051,7 +2051,7 @@ PHP_MINIT_FUNCTION(pqconn)
 	ph.read = php_pqconn_object_read_transaction_status;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "transactionStatus", sizeof("transactionStatus")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("socket"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("socket"), ZEND_ACC_PUBLIC);
 	ph.read = NULL; /* forward to std prophandler */
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "socket", sizeof("socket")-1, (void *) &ph, sizeof(ph));
 
