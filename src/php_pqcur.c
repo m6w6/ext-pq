@@ -446,21 +446,21 @@ PHP_MINIT_FUNCTION(pqcur)
 	zend_declare_class_constant_long(php_pqcur_class_entry, ZEND_STRL("SCROLL"), PHP_PQ_DECLARE_SCROLL);
 	zend_declare_class_constant_long(php_pqcur_class_entry, ZEND_STRL("NO_SCROLL"), PHP_PQ_DECLARE_NO_SCROLL);
 
-	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("name"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("name"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqcur_object_read_name;
 	zend_hash_str_add_mem(&php_pqcur_object_prophandlers, "name", sizeof("name")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("connection"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("connection"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqcur_object_read_connection;
 	ph.gc = php_pqcur_object_gc_connection;
 	zend_hash_str_add_mem(&php_pqcur_object_prophandlers, "connection", sizeof("connection")-1, (void *) &ph, sizeof(ph));
 	ph.gc = NULL;
 
-	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("query"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("query"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqcur_object_read_query;
 	zend_hash_str_add_mem(&php_pqcur_object_prophandlers, "query", sizeof("query")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("flags"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqcur_class_entry, ZEND_STRL("flags"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqcur_object_read_flags;
 	zend_hash_str_add_mem(&php_pqcur_object_prophandlers, "flags", sizeof("flags")-1, (void *) &ph, sizeof(ph));
 

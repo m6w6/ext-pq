@@ -500,7 +500,7 @@ PHP_MINIT_FUNCTION(pqstm)
 
 	zend_hash_init(&php_pqstm_object_prophandlers, 4, NULL, php_pq_object_prophandler_dtor, 1);
 
-	zend_declare_property_null(php_pqstm_class_entry, ZEND_STRL("name"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqstm_class_entry, ZEND_STRL("name"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqstm_object_read_name;
 	zend_hash_str_add_mem(&php_pqstm_object_prophandlers, "name", sizeof("name")-1, (void *) &ph, sizeof(ph));
 
@@ -510,11 +510,11 @@ PHP_MINIT_FUNCTION(pqstm)
 	zend_hash_str_add_mem(&php_pqstm_object_prophandlers, "connection", sizeof("connection")-1, (void *) &ph, sizeof(ph));
 	ph.gc = NULL;
 
-	zend_declare_property_null(php_pqstm_class_entry, ZEND_STRL("query"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqstm_class_entry, ZEND_STRL("query"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqstm_object_read_query;
 	zend_hash_str_add_mem(&php_pqstm_object_prophandlers, "query", sizeof("query")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqstm_class_entry, ZEND_STRL("types"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqstm_class_entry, ZEND_STRL("types"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqstm_object_read_types;
 	zend_hash_str_add_mem(&php_pqstm_object_prophandlers, "types", sizeof("types")-1, (void *) &ph, sizeof(ph));
 

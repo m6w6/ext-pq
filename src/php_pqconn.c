@@ -2043,23 +2043,23 @@ PHP_MINIT_FUNCTION(pqconn)
 
 	zend_hash_init(&php_pqconn_object_prophandlers, 23, NULL, php_pq_object_prophandler_dtor, 1);
 
-	zend_declare_property_long(php_pqconn_class_entry, ZEND_STRL("status"), CONNECTION_BAD, ZEND_ACC_PUBLIC);
+	zend_declare_property_long(php_pqconn_class_entry, ZEND_STRL("status"), CONNECTION_BAD, ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_status;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "status", sizeof("status")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_long(php_pqconn_class_entry, ZEND_STRL("transactionStatus"), PQTRANS_UNKNOWN, ZEND_ACC_PUBLIC);
+	zend_declare_property_long(php_pqconn_class_entry, ZEND_STRL("transactionStatus"), PQTRANS_UNKNOWN, ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_transaction_status;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "transactionStatus", sizeof("transactionStatus")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("socket"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("socket"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = NULL; /* forward to std prophandler */
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "socket", sizeof("socket")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("errorMessage"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("errorMessage"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_error_message;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "errorMessage", sizeof("errorMessage")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_bool(php_pqconn_class_entry, ZEND_STRL("busy"), 0, ZEND_ACC_PUBLIC);
+	zend_declare_property_bool(php_pqconn_class_entry, ZEND_STRL("busy"), 0, ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_busy;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "busy", sizeof("busy")-1, (void *) &ph, sizeof(ph));
 
@@ -2081,49 +2081,49 @@ PHP_MINIT_FUNCTION(pqconn)
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "nonblocking", sizeof("nonblocking")-1, (void *) &ph, sizeof(ph));
 	ph.write = NULL;
 
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("db"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("db"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_db;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "db", sizeof("db")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("user"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("user"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_user;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "user", sizeof("user")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("pass"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("pass"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_pass;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "pass", sizeof("pass")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("host"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("host"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_host;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "host", sizeof("host")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("port"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("port"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_port;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "port", sizeof("port")-1, (void *) &ph, sizeof(ph));
 
 #if HAVE_PQCONNINFO
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("params"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("params"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_params;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "params", sizeof("params")-1, (void *) &ph, sizeof(ph));
 #endif
 
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("options"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("options"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_options;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "options", sizeof("options")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("eventHandlers"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("eventHandlers"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_event_handlers;
 	ph.gc = php_pqconn_object_gc_event_handlers;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "eventHandlers", sizeof("eventHandlers")-1, (void *) &ph, sizeof(ph));
 	ph.gc = NULL;
 
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("listeners"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("listeners"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_listeners;
 	ph.gc = php_pqconn_object_gc_listeners;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "listeners", sizeof("listeners")-1, (void *) &ph, sizeof(ph));
 	ph.gc = NULL;
 
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("converters"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("converters"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqconn_object_read_converters;
 	ph.gc = php_pqconn_object_gc_converters;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, "converters", sizeof("converters")-1, (void *) &ph, sizeof(ph));

@@ -1283,31 +1283,31 @@ PHP_MINIT_FUNCTION(pqres)
 
 	zend_hash_init(&php_pqres_object_prophandlers, 9, NULL, php_pq_object_prophandler_dtor, 1);
 
-	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("status"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("status"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqres_object_read_status;
 	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "status", sizeof("status")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("statusMessage"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("statusMessage"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqres_object_read_status_message;
 	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "statusMessage", sizeof("statusMessage")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("errorMessage"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("errorMessage"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqres_object_read_error_message;
 	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "errorMessage", sizeof("errorMessage")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("diag"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqres_class_entry, ZEND_STRL("diag"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqres_object_read_diag;
 	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "diag", sizeof("diag")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("numRows"), 0, ZEND_ACC_PUBLIC);
+	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("numRows"), 0, ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqres_object_read_num_rows;
 	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "numRows", sizeof("numRows")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("numCols"), 0, ZEND_ACC_PUBLIC);
+	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("numCols"), 0, ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqres_object_read_num_cols;
 	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "numCols", sizeof("numCols")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("affectedRows"), 0, ZEND_ACC_PUBLIC);
+	zend_declare_property_long(php_pqres_class_entry, ZEND_STRL("affectedRows"), 0, ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqres_object_read_affected_rows;
 	zend_hash_str_add_mem(&php_pqres_object_prophandlers, "affectedRows", sizeof("affectedRows")-1, (void *) &ph, sizeof(ph));
 

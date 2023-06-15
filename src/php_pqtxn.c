@@ -890,7 +890,7 @@ PHP_MINIT_FUNCTION(pqtxn)
 
 	zend_hash_init(&php_pqtxn_object_prophandlers, 4, NULL, php_pq_object_prophandler_dtor, 1);
 
-	zend_declare_property_null(php_pqtxn_class_entry, ZEND_STRL("connection"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqtxn_class_entry, ZEND_STRL("connection"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqtxn_object_read_connection;
 	ph.gc = php_pqtxn_object_gc_connection;
 	zend_hash_str_add_mem(&php_pqtxn_object_prophandlers, "connection", sizeof("connection")-1, (void *) &ph, sizeof(ph));

@@ -478,17 +478,17 @@ PHP_MINIT_FUNCTION(pqlob)
 
 	zend_hash_init(&php_pqlob_object_prophandlers, 3, NULL, php_pq_object_prophandler_dtor, 1);
 
-	zend_declare_property_null(php_pqlob_class_entry, ZEND_STRL("transaction"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqlob_class_entry, ZEND_STRL("transaction"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqlob_object_read_transaction;
 	ph.gc = php_pqlob_object_gc_transaction;
 	zend_hash_str_add_mem(&php_pqlob_object_prophandlers, "transaction", sizeof("transaction")-1, (void *) &ph, sizeof(ph));
 	ph.gc = NULL;
 
-	zend_declare_property_long(php_pqlob_class_entry, ZEND_STRL("oid"), InvalidOid, ZEND_ACC_PUBLIC);
+	zend_declare_property_long(php_pqlob_class_entry, ZEND_STRL("oid"), InvalidOid, ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqlob_object_read_oid;
 	zend_hash_str_add_mem(&php_pqlob_object_prophandlers, "oid", sizeof("oid")-1, (void *) &ph, sizeof(ph));
 
-	zend_declare_property_null(php_pqlob_class_entry, ZEND_STRL("stream"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqlob_class_entry, ZEND_STRL("stream"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqlob_object_read_stream;
 	zend_hash_str_add_mem(&php_pqlob_object_prophandlers, "stream", sizeof("stream")-1, (void *) &ph, sizeof(ph));
 

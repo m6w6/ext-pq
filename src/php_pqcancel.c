@@ -163,7 +163,7 @@ PHP_MINIT_FUNCTION(pqcancel)
 
 	zend_hash_init(&php_pqcancel_object_prophandlers, 1, NULL, php_pq_object_prophandler_dtor, 1);
 
-	zend_declare_property_null(php_pqcancel_class_entry, ZEND_STRL("connection"), ZEND_ACC_PUBLIC);
+	zend_declare_property_null(php_pqcancel_class_entry, ZEND_STRL("connection"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
 	ph.read = php_pqcancel_object_read_connection;
 	ph.gc = php_pqcancel_object_gc_connection;
 	zend_hash_str_add_mem(&php_pqcancel_object_prophandlers, ZEND_STRL("connection"), (void *) &ph, sizeof(ph));
