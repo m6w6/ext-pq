@@ -29,6 +29,14 @@
 #undef PHP_PQ_TYPE
 #include "php_pq_type.h"
 
+/* convert version to string */
+extern void php_pq_version_to_string(int version, char *buffer, int len) {
+	if (version < 100000) {
+		slprintf(buffer, len, "%d.%d.%d", version/10000, version/100%100, version%100);
+	} else { /* since version 10 */
+		slprintf(buffer, len, "%d.%d", version/10000, version%100);
+	}
+}
 
 /* clear result object associated with a result handle */
 void php_pqres_clear(PGresult *r) {

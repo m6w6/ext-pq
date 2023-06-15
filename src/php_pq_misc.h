@@ -33,6 +33,8 @@ extern PGresult *php_pq_exec_params(PGconn *conn, const char *command, int nPara
 extern PGresult *php_pq_prepare(PGconn *conn, const char *stmtName, const char *query, int nParams, const Oid *paramTypes);
 extern PGresult *php_pq_exec_prepared(PGconn *conn, const char *stmtName, int nParams, const char *const * paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
 
+/* convert version to string */
+extern void php_pq_version_to_string(int version, char *buffer, int len);
 
 /* trim LF from EOL */
 extern char *php_pq_rtrim(char *e);
@@ -99,6 +101,9 @@ extern int php_pq_compare_index(const void *lptr, const void *rptr);
 		 ZEND_BEGIN_ARG_INFO_EX(name, 0, return_reference, required_num_args)
 #endif
 
+#ifndef ZEND_ACC_READONLY
+#define ZEND_ACC_READONLY 0
+#endif
 
 extern PHP_MINIT_FUNCTION(pq_misc);
 

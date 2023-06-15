@@ -2,6 +2,7 @@
 json conv broken since 2.2.1
 --SKIPIF--
 <?php
+define("SERVER_MIN", "9.4");
 include "_skipif.inc";
 ?>
 --INI--
