@@ -736,7 +736,7 @@ static ZEND_RESULT_CODE column_nn(php_pqres_object_t *obj, zval *zcol, php_pqres
 	}
 
 	if (!col->name) {
-		php_error_docref(NULL, E_WARNING, "Failed to find column at index %ld", index);
+		php_error_docref(NULL, E_WARNING, "Failed to find column at index " ZEND_LONG_FMT, index);
 		return FAILURE;
 	}
 	if (col->num == -1) {
@@ -791,7 +791,7 @@ static int apply_bound(zval *zbound, int argc, va_list argv, zend_hash_key *key)
 	ZEND_RESULT_CODE *rv = va_arg(argv, ZEND_RESULT_CODE *);
 
 	if (!(zvalue = zend_hash_index_find(Z_ARRVAL_P(zrow), key->h))) {
-		php_error_docref(NULL, E_WARNING, "Failed to find column ad index %lu", key->h);
+		php_error_docref(NULL, E_WARNING, "Failed to find column ad index " ZEND_ULONG_FMT, key->h);
 		*rv = FAILURE;
 		return ZEND_HASH_APPLY_STOP;
 	} else {
