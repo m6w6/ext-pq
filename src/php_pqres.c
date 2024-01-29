@@ -398,24 +398,24 @@ static zend_object_iterator_funcs php_pqres_iterator_funcs = {
 #endif
 };
 
-static inline ZEND_RESULT_CODE php_pqres_count_elements_ex(zend_object *object, long *count)
+static inline ZEND_RESULT_CODE php_pqres_count_elements_ex(zend_object *object, zend_long *count)
 {
 	php_pqres_object_t *obj = PHP_PQ_OBJ(NULL, object);
 
 	if (!obj->intern) {
 		return FAILURE;
 	} else {
-		*count = (long) PQntuples(obj->intern->res);
+		*count = (zend_long) PQntuples(obj->intern->res);
 		return SUCCESS;
 	}
 }
 #if PHP_VERSION_ID >= 80000
-static ZEND_RESULT_CODE php_pqres_count_elements(zend_object *object, long *count)
+static ZEND_RESULT_CODE php_pqres_count_elements(zend_object *object, zend_long *count)
 {
 	return php_pqres_count_elements_ex(object, count);
 }
 #else
-static ZEND_RESULT_CODE php_pqres_count_elements(zval *object, long *count)
+static ZEND_RESULT_CODE php_pqres_count_elements(zval *object, zend_long *count)
 {
 	return php_pqres_count_elements_ex(Z_OBJ_P(object), count);
 }
