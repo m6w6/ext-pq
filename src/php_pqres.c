@@ -1172,7 +1172,7 @@ static PHP_METHOD(pqres, count) {
 	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
-		long count;
+		zend_long count;
 
 		if (SUCCESS != php_pqres_count_elements_ex(Z_OBJ_P(getThis()), &count)) {
 			throw_exce(EX_UNINITIALIZED, "pq\\Result not initialized");
