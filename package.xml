@@ -41,9 +41,9 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </developer>
- <date>2023-06-12</date>
+ <date>2024-02-05</date>
  <version>
-  <release>2.2.2</release>
+  <release>2.2.3</release>
   <api>2.1.0</api>
  </version>
  <stability>
@@ -52,7 +52,7 @@
  </stability>
  <license uri="http://copyfree.org/content/standard/licenses/2bsd/license.txt">BSD-2-Clause</license>
  <notes><![CDATA[
-  * Fix JSON coversion (see gh issue #47)
+  * Fix incompatible pointer types (32-bit) (see hg issue #52)
 ]]></notes>
  <contents>
   <dir name="/">
