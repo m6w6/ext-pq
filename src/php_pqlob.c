@@ -169,7 +169,7 @@ static int php_pqlob_stream_flush(php_stream *stream)
 	return SUCCESS;
 }
 
-static ZEND_RESULT_CODE php_pqlob_stream_seek(php_stream *stream, off_t offset, int whence, off_t *newoffset)
+static ZEND_RESULT_CODE php_pqlob_stream_seek(php_stream *stream, zend_off_t offset, int whence, zend_off_t *newoffset)
 {
 	ZEND_RESULT_CODE rv = FAILURE;
 	php_pqlob_object_t *obj = stream->abstract;

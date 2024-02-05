@@ -398,24 +398,24 @@ static zend_object_iterator_funcs php_pqres_iterator_funcs = {
 #endif
 };
 
-static inline ZEND_RESULT_CODE php_pqres_count_elements_ex(zend_object *object, long *count)
+static inline ZEND_RESULT_CODE php_pqres_count_elements_ex(zend_object *object, zend_long *count)
 {
 	php_pqres_object_t *obj = PHP_PQ_OBJ(NULL, object);
 
 	if (!obj->intern) {
 		return FAILURE;
 	} else {
-		*count = (long) PQntuples(obj->intern->res);
+		*count = (zend_long) PQntuples(obj->intern->res);
 		return SUCCESS;
 	}
 }
 #if PHP_VERSION_ID >= 80000
-static ZEND_RESULT_CODE php_pqres_count_elements(zend_object *object, long *count)
+static ZEND_RESULT_CODE php_pqres_count_elements(zend_object *object, zend_long *count)
 {
 	return php_pqres_count_elements_ex(object, count);
 }
 #else
-static ZEND_RESULT_CODE php_pqres_count_elements(zval *object, long *count)
+static ZEND_RESULT_CODE php_pqres_count_elements(zval *object, zend_long *count)
 {
 	return php_pqres_count_elements_ex(Z_OBJ_P(object), count);
 }
@@ -736,7 +736,7 @@ static ZEND_RESULT_CODE column_nn(php_pqres_object_t *obj, zval *zcol, php_pqres
 	}
 
 	if (!col->name) {
-		php_error_docref(NULL, E_WARNING, "Failed to find column at index %ld", index);
+		php_error_docref(NULL, E_WARNING, "Failed to find column at index " ZEND_LONG_FMT, index);
 		return FAILURE;
 	}
 	if (col->num == -1) {
@@ -791,7 +791,7 @@ static int apply_bound(zval *zbound, int argc, va_list argv, zend_hash_key *key)
 	ZEND_RESULT_CODE *rv = va_arg(argv, ZEND_RESULT_CODE *);
 
 	if (!(zvalue = zend_hash_index_find(Z_ARRVAL_P(zrow), key->h))) {
-		php_error_docref(NULL, E_WARNING, "Failed to find column ad index %lu", key->h);
+		php_error_docref(NULL, E_WARNING, "Failed to find column ad index " ZEND_ULONG_FMT, key->h);
 		*rv = FAILURE;
 		return ZEND_HASH_APPLY_STOP;
 	} else {
@@ -1172,7 +1172,7 @@ static PHP_METHOD(pqres, count) {
 	zend_restore_error_handling(&zeh);
 
 	if (SUCCESS == rv) {
-		long count;
+		zend_long count;
 
 		if (SUCCESS != php_pqres_count_elements_ex(Z_OBJ_P(getThis()), &count)) {
 			throw_exce(EX_UNINITIALIZED, "pq\\Result not initialized");
