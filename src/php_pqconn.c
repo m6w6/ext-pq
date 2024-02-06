@@ -2160,19 +2160,49 @@ PHP_MINIT_FUNCTION(pqconn)
 	ph.write = NULL;
 
 #ifdef HAVE_PQLIBVERSION
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("libraryVersion"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
+#if PHP_VERSION_ID < 80000
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("libraryVersion"), ZEND_ACC_PUBLIC);
+#else
+	{
+	zval default_value;
+	zend_string *name = zend_string_init(ZEND_STRL("libraryVersion"), 1);
+	ZVAL_UNDEF(&default_value);
+	zend_declare_typed_property(php_pqconn_class_entry, name, &default_value, ZEND_ACC_PUBLIC|ZEND_ACC_READONLY, NULL, (zend_type) ZEND_TYPE_INIT_MASK(MAY_BE_STRING));
+	zend_string_release(name);
+	}
+#endif
 	ph.read = php_pqconn_object_read_lib_version;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, ZEND_STRL("libraryVersion"), (void *) &ph, sizeof(ph));
 #endif
 
 #ifdef HAVE_PQPROTOCOLVERSION
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("protocolVersion"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
+#if PHP_VERSION_ID < 80000
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("protocolVersion"), ZEND_ACC_PUBLIC);
+#else
+	{
+	zval default_value;
+	zend_string *name = zend_string_init(ZEND_STRL("protocolVersion"), 1);
+	ZVAL_UNDEF(&default_value);
+	zend_declare_typed_property(php_pqconn_class_entry, name, &default_value, ZEND_ACC_PUBLIC|ZEND_ACC_READONLY, NULL, (zend_type) ZEND_TYPE_INIT_MASK(MAY_BE_LONG));
+	zend_string_release(name);
+	}
+#endif
 	ph.read = php_pqconn_object_read_protocol_version;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, ZEND_STRL("protocolVersion"), (void *) &ph, sizeof(ph));
 #endif
 
 #ifdef HAVE_PQSERVERVERSION
-	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("serverVersion"), ZEND_ACC_PUBLIC|ZEND_ACC_READONLY);
+#if PHP_VERSION_ID < 80000
+	zend_declare_property_null(php_pqconn_class_entry, ZEND_STRL("serverVersion"), ZEND_ACC_PUBLIC);
+#else
+	{
+	zval default_value;
+	zend_string *name = zend_string_init(ZEND_STRL("serverVersion"), 1);
+	ZVAL_UNDEF(&default_value);
+	zend_declare_typed_property(php_pqconn_class_entry, name, &default_value, ZEND_ACC_PUBLIC|ZEND_ACC_READONLY, NULL, (zend_type) ZEND_TYPE_INIT_MASK(MAY_BE_STRING));
+	zend_string_release(name);
+	}
+#endif
 	ph.read = php_pqconn_object_read_server_version;
 	zend_hash_str_add_mem(&php_pqconn_object_prophandlers, ZEND_STRL("serverVersion"), (void *) &ph, sizeof(ph));
 #endif
