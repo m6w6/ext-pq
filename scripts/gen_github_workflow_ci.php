@@ -11,10 +11,10 @@ jobs:
 <?php
 
 $gen = include __DIR__ . "/ci/gen-matrix.php";
-$cur = "8.2";
+$cur = "8.3";
 $job = $gen->github([
 "old-matrix" => [
-	"PHP" => ["7.0", "7.1", "7.2", "7.3", "7.4", "8.0", "8.1"],
+	"PHP" => ["7.4", "8.0", "8.1", "8.2"],
 	"enable_debug" => "yes",
 	"enable_maintainer_zts" => "yes",
 	"enable_json" => "yes",
