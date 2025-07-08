@@ -25,7 +25,7 @@ Test
 resource(%d) of type (stream)
 resource(%d) of type (stream)
 
-Warning: fclose(): %d is not a valid stream resource in %s on line %d
+Warning: fclose(): %s in %s on line %d
 resource(%d) of type (stream)
 string(0) ""
 DONE
