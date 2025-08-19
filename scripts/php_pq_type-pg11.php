@@ -8,15 +8,16 @@
  * Since PgSQL-11
  */
 
-$dir = $argv[1] ?? __DIR__."/../../postgresql.git";
+$dir = $argv[1] ?? __DIR__."/../../postgresql";
 $dat = file_get_contents($dir . "/src/include/catalog/pg_type.dat");
 $typ = [];
 $arr = [];
+$delims = [];
 
 if (!$dat) {
 	exit(1);
 }
-if (!preg_match_all('/{(.*?)}/s', $dat, $matches)) {
+if (!preg_match_all('/{((?:[^{}]++|{(?1)})*+)}/', $dat, $matches)) {
 	fprintf(STDERR, "Failed to find entries in pg_type.dat\n");
 	exit(1);
 }
@@ -27,6 +28,7 @@ foreach ($matches[1] as $set_data) {
 		continue;
 	}
 	$set = array_combine($set_matches["key"], $set_matches["val"]);
+	//fprintf(STDERR, "%s => %s\n", $set["oid"], $set["typname"]);
 	$ucn = strtoupper($set["typname"]);
 	$typ[$set["oid"]] = $ucn;
 
