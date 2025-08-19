@@ -15,7 +15,7 @@ jobs:
       enable_maintainer_zts: "yes"
       enable_json: "yes"
       PQ_DSN: "postgres:///runner"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v2
         with:
@@ -51,7 +51,7 @@ jobs:
       enable_maintainer_zts: "yes"
       enable_json: "yes"
       PQ_DSN: "postgres:///runner"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v2
         with:
@@ -87,7 +87,7 @@ jobs:
       enable_maintainer_zts: "yes"
       enable_json: "yes"
       PQ_DSN: "postgres:///runner"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v2
         with:
@@ -123,7 +123,43 @@ jobs:
       enable_maintainer_zts: "yes"
       enable_json: "yes"
       PQ_DSN: "postgres:///runner"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Install
+        run: |
+          sudo apt-get install -y \
+            php-cli \
+            php-pear \
+            libpq-dev \
+            re2c
+      - name: Prepare
+        run: |
+          make -f scripts/ci/Makefile php || make -f scripts/ci/Makefile clean php
+          make -f scripts/ci/Makefile pecl PECL=m6w6/ext-raphf.git:raphf:master
+      - name: Build
+        run: |
+          make -f scripts/ci/Makefile ext PECL=pq
+      - name: Prepare Test
+        run: |
+          sudo systemctl start postgresql
+          sudo -u postgres createuser --login runner
+          sudo -u postgres createdb -O runner runner
+      - name: Test
+        run: |
+          make -f scripts/ci/Makefile test
+
+  old-matrix-4:
+    name: "old-matrix-4 (8.3)"
+    env:
+      PHP: "8.3"
+      enable_debug: "yes"
+      enable_maintainer_zts: "yes"
+      enable_json: "yes"
+      PQ_DSN: "postgres:///runner"
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v2
         with:
@@ -159,7 +195,7 @@ jobs:
       enable_debug: "yes"
       enable_zts: "yes"
       PQ_DSN: "postgres:///runner"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v2
         with:
@@ -188,13 +224,13 @@ jobs:
           make -f scripts/ci/Makefile test
 
   cur-dbg-zts-0:
-    name: "cur-dbg-zts-0 (8.3)"
+    name: "cur-dbg-zts-0 (8.4)"
     env:
-      PHP: "8.3"
+      PHP: "8.4"
       enable_debug: "yes"
       enable_zts: "yes"
       PQ_DSN: "postgres:///runner"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v2
         with:
@@ -223,13 +259,13 @@ jobs:
           make -f scripts/ci/Makefile test
 
   cur-dbg-zts-1:
-    name: "cur-dbg-zts-1 (8.3)"
+    name: "cur-dbg-zts-1 (8.4)"
     env:
-      PHP: "8.3"
+      PHP: "8.4"
       enable_debug: "no"
       enable_zts: "yes"
       PQ_DSN: "postgres:///runner"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v2
         with:
@@ -258,13 +294,13 @@ jobs:
           make -f scripts/ci/Makefile test
 
   cur-dbg-zts-2:
-    name: "cur-dbg-zts-2 (8.3)"
+    name: "cur-dbg-zts-2 (8.4)"
     env:
-      PHP: "8.3"
+      PHP: "8.4"
       enable_debug: "yes"
       enable_zts: "no"
       PQ_DSN: "postgres:///runner"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v2
         with:
@@ -293,13 +329,13 @@ jobs:
           make -f scripts/ci/Makefile test
 
   cur-dbg-zts-3:
-    name: "cur-dbg-zts-3 (8.3)"
+    name: "cur-dbg-zts-3 (8.4)"
     env:
-      PHP: "8.3"
+      PHP: "8.4"
       enable_debug: "no"
       enable_zts: "no"
       PQ_DSN: "postgres:///runner"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v2
         with:
@@ -328,13 +364,13 @@ jobs:
           make -f scripts/ci/Makefile test
 
   cur-cov-0:
-    name: "cur-cov-0 (8.3)"
+    name: "cur-cov-0 (8.4)"
     env:
       CFLAGS: "-O0 -g --coverage"
       CXXFLAGS: "-O0 -g --coverage"
-      PHP: "8.3"
+      PHP: "8.4"
       PQ_DSN: "postgres:///runner"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v2
         with:
