@@ -1,0 +1,13 @@
+{
+    "name": "m6w6/ext-pq",
+    "type": "php-ext",
+    "license": "BSD-2-Clause",
+    "description": "PostgreSQL client library (libpq) binding",
+    "require": {
+        "php": ">= 7.0.0",
+        "ext-raphf": "*"
+    },
+    "php-ext": {
+        "extension-name": "pq"
+    }
+}

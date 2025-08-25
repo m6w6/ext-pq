@@ -26,6 +26,10 @@ Known issues are listed in [BUGS](./BUGS) and future ideas can be found in [TODO
 
 	pecl install pq
 
+### PIE
+
+    pie install m6w6/ext-pq
+
 ### Checkout
 
 	git clone github.com:m6w6/ext-pq

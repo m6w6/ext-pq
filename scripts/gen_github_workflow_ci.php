@@ -76,9 +76,9 @@ foreach ($job as $id => $env) {
 <?php if (isset($env["CFLAGS"]) && strpos($env["CFLAGS"], "--coverage") != false) : ?>
       - name: Coverage
         if: success()
-        run: |
-          cd src/.libs
-          bash <(curl -s https://codecov.io/bash) -X xcode -X coveragepy
+        uses: codecov/codecov-action@v5
+        with:
+          directory: src
 <?php endif; ?>
 
 <?php
