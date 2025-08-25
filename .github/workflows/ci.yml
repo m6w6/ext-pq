@@ -400,6 +400,4 @@ jobs:
       - name: Coverage
         if: success()
         uses: codecov/codecov-action@v5
-        with:
-          directory: src
 
