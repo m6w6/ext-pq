@@ -14,25 +14,33 @@ $gen = include __DIR__ . "/ci/gen-matrix.php";
 $cur = "8.4";
 $job = $gen->github([
 "old-matrix" => [
-	"PHP" => ["7.4", "8.0", "8.1", "8.2", "8.3"],
+	"PHP" => [
+	//"8.0", "8.1", "8.2",
+	"8.3"],
 	"enable_debug" => "yes",
-	"enable_maintainer_zts" => "yes",
+	"enable_zts" => "yes",
 	"enable_json" => "yes",
 ],
+// "oldest" => [
+// 	"PHP" => ["7.4"],
+// 	"enable_debug" => "yes",
+// 	"enable_maintainer_zts" => "yes",
+// 	"enable_json" => "yes",
+// ],
 "next" => [
-    "PHP" => ["master"],
+    "PHP" => ["8.5", "master"],
     "enable_debug" => "yes",
     "enable_zts" => "yes",
-],
-"cur-dbg-zts" => [
-    "PHP" => $cur,
-    "enable_debug",
-    "enable_zts",
-],
-"cur-cov" => [
-    "CFLAGS" => "-O0 -g --coverage",
-    "CXXFLAGS" => "-O0 -g --coverage",
-    "PHP" => $cur,
+//],
+// "cur-dbg-zts" => [
+//     "PHP" => $cur,
+//     "enable_debug",
+//     "enable_zts",
+//],
+// "cur-cov" => [
+//     "CFLAGS" => "-O0 -g --coverage",
+//     "CXXFLAGS" => "-O0 -g --coverage",
+//     "PHP" => $cur,
 ]]);
 foreach ($job as $id => $env) {
     printf("  %s:\n", $id);
