@@ -34,7 +34,7 @@ if test "$PHP_PQ" != "no"; then
 
 		if test -z "$PQ_VERSION"; then
 			AC_MSG_RESULT(not found)
-			AC_MSG_ERROR(\`$PG_CONFIG --version\` did not provide any meaningful output, please reinstall postgresql/libpq)
+			AC_MSG_ERROR(["$PG_CONFIG --version" did not provide any meaningful output, please reinstall postgresql/libpq])
 		else
 			AC_MSG_RESULT($PQ_VERSION)
 			AC_DEFINE_UNQUOTED(PHP_PQ_LIBVERSION, "$PQ_VERSION", [ ])
