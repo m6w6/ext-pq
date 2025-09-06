@@ -231,12 +231,13 @@ zval *php_pq_object_read_prop(zend_object *object, zend_string *member, int type
 	if (SUCCESS != php_pq_object_read_prop_ex(object, member, type, tmp)) {
 		return zend_std_read_property(object, member, type, cache_slot, tmp);
 	}
-
+/*
 	zend_std_write_property(object, member, tmp, cache_slot);
 
 	if (cache_slot) {
 		*cache_slot = NULL;
 	}
+*/
 	return tmp;
 }
 #else
